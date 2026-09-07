@@ -262,22 +262,6 @@ int GameStateLoading::Load(int stage) {
 				sscanf(s,"%d %d %d %f %d %d %d %f %f %f %d %d %s",&gun.mId,&gun.mDamage,&gun.mDelay,&gun.mSpread,&gun.mClip,&gun.mNumClips,&gun.mReloadDelay,&gun.mSpeed,&gun.mBulletSpeed,&gun.mViewAngle,&gun.mCost,&gun.mType,gun.mName);
 				gun.mHandQuad = gGunHandQuads[gun.mId];
 				gun.mGroundQuad = gGunGroundQuads[gun.mId];
-				if (gun.mId == 28) {
-					gun.mHandQuad = gGunHandQuads[17];
-					gun.mGroundQuad = gGunGroundQuads[17];
-				}
-				else if (gun.mId == 29) {
-					gun.mHandQuad = gGunHandQuads[11];
-					gun.mGroundQuad = gGunGroundQuads[11];
-				}
-				else if (gun.mId == 30) {
-					gun.mHandQuad = gGunHandQuads[24];
-					gun.mGroundQuad = gGunGroundQuads[24];
-				}
-				else if (gun.mId == 31) {
-					gun.mHandQuad = gGunHandQuads[1];
-					gun.mGroundQuad = gGunGroundQuads[1];
-				}
 				gGuns[i] = gun;
 
 				//strcpy(gGuns[i].mName,name);
