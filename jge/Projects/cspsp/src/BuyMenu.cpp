@@ -8,7 +8,7 @@ JRenderer* BuyMenu::mRenderer = NULL;
 //------------------------------------------------------------------------------------------------
 BuyMenu::BuyMenu(Person* player, Gun guns[])
 {
-	for (int i=0; i<32; i++) {
+	for (int i=0; i<MAX_GUNS; i++) {
 		mGuns[i] = guns[i];
 	}
 
@@ -23,6 +23,7 @@ BuyMenu::BuyMenu(Person* player, Gun guns[])
 	mIsSelected = false;
 	mCategoryIndex = MAIN;
 	mSelectedIndex = -1;
+	mScrollOffset = 0;
 
 	mCategories[T][MAIN].id = MAIN;
 	mCategories[T][MAIN].buttons.push_back(Button(PISTOLS,"Pistols"));
@@ -33,60 +34,15 @@ BuyMenu::BuyMenu(Person* player, Gun guns[])
 	mCategories[T][MAIN].buttons.push_back(Button(EQUIPMENT,"Equipment"));
 	mCategories[CT][MAIN] = mCategories[T][MAIN];
 
-	for (int i=1; i<=6; i++) {
-		if (i == 5) {
-			mCategories[CT][PISTOLS].buttons.push_back(Button(i,guns[i].mName));
+	for (int i=0; i<MAX_GUNS; i++) {
+		if (guns[i].mId != i || guns[i].mName[0] == '\0' ||
+			guns[i].mBuyCategory < PISTOLS || guns[i].mBuyCategory > EQUIPMENT) continue;
+		if ((guns[i].mBuyTeams & BUY_TEAM_T) != 0) {
+			mCategories[T][guns[i].mBuyCategory].buttons.push_back(Button(i,guns[i].mName));
 		}
-		else if (i == 6) {
-			mCategories[T][PISTOLS].buttons.push_back(Button(i,guns[i].mName));
+		if ((guns[i].mBuyTeams & BUY_TEAM_CT) != 0) {
+			mCategories[CT][guns[i].mBuyCategory].buttons.push_back(Button(i,guns[i].mName));
 		}
-		else {
-			mCategories[T][PISTOLS].buttons.push_back(Button(i,guns[i].mName));
-			mCategories[CT][PISTOLS].buttons.push_back(Button(i,guns[i].mName));
-		}
-	}
-	mCategories[T][PISTOLS].buttons.push_back(Button(31,guns[31].mName));
-	mCategories[CT][PISTOLS].buttons.push_back(Button(31,guns[31].mName));
-	for (int i=7; i<=8; i++) {
-		mCategories[T][SHOTGUNS].buttons.push_back(Button(i,guns[i].mName));
-		mCategories[CT][SHOTGUNS].buttons.push_back(Button(i,guns[i].mName));
-	}	
-	for (int i=9; i<=13; i++) {
-		if (i == 9) {
-			mCategories[CT][SMG].buttons.push_back(Button(i,guns[i].mName));
-		}
-		else if (i == 10) {
-			mCategories[T][SMG].buttons.push_back(Button(i,guns[i].mName));
-		}
-		else {
-			mCategories[T][SMG].buttons.push_back(Button(i,guns[i].mName));
-			mCategories[CT][SMG].buttons.push_back(Button(i,guns[i].mName));
-		}
-	}	
-	mCategories[T][SMG].buttons.push_back(Button(29,guns[29].mName));
-	mCategories[CT][SMG].buttons.push_back(Button(29,guns[29].mName));
-	for (int i=14; i<=23; i++) {
-		if (i == 14 || i == 17 || i == 19 || i == 21) {
-			mCategories[CT][RIFLES].buttons.push_back(Button(i,guns[i].mName));
-		}
-		else if (i == 15 || i == 18 || i == 20 || i == 22) {
-			mCategories[T][RIFLES].buttons.push_back(Button(i,guns[i].mName));
-		}
-		else {
-			mCategories[T][RIFLES].buttons.push_back(Button(i,guns[i].mName));
-			mCategories[CT][RIFLES].buttons.push_back(Button(i,guns[i].mName));
-		}
-	}	
-	mCategories[T][RIFLES].buttons.push_back(Button(28,guns[28].mName));
-	mCategories[CT][RIFLES].buttons.push_back(Button(28,guns[28].mName));
-	mCategories[T][MACHINEGUNS].buttons.push_back(Button(24,guns[24].mName));
-	mCategories[CT][MACHINEGUNS].buttons.push_back(Button(24,guns[24].mName));
-	mCategories[T][MACHINEGUNS].buttons.push_back(Button(30,guns[30].mName));
-	mCategories[CT][MACHINEGUNS].buttons.push_back(Button(30,guns[30].mName));
-
-	for (int i=25; i<=27; i++) {
-		mCategories[T][EQUIPMENT].buttons.push_back(Button(i,guns[i].mName));
-		mCategories[CT][EQUIPMENT].buttons.push_back(Button(i,guns[i].mName));
 	}
 
 	mIsOldStyle = true;
@@ -108,12 +64,15 @@ void BuyMenu::Update(float dt)
 	}
 	if (mEngine->GetButtonClick(PSP_CTRL_TRIANGLE) && mCategoryIndex != MAIN) {
 		mCategoryIndex = MAIN;
+		mScrollOffset = 0;
+		mSelectedIndex = mIsOldStyle ? 0 : -1;
 	}
 
 	if (mEngine->GetButtonClick(PSP_CTRL_CROSS)) {
 		if (mSelectedIndex != -1) {
 			if (mCategoryIndex == MAIN) {
 				mCategoryIndex = mCategories[team][mCategoryIndex].buttons[mSelectedIndex].id;
+				mScrollOffset = 0;
 				if (mIsOldStyle) {
 					mSelectedIndex = 0;
 				}
@@ -169,6 +128,16 @@ void BuyMenu::Update(float dt)
 				if (mSelectedIndex >= size) mSelectedIndex = 0;
 			}
 		}
+
+		const int visibleItems = 7;
+		if (mCategoryIndex != MAIN) {
+			if (mSelectedIndex < mScrollOffset) {
+				mScrollOffset = mSelectedIndex;
+			}
+			else if (mSelectedIndex >= mScrollOffset+visibleItems) {
+				mScrollOffset = mSelectedIndex-visibleItems+1;
+			}
+		}
 	}
 }
 
@@ -201,15 +170,24 @@ void BuyMenu::Render()
 	int team = mPlayer->mTeam;
 	int size = mCategories[team][mCategoryIndex].buttons.size();
 	float theta = -M_PI_2;
-	float step = 1.0f/size*(2*M_PI);
+	float step = size > 0 ? 1.0f/size*(2*M_PI) : 0.0f;
+	const int visibleItems = 7;
+	int firstVisible = mIsOldStyle && mCategoryIndex != MAIN ? mScrollOffset : 0;
+	int lastVisible = mIsOldStyle && mCategoryIndex != MAIN ? mScrollOffset+visibleItems : size;
+	if (lastVisible > size) lastVisible = size;
+	float radialCardSize = size > 10 ? 30.0f : 40.0f;
+	float radialSelectedSize = size > 10 ? 44.0f : 60.0f;
+	float radialIconScale = size > 10 ? 0.8f : 1.0f;
+	float radialSelectedIconScale = size > 10 ? 1.1f : 1.4f;
 	for (int i=0; i<size; i++) {
 		//float theta = (float)i/size*(2*M_PI);
 		float x = 140+100*cosf(theta);
 		float y = SCREEN_HEIGHT_2+100*sinf(theta);
 
 		if (mIsOldStyle) {
+			if (i < firstVisible || i >= lastVisible) continue;
 			x = 50;
-			y = 25+32*i;
+			y = 25+32*(i-firstVisible);
 		}
 
 		if (i == mSelectedIndex) {
@@ -225,15 +203,19 @@ void BuyMenu::Render()
 			}
 			
 			if (!mIsOldStyle) {
-				mRenderer->FillRect(x-30,y-30,60,60,ARGB(220,0,0,0));
-				mRenderer->DrawRect(x-30,y-30,60,60,ARGB(255,255,128,0));
-				mRenderer->RenderQuad(mGuns[id].mGroundQuad,x,y-5,0,1.4f,1.4f);
+				mRenderer->FillRect(x-radialSelectedSize/2,y-radialSelectedSize/2,radialSelectedSize,radialSelectedSize,ARGB(220,0,0,0));
+				mRenderer->DrawRect(x-radialSelectedSize/2,y-radialSelectedSize/2,radialSelectedSize,radialSelectedSize,ARGB(255,255,128,0));
+				if (mGuns[id].mGroundQuad != NULL) {
+					mRenderer->RenderQuad(mGuns[id].mGroundQuad,x,y-5,0,radialSelectedIconScale,radialSelectedIconScale);
+				}
 				gFont->DrawShadowedString(mCategories[team][mCategoryIndex].buttons[i].name,x,y,JGETEXT_CENTER);
 			}
 			else {
 				mRenderer->FillRect(x,y,200,25,ARGB(220,0,0,0));
 				mRenderer->DrawRect(x,y,200,25,ARGB(255,255,128,0));
-				mRenderer->RenderQuad(mGuns[id].mGroundQuad,x+25,y+12,0,1.4f,1.4f);
+				if (mGuns[id].mGroundQuad != NULL) {
+					mRenderer->RenderQuad(mGuns[id].mGroundQuad,x+25,y+12,0,1.4f,1.4f);
+				}
 				gFont->DrawShadowedString(mCategories[team][mCategoryIndex].buttons[i].name,x+50,y+3);
 			}
 			//mRenderer->FillPolygon(x,y,150,3,M_PI-theta,ARGB(200,255,255,255));
@@ -251,15 +233,21 @@ void BuyMenu::Render()
 			}
 
 			if (!mIsOldStyle) {
-				mRenderer->FillRect(x-20,y-20,40,40,ARGB(220,0,0,0));
-				mRenderer->DrawRect(x-20,y-20,40,40,ARGB(255,255,128,0));
-				mRenderer->RenderQuad(mGuns[id].mGroundQuad,x,y-5);
-				gFont->DrawShadowedString(mCategories[team][mCategoryIndex].buttons[i].name,x,y+3,JGETEXT_CENTER);
+				mRenderer->FillRect(x-radialCardSize/2,y-radialCardSize/2,radialCardSize,radialCardSize,ARGB(220,0,0,0));
+				mRenderer->DrawRect(x-radialCardSize/2,y-radialCardSize/2,radialCardSize,radialCardSize,ARGB(255,255,128,0));
+				if (mGuns[id].mGroundQuad != NULL) {
+					mRenderer->RenderQuad(mGuns[id].mGroundQuad,x,y-5,0,radialIconScale,radialIconScale);
+				}
+				if (size <= 10) {
+					gFont->DrawShadowedString(mCategories[team][mCategoryIndex].buttons[i].name,x,y+3,JGETEXT_CENTER);
+				}
 			}
 			else {
 				mRenderer->FillRect(x,y,200,25,ARGB(220,0,0,0));
 				mRenderer->DrawRect(x,y,200,25,ARGB(255,255,128,0));
-				mRenderer->RenderQuad(mGuns[id].mGroundQuad,x+25,y+12);
+				if (mGuns[id].mGroundQuad != NULL) {
+					mRenderer->RenderQuad(mGuns[id].mGroundQuad,x+25,y+12);
+				}
 				gFont->DrawShadowedString(mCategories[team][mCategoryIndex].buttons[i].name,x+50,y+6);
 			}
 
@@ -269,6 +257,12 @@ void BuyMenu::Render()
 		//mRenderer->FillRect(x-50,y-10,100,20,ARGB(200,50,50,50));
 		
 		theta -= step;
+	}
+
+	if (mIsOldStyle && mCategoryIndex != MAIN) {
+		gFont->SetScale(0.75f);
+		if (firstVisible > 0) gFont->DrawString("^",255,25);
+		if (lastVisible < size) gFont->DrawString("v",255,217);
 	}
 
 	if (mCategoryIndex == MAIN) {
@@ -311,7 +305,9 @@ void BuyMenu::Render()
 	gFont->SetScale(0.6f);
 	if (mCategoryIndex != MAIN && mSelectedIndex != -1) {
 		int id = mCategories[team][mCategoryIndex].buttons[mSelectedIndex].id;
-		mRenderer->RenderQuad(mGuns[id].mGroundQuad,330,155,0,1.4f,1.4f);
+		if (mGuns[id].mGroundQuad != NULL) {
+			mRenderer->RenderQuad(mGuns[id].mGroundQuad,330,155,0,1.4f,1.4f);
+		}
 
 		float x = 310;
 		float y = 175;
@@ -327,21 +323,12 @@ void BuyMenu::Render()
 			value = mGuns[id].mDamage;
 			min = 5;
 			max = 40;
-			if ((id >= 1 && id <= 6) || id == 31) { //pistols
-			}
-			else if (id >= 7 && id <= 8) { //shotguns
-				if (id == 7) value *= 6;
-				else if (id == 8) value *= 4;
+			if (mGuns[id].mPellets > 1) {
+				value *= mGuns[id].mPellets;
 				max = 100;
 			}
-			else if ((id >= 9 && id <= 13) || id == 29) { //smgs
-			}
-			else if (id == 16 || (id >= 21 && id <= 23)) { //snipers
+			else if (mGuns[id].mScope >= SCOPE_MEDIUM) {
 				max = 100;
-			}
-			else if ((id >= 14 && id <= 20) || id == 28) { //rifles
-			}
-			else if (id == 24 || id == 30) { //machine guns
 			}
 			else if (id >= 25 && id <= 27) { //nades
 				max = 100;
@@ -360,18 +347,8 @@ void BuyMenu::Render()
 			value = M_PI-mGuns[id].mSpread;
 			min = M_PI_2+M_PI_4/2;
 			max = M_PI;
-			if ((id >= 1 && id <= 6) || id == 31) { //pistols
-			}
-			else if (id >= 7 && id <= 8) { //shotguns
-			}
-			else if ((id >= 9 && id <= 13) || id == 29) { //smgs
-			}
-			else if (id == 16 || (id >= 21 && id <= 23)) { //snipers
+			if (mGuns[id].mScope >= SCOPE_MEDIUM) {
 				min = 0;
-			}
-			else if ((id >= 14 && id <= 20) || id == 28) { //rifles
-			}
-			else if (id == 24 || id == 30) { //machine guns
 			}
 			else if (id >= 25 && id <= 27) { //nades
 				value = 0;
@@ -389,21 +366,13 @@ void BuyMenu::Render()
 			value = 2000-mGuns[id].mDelay;
 			min = 1850;
 			max = 1950;
-			if ((id >= 1 && id <= 6) || id == 31) { //pistols
-			}
-			else if (id >= 7 && id <= 8) { //shotguns
+			if (mGuns[id].mPellets > 1) {
 				min = 500;
 				max = 3000;
 			}
-			else if ((id >= 9 && id <= 13) || id == 29) { //smgs
-			}
-			else if (id == 16 || (id >= 21 && id <= 23)) { //snipers
+			else if (mGuns[id].mScope >= SCOPE_MEDIUM) {
 				min = 250;
 				max = 3500;
-			}
-			else if ((id >= 14 && id <= 20) || id == 28) { //rifles
-			}
-			else if (id == 24 || id == 30) { //machine guns
 			}
 			else if (id >= 25 && id <= 27) { //nades
 				value = 0;
@@ -455,6 +424,7 @@ void BuyMenu::Enable()
 	mIsSelected = false;
 	mIsActive = true;
 	mCategoryIndex = MAIN;
+	mScrollOffset = 0;
 	if (!mIsOldStyle) {
 		mSelectedIndex = -1;
 	}

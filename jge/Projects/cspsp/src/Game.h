@@ -66,7 +66,7 @@ protected:
 public:
 	int mGameType;
 
-	Gun mGuns[32];
+	Gun mGuns[MAX_GUNS];
 	//JGE* mEngine;
 	int mRoundFreezeTime;
 	int mRoundTime;

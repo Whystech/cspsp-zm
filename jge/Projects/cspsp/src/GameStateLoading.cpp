@@ -252,14 +252,25 @@ int GameStateLoading::Load(int stage) {
 			char line[1024]; 
 			fgets(line,1024,file);  // Get one line from your file into a buffer 
 			sscanf(line,"%d",&mNumGuns);  // read mCols and mRows of your map from the file 
+			if (mNumGuns < 0 || mNumGuns > MAX_GUNS) {
+				fclose(file);
+				break;
+			}
 			//mGuns = new Gun*[mNumGuns];
 			char* s = line; 
 
-			for (int i=0;i<mNumGuns;i++) { 
+			for (int i=0;i<mNumGuns;) { 
 				if (!fgets(line,1024,file)) break; // read error, you should handle this properly 
 				s = line; // This was what the problem was! 
-				Gun gun;
-				sscanf(s,"%d %d %d %f %d %d %d %f %f %f %d %d %s",&gun.mId,&gun.mDamage,&gun.mDelay,&gun.mSpread,&gun.mClip,&gun.mNumClips,&gun.mReloadDelay,&gun.mSpeed,&gun.mBulletSpeed,&gun.mViewAngle,&gun.mCost,&gun.mType,gun.mName);
+				Gun gun = {};
+				int fields = sscanf(s,"%d %d %d %f %d %d %d %f %f %f %d %d %d %d %d %d %d %14s",&gun.mId,&gun.mDamage,&gun.mDelay,&gun.mSpread,&gun.mClip,&gun.mNumClips,&gun.mReloadDelay,&gun.mSpeed,&gun.mBulletSpeed,&gun.mViewAngle,&gun.mCost,&gun.mType,&gun.mFireMode,&gun.mPellets,&gun.mScope,&gun.mBuyCategory,&gun.mBuyTeams,gun.mName);
+				if (fields != 18) continue;
+				if (gun.mId < 0 || gun.mId >= MAX_GUNS) continue;
+				if (gun.mPellets < 1) gun.mPellets = 1;
+				if (gun.mPellets > MAX_PELLETS) gun.mPellets = MAX_PELLETS;
+				if (gun.mScope < SCOPE_NONE || gun.mScope > SCOPE_HIGH) gun.mScope = SCOPE_NONE;
+				if (gun.mBuyCategory < BUY_CATEGORY_NONE || gun.mBuyCategory > BUY_CATEGORY_EQUIPMENT) gun.mBuyCategory = BUY_CATEGORY_NONE;
+				if (gun.mBuyTeams < 0 || gun.mBuyTeams > (BUY_TEAM_T | BUY_TEAM_CT)) gun.mBuyTeams = 0;
 				gun.mHandQuad = gGunHandQuads[gun.mId];
 				gun.mGroundQuad = gGunGroundQuads[gun.mId];
 				gGuns[i] = gun;
@@ -278,6 +289,17 @@ int GameStateLoading::Load(int stage) {
 				}
 				else if (gGuns[i].mId == 31) {
 					gGuns[i].mFireSound = mSoundSystem->LoadSample("sfx/glock.wav"); // GLOCK18AUTO (ID 31) -> GLOCK (ID 1)
+				}
+				/*else if (gGuns[i].mId == 32) {
+					gGuns[i].mFireSound = mSoundSystem->LoadSample("sfx/ak47.wav"); // ID 32 reuses the AK-47 fire sound
+				}*/
+				//CZ fire sound
+				else if (gGuns[i].mId == 33) {
+					gGuns[i].mFireSound = mSoundSystem->LoadSample("sfx/mp5.wav"); // ID 32 reuses the AK-47 fire sound
+				}
+				//tec-9 fire sound
+				else if (gGuns[i].mId == 32) {
+					gGuns[i].mFireSound = mSoundSystem->LoadSample("sfx/glock.wav"); // ID 32 reuses the AK-47 fire sound
 				}
 				else if (gGuns[i].mId == 25 || gGuns[i].mId == 26 || gGuns[i].mId == 27) {
 					gGuns[i].mFireSound = gPinPullSound;
@@ -298,6 +320,18 @@ int GameStateLoading::Load(int stage) {
 				}
 				else if (gGuns[i].mId == 31) {
 					gGuns[i].mReloadSound = mSoundSystem->LoadSample("sfx/glockreload.wav"); // GLOCK18AUTO (ID 31) -> GLOCK (ID 1)
+				}
+				//attach sounds to the new guns you want using the else if here - add gun step 2
+				/*else if (gGuns[i].mId == 32) {
+					gGuns[i].mReloadSound = mSoundSystem->LoadSample("sfx/ak47reload.wav"); // ID 32 reuses the AK-47 reload sound
+				}*/
+				//CZ reload sound
+				else if (gGuns[i].mId == 33) {
+					gGuns[i].mReloadSound = mSoundSystem->LoadSample("sfx/glockreload.wav"); // ID 32 reuses the AK-47 reload sound
+				}
+				//tec-9 reload sound
+				else if (gGuns[i].mId == 32) {
+					gGuns[i].mReloadSound = mSoundSystem->LoadSample("sfx/ak47reload.wav"); // ID 32 reuses the AK-47 reload sound
 				}
 				else if (gGuns[i].mId != 0 && gGuns[i].mId != 25 && gGuns[i].mId != 26 && gGuns[i].mId != 27) {
 					sprintf(buffer,"sfx/%sreload.wav",gGuns[i].mName);
@@ -322,6 +356,37 @@ int GameStateLoading::Load(int stage) {
 				gGuns[i].mAmmoBarWidth = w;
 
 				//mGuns[i] = gGuns[i];
+				i++;
+			}
+
+			for (int i=0; i<mNumGuns; i++) {
+				JSample* fallbackFireSound = gGuns[0].mFireSound;
+				JSample* fallbackReloadSound = gGuns[0].mReloadSound;
+				if (gGuns[i].mType == PRIMARY) {
+					fallbackFireSound = gGuns[18].mFireSound;
+					fallbackReloadSound = gGuns[18].mReloadSound;
+				}
+				else if (gGuns[i].mType == SECONDARY) {
+					fallbackFireSound = gGuns[1].mFireSound;
+					fallbackReloadSound = gGuns[1].mReloadSound;
+				}
+				else if (gGuns[i].mType == GRENADE) {
+					fallbackFireSound = gPinPullSound;
+					fallbackReloadSound = NULL;
+				}
+
+				if (gGuns[i].mFireSound == NULL || gGuns[i].mFireSound->mSample == NULL) {
+					if (gGuns[i].mFireSound != NULL && gGuns[i].mFireSound != fallbackFireSound) {
+						delete gGuns[i].mFireSound;
+					}
+					gGuns[i].mFireSound = fallbackFireSound;
+				}
+				if (gGuns[i].mReloadSound == NULL || gGuns[i].mReloadSound->mSample == NULL) {
+					if (gGuns[i].mReloadSound != NULL && gGuns[i].mReloadSound != fallbackReloadSound) {
+						delete gGuns[i].mReloadSound;
+					}
+					gGuns[i].mReloadSound = fallbackReloadSound;
+				}
 			}
 			fclose(file);
 

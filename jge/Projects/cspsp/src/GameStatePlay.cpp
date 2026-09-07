@@ -30,7 +30,7 @@ void GameStatePlay::Create()
 
 	//mWinner = NONE;
 
-	for (int i=0; i<32; i++) {
+	for (int i=0; i<MAX_GUNS; i++) {
 		mGuns[i] = gGuns[i];
 	}
 
@@ -369,8 +369,8 @@ void GameStatePlay::CheckInput(float dt)
 	if (mEngine->GetButtonState(PSP_CTRL_CROSS) && !cross)
 	{
 		bool fire = true;
-		// Glock 18 Auto (ID 31) repeats while Cross is held; other secondaries are semi-automatic.
-		if (mPlayer->mGunIndex == SECONDARY && mPlayer->GetCurrentGun()->mGun->mId != 31) {
+		Gun* gun = mPlayer->GetCurrentGun()->mGun;
+		if (gun->mFireMode == FIREMODE_SEMI) {
 			if (mPlayer->mHasFired) {
 				fire = false;
 			}
@@ -1132,13 +1132,14 @@ void GameStatePlay::Explode(Grenade* grenade) {
 
 				int a = 500;
 				if (mPeople[i]->mGunIndex == PRIMARY) {
-					if (mPeople[i]->GetCurrentGun()->mGun->mId == 19 || mPeople[i]->GetCurrentGun()->mGun->mId == 20) {
+					int scope = mPeople[i]->GetCurrentGun()->mGun->mScope;
+					if (scope == SCOPE_LOW) {
 						a = 800;
 					}
-					else if (mPeople[i]->GetCurrentGun()->mGun->mId == 21 || mPeople[i]->GetCurrentGun()->mGun->mId == 22 || mPeople[i]->GetCurrentGun()->mGun->mId == 23) {
+					else if (scope == SCOPE_HIGH) {
 						a = 1400;
 					}
-					else if (mPeople[i]->GetCurrentGun()->mGun->mId == 16) {
+					else if (scope == SCOPE_MEDIUM) {
 						a = 1100;
 					}
 				}

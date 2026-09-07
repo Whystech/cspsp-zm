@@ -6,6 +6,24 @@
 #include "JSoundSystem.h"
 #include <vector>
 
+#define MAX_GUNS 64
+#define FIREMODE_SEMI 0
+#define FIREMODE_AUTO 1
+#define MAX_PELLETS 16
+#define SCOPE_NONE 0
+#define SCOPE_LOW 1
+#define SCOPE_MEDIUM 2
+#define SCOPE_HIGH 3
+#define BUY_CATEGORY_NONE 0
+#define BUY_CATEGORY_PISTOLS 1
+#define BUY_CATEGORY_SHOTGUNS 2
+#define BUY_CATEGORY_SMG 3
+#define BUY_CATEGORY_RIFLES 4
+#define BUY_CATEGORY_MACHINEGUNS 5
+#define BUY_CATEGORY_EQUIPMENT 6
+#define BUY_TEAM_T 1
+#define BUY_TEAM_CT 2
+
 struct Gun {
 	JQuad* mHandQuad;
 	JQuad* mGroundQuad;
@@ -21,6 +39,11 @@ struct Gun {
 	float mViewAngle;
 	int mCost;
 	int mType;
+	int mFireMode;
+	int mPellets;
+	int mScope;
+	int mBuyCategory;
+	int mBuyTeams;
 	char mName[15];
 	JSample* mFireSound;
 	JSample* mReloadSound;

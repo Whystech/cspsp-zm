@@ -31,10 +31,11 @@ private:
 	Category mCategories[2][EQUIPMENT+1];	
 	int mCategoryIndex;
 	int mSelectedIndex;
+	int mScrollOffset;
 
 	Person* mPlayer;
 	int mChoice;
-	Gun mGuns[32];
+	Gun mGuns[MAX_GUNS];
 
 	float angle;
 
