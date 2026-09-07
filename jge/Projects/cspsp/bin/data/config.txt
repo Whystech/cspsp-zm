@@ -3,6 +3,6 @@ music = off
 ff = off
 menu = analog
 respawn = inplace
-infection_respawn_delay = 1
+infection_respawn_delay = 2
 name = PPSSPP
 map = gunstest
