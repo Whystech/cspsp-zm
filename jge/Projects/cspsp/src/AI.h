@@ -45,7 +45,7 @@ protected:
 public:
 	AStar* mAStar;
 	Grid* mGrid;
-	Gun (*mGameGuns)[28];
+	Gun (*mGameGuns)[32];
 	//std::vector<CollisionPoint>* mCollisionPoints;
 
 	AI(JQuad* quads[], JQuad* deadquad, std::vector<Bullet*>* bullets, std::vector<GunObject*>* guns, std::vector<Node*> nodes, int team, char* name, int movementstyle);

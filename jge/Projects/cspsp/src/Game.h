@@ -66,7 +66,7 @@ protected:
 public:
 	int mGameType;
 
-	Gun mGuns[28];
+	Gun mGuns[32];
 	//JGE* mEngine;
 	int mRoundFreezeTime;
 	int mRoundTime;

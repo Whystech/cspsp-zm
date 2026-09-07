@@ -262,12 +262,40 @@ int GameStateLoading::Load(int stage) {
 				sscanf(s,"%d %d %d %f %d %d %d %f %f %f %d %d %s",&gun.mId,&gun.mDamage,&gun.mDelay,&gun.mSpread,&gun.mClip,&gun.mNumClips,&gun.mReloadDelay,&gun.mSpeed,&gun.mBulletSpeed,&gun.mViewAngle,&gun.mCost,&gun.mType,gun.mName);
 				gun.mHandQuad = gGunHandQuads[gun.mId];
 				gun.mGroundQuad = gGunGroundQuads[gun.mId];
+				if (gun.mId == 28) {
+					gun.mHandQuad = gGunHandQuads[17];
+					gun.mGroundQuad = gGunGroundQuads[17];
+				}
+				else if (gun.mId == 29) {
+					gun.mHandQuad = gGunHandQuads[11];
+					gun.mGroundQuad = gGunGroundQuads[11];
+				}
+				else if (gun.mId == 30) {
+					gun.mHandQuad = gGunHandQuads[24];
+					gun.mGroundQuad = gGunGroundQuads[24];
+				}
+				else if (gun.mId == 31) {
+					gun.mHandQuad = gGunHandQuads[1];
+					gun.mGroundQuad = gGunGroundQuads[1];
+				}
 				gGuns[i] = gun;
 
 				//strcpy(gGuns[i].mName,name);
 				char buffer[128];
 
-				if (gGuns[i].mId == 25 || gGuns[i].mId == 26 || gGuns[i].mId == 27) {
+				if (gGuns[i].mId == 28) {
+					gGuns[i].mFireSound = mSoundSystem->LoadSample("sfx/m4a1.wav"); // AS-VAL (ID 28) -> M4A1 (ID 17)
+				}
+				else if (gGuns[i].mId == 29) {
+					gGuns[i].mFireSound = mSoundSystem->LoadSample("sfx/mp5.wav"); // KRISS-VECTOR (ID 29) -> MP5 (ID 11)
+				}
+				else if (gGuns[i].mId == 30) {
+					gGuns[i].mFireSound = mSoundSystem->LoadSample("sfx/m249.wav"); // BAR (ID 30) -> M249 (ID 24)
+				}
+				else if (gGuns[i].mId == 31) {
+					gGuns[i].mFireSound = mSoundSystem->LoadSample("sfx/glock.wav"); // GLOCK18AUTO (ID 31) -> GLOCK (ID 1)
+				}
+				else if (gGuns[i].mId == 25 || gGuns[i].mId == 26 || gGuns[i].mId == 27) {
 					gGuns[i].mFireSound = gPinPullSound;
 				}
 				else {
@@ -275,7 +303,19 @@ int GameStateLoading::Load(int stage) {
 					gGuns[i].mFireSound = mSoundSystem->LoadSample(buffer);
 				}
 
-				if (gGuns[i].mId != 0 && gGuns[i].mId != 25 && gGuns[i].mId != 26 && gGuns[i].mId != 27) {
+				if (gGuns[i].mId == 28) {
+					gGuns[i].mReloadSound = mSoundSystem->LoadSample("sfx/m4a1reload.wav"); // AS-VAL (ID 28) -> M4A1 (ID 17)
+				}
+				else if (gGuns[i].mId == 29) {
+					gGuns[i].mReloadSound = mSoundSystem->LoadSample("sfx/mp5reload.wav"); // KRISS-VECTOR (ID 29) -> MP5 (ID 11)
+				}
+				else if (gGuns[i].mId == 30) {
+					gGuns[i].mReloadSound = mSoundSystem->LoadSample("sfx/m249reload.wav"); // BAR (ID 30) -> M249 (ID 24)
+				}
+				else if (gGuns[i].mId == 31) {
+					gGuns[i].mReloadSound = mSoundSystem->LoadSample("sfx/glockreload.wav"); // GLOCK18AUTO (ID 31) -> GLOCK (ID 1)
+				}
+				else if (gGuns[i].mId != 0 && gGuns[i].mId != 25 && gGuns[i].mId != 26 && gGuns[i].mId != 27) {
 					sprintf(buffer,"sfx/%sreload.wav",gGuns[i].mName);
 					gGuns[i].mReloadSound = mSoundSystem->LoadSample(buffer);
 				}

@@ -30,7 +30,7 @@ void GameStatePlay::Create()
 
 	//mWinner = NONE;
 
-	for (int i=0; i<28; i++) {
+	for (int i=0; i<32; i++) {
 		mGuns[i] = gGuns[i];
 	}
 
@@ -369,7 +369,8 @@ void GameStatePlay::CheckInput(float dt)
 	if (mEngine->GetButtonState(PSP_CTRL_CROSS) && !cross)
 	{
 		bool fire = true;
-		if (mPlayer->mGunIndex == SECONDARY) {
+		// Glock 18 Auto (ID 31) repeats while Cross is held; other secondaries are semi-automatic.
+		if (mPlayer->mGunIndex == SECONDARY && mPlayer->GetCurrentGun()->mGun->mId != 31) {
 			if (mPlayer->mHasFired) {
 				fire = false;
 			}
