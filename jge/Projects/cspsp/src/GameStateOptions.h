@@ -14,7 +14,7 @@
 #define OPTIONS 0
 #define CONTROLS 1
 
-#define NUMCONFIGS 8
+#define NUMCONFIGS 9
 
 #define RELATIVE1 0
 #define ABSOLUTE1 1
@@ -34,8 +34,15 @@
 #define INFECTION_DELAY_3 3
 #define INFECTION_DELAY_4 4
 
-#define SAVE 7
-#define CANCEL 8
+#define FREEZE_TIME_0 0
+#define FREEZE_TIME_1 1
+#define FREEZE_TIME_2 2
+#define FREEZE_TIME_3 3
+#define FREEZE_TIME_4 4
+#define FREEZE_TIME_5 5
+
+#define SAVE 8
+#define CANCEL 9
 
 class GameStateOptions:	public GameState,
 	 					public JGuiListener
@@ -54,6 +61,7 @@ private:
 	int menustyle;
 	int respawnstyle;
 	int infectiondelay;
+	int freezetime;
 	char name[16];
 	char* tempname;
 	JTexture* mControlsTex;

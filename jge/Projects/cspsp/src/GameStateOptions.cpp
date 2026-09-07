@@ -18,6 +18,7 @@ void GameStateOptions::Create()
 	friendlyfire = ON;
 	menustyle = ANALOG;
 	respawnstyle = RESPAWN_BASE;
+	freezetime = FREEZE_TIME_3;
 
 
 	//initial check to use nickname
@@ -107,54 +108,65 @@ void GameStateOptions::Create()
 	float x = 160+10;
 
 	mGuiControllers[0] = new JGuiController(0, this, JGUI_STYLE_LEFTRIGHT);
-	mGuiControllers[0]->Add(new MenuItem(RELATIVE1, gFont, "Relative", x, 40, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[0]->Add(new MenuItem(ABSOLUTE1, gFont, "Absolute", x+100, 40, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[0]->Add(new MenuItem(RELATIVE1, gFont, "Relative", x, 38, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[0]->Add(new MenuItem(ABSOLUTE1, gFont, "Absolute", x+100, 38, TYPE_OPTION, JGETEXT_LEFT));
 	mGuiControllers[0]->SetActive(false);
 	strcpy(mConfigs[0],"Movement Style");
 	strcpy(mConfigInfo[0],"Change your player's movement style");
 
 	mGuiControllers[1] = new JGuiController(1, this, JGUI_STYLE_LEFTRIGHT);
-	mGuiControllers[1]->Add(new MenuItem(ON, gFont, "on", x, 65, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[1]->Add(new MenuItem(OFF, gFont, "off", x+50, 65, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[1]->Add(new MenuItem(ON, gFont, "on", x, 58, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[1]->Add(new MenuItem(OFF, gFont, "off", x+50, 58, TYPE_OPTION, JGETEXT_LEFT));
 	mGuiControllers[1]->SetActive(false);
 	strcpy(mConfigs[1],"Music");
 	strcpy(mConfigInfo[1],"Enable or disable the background music in Singleplayer");
 
 	mGuiControllers[2] = new JGuiController(2, this, JGUI_STYLE_LEFTRIGHT);
-	mGuiControllers[2]->Add(new MenuItem(ON, gFont, "on", x, 90, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[2]->Add(new MenuItem(OFF, gFont, "off", x+50, 90, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[2]->Add(new MenuItem(ON, gFont, "on", x, 78, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[2]->Add(new MenuItem(OFF, gFont, "off", x+50, 78, TYPE_OPTION, JGETEXT_LEFT));
 	mGuiControllers[2]->SetActive(false);
 	strcpy(mConfigs[2],"Friendly Fire");
 	strcpy(mConfigInfo[2],"Enable or disable friendly fire in Singleplayer");
 
 	mGuiControllers[3] = new JGuiController(3, this, JGUI_STYLE_LEFTRIGHT);
-	mGuiControllers[3]->Add(new MenuItem(ANALOG, gFont, "Analog", x, 115, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[3]->Add(new MenuItem(DIRPAD, gFont, "Dir Pad", x+100, 115, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[3]->Add(new MenuItem(ANALOG, gFont, "Analog", x, 98, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[3]->Add(new MenuItem(DIRPAD, gFont, "Dir Pad", x+100, 98, TYPE_OPTION, JGETEXT_LEFT));
 	mGuiControllers[3]->SetActive(false);
 	strcpy(mConfigs[3],"Menu Style");
 	strcpy(mConfigInfo[3],"Change the style of the in-game team select and buy menu");
 
 	mGuiControllers[4] = new JGuiController(4, this, JGUI_STYLE_LEFTRIGHT);
 	// Respawn selects the location used only when Infection converts a CT into a Zombie.
-	mGuiControllers[4]->Add(new MenuItem(RESPAWN_INPLACE, gFont, "In-Place", x, 140, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[4]->Add(new MenuItem(RESPAWN_BASE, gFont, "Base", x+100, 140, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[4]->Add(new MenuItem(RESPAWN_INPLACE, gFont, "In-Place", x, 118, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[4]->Add(new MenuItem(RESPAWN_BASE, gFont, "Base", x+100, 118, TYPE_OPTION, JGETEXT_LEFT));
 	mGuiControllers[4]->SetActive(false);
 	strcpy(mConfigs[4],"Respawn");
 	strcpy(mConfigInfo[4],"Choose where infected players respawn");
 
 	mGuiControllers[5] = new JGuiController(5, this, JGUI_STYLE_LEFTRIGHT);
 	// Keep the delay as a numeric menu value so it can be saved and loaded directly.
-	mGuiControllers[5]->Add(new MenuItem(INFECTION_DELAY_0, gFont, "0", x, 165, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[5]->Add(new MenuItem(INFECTION_DELAY_1, gFont, "1", x+35, 165, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[5]->Add(new MenuItem(INFECTION_DELAY_2, gFont, "2", x+70, 165, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[5]->Add(new MenuItem(INFECTION_DELAY_3, gFont, "3", x+105, 165, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[5]->Add(new MenuItem(INFECTION_DELAY_4, gFont, "4", x+140, 165, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[5]->Add(new MenuItem(INFECTION_DELAY_0, gFont, "0", x, 138, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[5]->Add(new MenuItem(INFECTION_DELAY_1, gFont, "1", x+35, 138, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[5]->Add(new MenuItem(INFECTION_DELAY_2, gFont, "2", x+70, 138, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[5]->Add(new MenuItem(INFECTION_DELAY_3, gFont, "3", x+105, 138, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[5]->Add(new MenuItem(INFECTION_DELAY_4, gFont, "4", x+140, 138, TYPE_OPTION, JGETEXT_LEFT));
 	mGuiControllers[5]->SetActive(false);
 	strcpy(mConfigs[5],"Infection Delay");
 	strcpy(mConfigInfo[5],"Choose the infection respawn delay.");
 
-	strcpy(mConfigs[6],"Nickname");
-	strcpy(mConfigInfo[6],"Choose a name (15 characters max)");
+	mGuiControllers[6] = new JGuiController(6, this, JGUI_STYLE_LEFTRIGHT);
+	mGuiControllers[6]->Add(new MenuItem(FREEZE_TIME_0, gFont, "0", x, 158, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[6]->Add(new MenuItem(FREEZE_TIME_1, gFont, "1", x+35, 158, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[6]->Add(new MenuItem(FREEZE_TIME_2, gFont, "2", x+70, 158, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[6]->Add(new MenuItem(FREEZE_TIME_3, gFont, "3", x+105, 158, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[6]->Add(new MenuItem(FREEZE_TIME_4, gFont, "4", x+140, 158, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[6]->Add(new MenuItem(FREEZE_TIME_5, gFont, "5", x+175, 158, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[6]->SetActive(false);
+	strcpy(mConfigs[6],"Freeze Time");
+	strcpy(mConfigInfo[6],"Choose the delay before each local round starts.");
+
+	strcpy(mConfigs[7],"Nickname");
+	strcpy(mConfigInfo[7],"Choose a name (15 characters max)");
 
 	strcpy(mConfigs[NUMCONFIGS-1],"Save");
 	strcpy(mConfigInfo[NUMCONFIGS-1],"Save any changes and return to the main menu");
@@ -258,6 +270,17 @@ void GameStateOptions::Start()
 	}
 	mGuiControllers[5]->SetCurr(infectiondelay);
 
+	freezetime = FREEZE_TIME_3;
+	char* freezeTime = GetConfig("data/config.txt","round_freeze_time");
+	if (freezeTime != NULL) {
+		freezetime = atoi(freezeTime);
+		if (freezetime < FREEZE_TIME_0 || freezetime > FREEZE_TIME_5) {
+			freezetime = FREEZE_TIME_3;
+		}
+		delete freezeTime;
+	}
+	mGuiControllers[6]->SetCurr(freezetime);
+
 	char* nameconfig = GetConfig("data/config.txt","name");
 	if (nameconfig != NULL) {
 		strncpy(name,nameconfig,15);
@@ -309,6 +332,7 @@ void GameStateOptions::Update(float dt)
 			mGuiControllers[3]->SetCurr(menustyle);
 			mGuiControllers[5]->SetCurr(infectiondelay);
 			mGuiControllers[4]->SetCurr(respawnstyle);
+			mGuiControllers[6]->SetCurr(freezetime);
 
 			main = true;
 			mInfoX = -400.0f;
@@ -351,7 +375,7 @@ void GameStateOptions::Update(float dt)
 				}
 
 				if (mEngine->GetButtonClick(PSP_CTRL_CROSS)) {
-					if (index == 6) {
+					if (index == 7) {
 						main = false;
 						gDanzeff->Enable();
 						gDanzeff->mString = name;
@@ -387,6 +411,7 @@ void GameStateOptions::Update(float dt)
 					mGuiControllers[3]->SetCurr(menustyle);
 					mGuiControllers[4]->SetCurr(respawnstyle);
 					mGuiControllers[5]->SetCurr(infectiondelay);
+					mGuiControllers[6]->SetCurr(freezetime);
 
 					main = true;
 				}
@@ -490,11 +515,11 @@ void GameStateOptions::Render()
 		gFont->SetColor(ARGB(255,255,255,255));
 
 		if (main) {
-			mRenderer->FillRect(0,35+index*25,SCREEN_WIDTH,25,ARGB(255,0,0,0));
+			mRenderer->FillRect(0,35+index*20,SCREEN_WIDTH,20,ARGB(255,0,0,0));
 			gFont->DrawShadowedString("[X] Select     [O] Cancel and Return to Menu",SCREEN_WIDTH_2,SCREEN_HEIGHT_F-20,JGETEXT_CENTER);
 		}
 		else {
-			mRenderer->FillRect(0,35+index*25,SCREEN_WIDTH,25,ARGB(100,255,128,0));
+			mRenderer->FillRect(0,35+index*20,SCREEN_WIDTH,20,ARGB(100,255,128,0));
 			if (!gDanzeff->mIsActive) {
 				gFont->DrawShadowedString("[DIR PAD/ANALOG] Change Selection    [X] Select    [O] Cancel",SCREEN_WIDTH_2,SCREEN_HEIGHT_F-20,JGETEXT_CENTER);
 			}
@@ -518,7 +543,7 @@ void GameStateOptions::Render()
 			else {
 				gFont->SetColor(ARGB(255,255,255,255));
 			}
-			gFont->DrawShadowedString(mConfigs[i],x,38+25*i,JGETEXT_RIGHT);
+			gFont->DrawShadowedString(mConfigs[i],x,38+20*i,JGETEXT_RIGHT);
 			if (mGuiControllers[i] != NULL) {
 				mGuiControllers[i]->Render();
 			}
@@ -541,11 +566,11 @@ void GameStateOptions::Render()
 		gFont->SetColor(ARGB(255,255,255,255));
 		gFont->SetScale(0.75f);
 		if (!gDanzeff->mIsActive) {
-			gFont->DrawShadowedString(name,160+10,190);
+			gFont->DrawShadowedString(name,160+10,178);
 		}
 		else if (gDanzeff->mIsActive) {
-			gFont->DrawShadowedString(tempname,160+10,190);
-			gFont->DrawShadowedString("|",160+10+gFont->GetStringWidth(tempname),190);
+			gFont->DrawShadowedString(tempname,160+10,178);
+			gFont->DrawShadowedString("|",160+10+gFont->GetStringWidth(tempname),178);
 			gDanzeff->Render(SCREEN_WIDTH-175,SCREEN_HEIGHT-175);
 		}
 	} 
@@ -622,6 +647,10 @@ void GameStateOptions::Save()
 	fprintf(file,"%d",infectiondelay);
 	fputs("\r\n",file);
 
+	fputs("round_freeze_time = ",file);
+	fprintf(file,"%d",freezetime);
+	fputs("\r\n",file);
+
 	fputs("name = ",file);
 	fputs(name,file);
 	fputs("\r\n",file);
@@ -662,6 +691,9 @@ void GameStateOptions::ButtonPressed(int controllerId, int controlId)
 		infectiondelay = controlId;
 		// Persist the delay immediately so changing this selector cannot be lost.
 		Save();
+		break;
+	case 6:
+		freezetime = controlId;
 		break;
 	}
 

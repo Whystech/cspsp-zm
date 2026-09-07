@@ -885,6 +885,14 @@ void GameStatePlay::NewGame() {
 	mAStar->Rebuild(&(mMap->mNodes),mGrid);
 
 	mRoundFreezeTime = 3;
+	char* freezeTime = GetConfig("data/config.txt","round_freeze_time");
+	if (freezeTime != NULL) {
+		mRoundFreezeTime = atoi(freezeTime);
+		if (mRoundFreezeTime < 0 || mRoundFreezeTime > 5) {
+			mRoundFreezeTime = 3;
+		}
+		delete freezeTime;
+	}
 	mRoundTime = 120;
 	mRoundEndTime = 3;
 	mBuyTime = 60;
