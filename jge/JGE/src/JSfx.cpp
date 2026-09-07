@@ -184,8 +184,14 @@ JSample *JSoundSystem::LoadSample(const char *fileName)
 	return sample;*/
 
 	JSample *sample = new JSample();
-	if (sample)
-		sample->mSample = WAV_LoadFN((char*)fileName);
+	if (sample) {
+		sample->mSample = NULL;
+		FILE *file = fopen(fileName, "rb");
+		if (file != NULL) {
+			fclose(file);
+			sample->mSample = WAV_LoadFN((char*)fileName);
+		}
+	}
 
 	return sample;
 }

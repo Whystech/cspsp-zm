@@ -1639,7 +1639,7 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 					break;
 				}
 
-				if (id < 0 || id >= 28) break;
+				if (id < 0 || id >= MAX_GUNS) break;
 				
 				//if (mGuns[id] != NULL) break;
 

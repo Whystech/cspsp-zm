@@ -287,13 +287,13 @@ void Person::Update(float dt)
 
 	//JSprite::Update(dt);
 
-	if (mGuns[mGunIndex]->mGun->mId == 7 || mGuns[mGunIndex]->mGun->mId == 8) { //HERE
+	if (mGuns[mGunIndex]->mGun->mPellets > 1) {
 		mRecoilAngle = mGuns[mGunIndex]->mGun->mSpread;
 	}
 
 	mLastFireAngle = mRotation;
 	if (mState == NORMAL) {
-		if (mGuns[mGunIndex]->mGun->mId != 7 && mGuns[mGunIndex]->mGun->mId != 8) {
+		if (mGuns[mGunIndex]->mGun->mPellets == 1) {
 			mRecoilAngle -= mGuns[mGunIndex]->mGun->mSpread/100.0f*dt;
 			if (mRecoilAngle < 0) {
 				mRecoilAngle = 0.0f;
@@ -308,7 +308,7 @@ void Person::Update(float dt)
 			mRecoilAngle += mGuns[mGunIndex]->mGun->mSpread/50.0f*dt;
 		}
 
-		if (mGuns[mGunIndex]->mGun->mId == 16 || mGuns[mGunIndex]->mGun->mId == 21 || mGuns[mGunIndex]->mGun->mId == 22 || mGuns[mGunIndex]->mGun->mId == 23) {
+		if (mGuns[mGunIndex]->mGun->mScope >= SCOPE_MEDIUM) {
 			mRecoilAngle = mGuns[mGunIndex]->mGun->mSpread;
 		}
 		if (mRecoilAngle > mGuns[mGunIndex]->mGun->mSpread) {
@@ -337,7 +337,7 @@ void Person::Update(float dt)
 			}
 			SetState(NORMAL);
 		}
-		if (mGuns[mGunIndex]->mGun->mId != 7 && mGuns[mGunIndex]->mGun->mId != 8) {
+		if (mGuns[mGunIndex]->mGun->mPellets == 1) {
 			mRecoilAngle -= mGuns[mGunIndex]->mGun->mSpread/100.0f*dt;
 			if (mRecoilAngle < 0.0f) {
 				mRecoilAngle = 0.0f;
@@ -619,26 +619,17 @@ std::vector<Bullet*> Person::Fire()
 				float w = 24*cosf(mFacingAngle);
 				float theta = mFacingAngle;
 				float speed = 0.3f*mGuns[mGunIndex]->mGun->mBulletSpeed;
-				if (mGuns[mGunIndex]->mGun->mId == 7) {
-					theta -= mGuns[mGunIndex]->mGun->mSpread/2;//m0.36f;
-					float step = mGuns[mGunIndex]->mGun->mSpread/5;
-					for (int i=0; i<6; i++) {
-						theta += (rand()%11)/100.0f-0.05f;
+				if (mGuns[mGunIndex]->mGun->mPellets > 1) {
+					int pelletCount = mGuns[mGunIndex]->mGun->mPellets;
+					theta -= mGuns[mGunIndex]->mGun->mSpread/2;
+					float step = mGuns[mGunIndex]->mGun->mSpread/(pelletCount-1);
+					int randomSteps = pelletCount == 4 ? 10 : 11;
+					for (int i=0; i<pelletCount; i++) {
+						theta += (rand()%randomSteps)/100.0f-0.05f;
 						bullet = new Bullet(mX+w,mY+h,mX,mY,theta,speed,abs(mGuns[mGunIndex]->mGun->mDamage+rand()%17-8),this);
 						bullets.push_back(bullet);
 						mBullets->push_back(bullet);
-						theta += step;//0.144f;
-					}
-				}
-				else if (mGuns[mGunIndex]->mGun->mId == 8) {
-					theta -= mGuns[mGunIndex]->mGun->mSpread/2;//0.36f;
-					float step = mGuns[mGunIndex]->mGun->mSpread/3;
-					for (int i=0; i<4; i++) {
-						theta += (rand()%10)/100.0f-0.05f;
-						bullet = new Bullet(mX+w,mY+h,mX,mY,theta,speed,abs(mGuns[mGunIndex]->mGun->mDamage+rand()%17-8),this);
-						bullets.push_back(bullet);
-						mBullets->push_back(bullet);
-						theta += step; //0.24f;
+						theta += step;
 					}
 				}
 				else {

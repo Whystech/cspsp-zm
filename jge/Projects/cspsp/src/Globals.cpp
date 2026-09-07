@@ -27,7 +27,7 @@ JLBFont* gHudFont;
 JQuad* gBgQuad;
 JQuad* gLogoQuad;
 
-Gun gGuns[32];
+Gun gGuns[MAX_GUNS];
 JQuad** gGunHandQuads;
 JQuad** gGunGroundQuads;
 JQuad* gPlayersQuads[2][4][NUM_QUADS];

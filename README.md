@@ -3,11 +3,8 @@
 ![screenshot1]
 ![screenshot2]
 
-<<<<<<< HEAD
 CSPSP:ZM is a homebrew game mod for the Sony PSP's CSPSP, created in 2026.
-=======
-CSPSP:ZM is a homebrew game mod for the Sony PSP based on CSPSP, created in 2026.
->>>>>>> 762d8795c1e6cee138cc5113c0f3c789ad38d9b1
+
 It is a 2d top-down shooter mod based on Kevinbchen's CSPSP. The mod only works offline. 
 It has 2 game modes: Infection and Extermination.
 
@@ -20,8 +17,6 @@ The game is still available to download - see the [Releases](https://github.com/
 
 Simply copy the game into ms0:/PSP/GAME/ like any other homebrew. 
 CSPSP ZM is based on the CSPSP v1.92b release.
-
-![controls](https://user-images.githubusercontent.com/2881968/173964080-ab480a79-af94-454a-bdfe-a2a56b491cad.png)
 
 ### PPSSPP
 You can also run CSPSP using the [PPSSPP](https://www.ppsspp.org/) emulator, though the latest official release does not yet support online functionality. However, online/infrastructure support is in development (https://github.com/hrydgard/ppsspp/issues/14256), and you can find links to test builds that do already support CSPSP online (e.g. https://github.com/hrydgard/ppsspp/issues/14256#issuecomment-1136256118).

@@ -1417,14 +1417,14 @@ void Game::UpdateCamera(float dt)
 
 		Gun *gun = mSpec->GetCurrentGun()->mGun;
 		if (mSpec->mGunIndex == PRIMARY) {
-			if (gun->mId == 19 ||gun->mId == 20) {
+			if (gun->mScope == SCOPE_LOW) {
 				a = 800;
 			}
-			else if (gun->mId == 21 || gun->mId == 22 || mPlayer->GetCurrentGun()->mGun->mId == 23) {
+			else if (gun->mScope == SCOPE_HIGH) {
 				a = 1400;
 				b = 0.10f;
 			}
-			else if (gun->mId == 16) {
+			else if (gun->mScope == SCOPE_MEDIUM) {
 				a = 1100;
 				b = 0.20f;
 			}
@@ -3020,6 +3020,12 @@ void Game::NewSpec(Person* attacker, int index) {
 
 void Game::Buy(int index) {
 	bool hasMoney = true;
+	if (index < -1 || index >= MAX_GUNS ||
+		(index >= 0 && (mGuns[index].mId != index || mGuns[index].mName[0] == '\0' ||
+		mGuns[index].mHandQuad == NULL || mGuns[index].mGroundQuad == NULL))) {
+		mHud->SetMessage("Weapon is unavailable!");
+		return;
+	}
 	if (index == -1) {
 		if (mPlayer->mGuns[PRIMARY] != NULL) {
 			if (mPlayer->mGuns[PRIMARY]->mRemainingAmmo != (mPlayer->mGuns[PRIMARY]->mGun->mNumClips-1)*mPlayer->mGuns[PRIMARY]->mGun->mClip) {
