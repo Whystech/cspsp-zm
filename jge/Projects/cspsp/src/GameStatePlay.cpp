@@ -839,6 +839,28 @@ void GameStatePlay::Render()
 }
 
 void GameStatePlay::NewGame() {
+	static char botNames[][16] = {
+		"Albert", "Allen", "Bert", "Bob", "Cecil", "Clarence", "Elliot", "Elmer",
+		"Ernie", "Eugene", "Fergus", "Ferris", "Frank", "Frasier", "Fred", "George",
+		"Graham", "Harvey", "Irwin", "Lester", "Marvin", "Neil", "Niles", "Oliver",
+		"Opie", "Toby", "Ulric", "Ulysses", "Uri", "Waldo", "Wally", "Walt",
+		"Wesley", "Yanni", "Yogi", "Yuri", "Alfred", "Bill", "Brandon", "Calvin",
+		"Dean", "Dustin", "Ethan", "Harold", "Henry", "Irving", "Jason", "Josh",
+		"Martin", "Nick", "Norm", "Orin", "Pat", "Perry", "Ron", "Shawn",
+		"Tim", "Will", "Wyatt", "Adam", "Andy", "Chris", "Colin", "Dennis",
+		"Doug", "Gary", "Grant", "Greg", "Ian", "Jerry", "Jon", "Keith",
+		"Mark", "Matt", "Mike", "Nate", "Paul", "Scott", "Steve", "Tom",
+		"Yahn", "Adrian", "Brad", "Connor", "Dave", "Dan", "Derek", "Don",
+		"Eric", "Erik", "Finn", "Jeff", "Kevin", "Reed", "Rick", "Ted",
+		"Troy", "Wade", "Wayne", "Xander", "Xavier", "Chad", "Chet", "Gabe",
+		"Hank", "Ivan", "Jim", "Joe", "John", "Tony", "Tyler", "Victor",
+		"Vladimir", "Zane", "Zim", "Cory", "Quinn", "Seth", "Vinny", "Arnold",
+		"Brett", "Kurt", "Kyle", "Moe", "Quade", "Quintin", "Ringo", "Rip",
+		"Zach", "Cliffe", "Crusher", "Gunner", "Minh", "Pheonix", "Rock", "Shark",
+		"Steel", "Stone", "Wolf", "Zed"
+	};
+	const int botNameCount = sizeof(botNames)/sizeof(botNames[0]);
+	const int botNameOffset = rand()%botNameCount;
 
 	char* map;
 	#ifdef WIN32
@@ -872,14 +894,10 @@ void GameStatePlay::NewGame() {
 	//std::vector<Person*> mTs;
 
 	for (int i=0;i<mNumCTs;i++) {
-		char buffer[10];
-		char numberbuffer[3];
-		sprintf(numberbuffer,"%i",i); 
-		strcpy(buffer,"CTbot");
-		strcat(buffer,numberbuffer);
+		char* botName = botNames[(botNameOffset+i)%botNameCount];
 
 		int type = rand()%4;
-		AI *ct = new AI(gPlayersQuads[CT][type], gPlayersDeadQuads[CT][type], &mBullets, &mGunObjects, mMap->mNodes, CT, buffer, ABSOLUTE1);
+		AI *ct = new AI(gPlayersQuads[CT][type], gPlayersDeadQuads[CT][type], &mBullets, &mGunObjects, mMap->mNodes, CT, botName, ABSOLUTE1);
 		//ct->mSpawn = mMap->mCTSpawns[i];
 		//ct->SetPosition(mMap->mCTSpawns[i]->x,mMap->mCTSpawns[i]->y);
 		//ct->SetTotalRotation(M_PI_2);
@@ -894,14 +912,10 @@ void GameStatePlay::NewGame() {
 	}
 
 	for (int i=0;i<mNumTs;i++) {
-		char buffer[10];
-		char numberbuffer[3];
-		sprintf(numberbuffer,"%i",i); 
-		strcpy(buffer,"Tbot");
-		strcat(buffer,numberbuffer);
+		char* botName = botNames[(botNameOffset+mNumCTs+i)%botNameCount];
 
 		int type = rand()%4;
-		AI *t = new AI(gPlayersQuads[T][type], gPlayersDeadQuads[T][type], &mBullets, &mGunObjects, mMap->mNodes, T, buffer, ABSOLUTE1);
+		AI *t = new AI(gPlayersQuads[T][type], gPlayersDeadQuads[T][type], &mBullets, &mGunObjects, mMap->mNodes, T, botName, ABSOLUTE1);
 		//t->mSpawn = mMap->mTSpawns[i];
 		//t->SetPosition(mMap->mTSpawns[i]->x,mMap->mTSpawns[i]->y);
 		//t->SetTotalRotation(M_PI_2);
