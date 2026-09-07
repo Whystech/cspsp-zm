@@ -34,7 +34,7 @@ private:
 
 	Person* mPlayer;
 	int mChoice;
-	Gun mGuns[28];
+	Gun mGuns[32];
 
 	float angle;
 

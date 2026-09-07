@@ -8,7 +8,7 @@ JRenderer* BuyMenu::mRenderer = NULL;
 //------------------------------------------------------------------------------------------------
 BuyMenu::BuyMenu(Person* player, Gun guns[])
 {
-	for (int i=0; i<28; i++) {
+	for (int i=0; i<32; i++) {
 		mGuns[i] = guns[i];
 	}
 
@@ -45,6 +45,8 @@ BuyMenu::BuyMenu(Person* player, Gun guns[])
 			mCategories[CT][PISTOLS].buttons.push_back(Button(i,guns[i].mName));
 		}
 	}
+	mCategories[T][PISTOLS].buttons.push_back(Button(31,guns[31].mName));
+	mCategories[CT][PISTOLS].buttons.push_back(Button(31,guns[31].mName));
 	for (int i=7; i<=8; i++) {
 		mCategories[T][SHOTGUNS].buttons.push_back(Button(i,guns[i].mName));
 		mCategories[CT][SHOTGUNS].buttons.push_back(Button(i,guns[i].mName));
@@ -61,6 +63,8 @@ BuyMenu::BuyMenu(Person* player, Gun guns[])
 			mCategories[CT][SMG].buttons.push_back(Button(i,guns[i].mName));
 		}
 	}	
+	mCategories[T][SMG].buttons.push_back(Button(29,guns[29].mName));
+	mCategories[CT][SMG].buttons.push_back(Button(29,guns[29].mName));
 	for (int i=14; i<=23; i++) {
 		if (i == 14 || i == 17 || i == 19 || i == 21) {
 			mCategories[CT][RIFLES].buttons.push_back(Button(i,guns[i].mName));
@@ -73,8 +77,12 @@ BuyMenu::BuyMenu(Person* player, Gun guns[])
 			mCategories[CT][RIFLES].buttons.push_back(Button(i,guns[i].mName));
 		}
 	}	
+	mCategories[T][RIFLES].buttons.push_back(Button(28,guns[28].mName));
+	mCategories[CT][RIFLES].buttons.push_back(Button(28,guns[28].mName));
 	mCategories[T][MACHINEGUNS].buttons.push_back(Button(24,guns[24].mName));
 	mCategories[CT][MACHINEGUNS].buttons.push_back(Button(24,guns[24].mName));
+	mCategories[T][MACHINEGUNS].buttons.push_back(Button(30,guns[30].mName));
+	mCategories[CT][MACHINEGUNS].buttons.push_back(Button(30,guns[30].mName));
 
 	for (int i=25; i<=27; i++) {
 		mCategories[T][EQUIPMENT].buttons.push_back(Button(i,guns[i].mName));
@@ -319,23 +327,23 @@ void BuyMenu::Render()
 			value = mGuns[id].mDamage;
 			min = 5;
 			max = 40;
-			if (id >= 1 && id <= 6) { //pistols
+			if ((id >= 1 && id <= 6) || id == 31) { //pistols
 			}
 			else if (id >= 7 && id <= 8) { //shotguns
 				if (id == 7) value *= 6;
 				else if (id == 8) value *= 4;
 				max = 100;
 			}
-			else if (id >= 9 && id <= 13) { //smgs
+			else if ((id >= 9 && id <= 13) || id == 29) { //smgs
 			}
 			else if (id == 16 || (id >= 21 && id <= 23)) { //snipers
 				max = 100;
 			}
-			else if (id >= 14 && id <= 20) { //rifles
+			else if ((id >= 14 && id <= 20) || id == 28) { //rifles
 			}
-			else if (id == 24) { //machine guns
+			else if (id == 24 || id == 30) { //machine guns
 			}
-			else if (id >= 25) { //nades
+			else if (id >= 25 && id <= 27) { //nades
 				max = 100;
 			}
 			width = 90*((value-min)/(max-min));
@@ -352,20 +360,20 @@ void BuyMenu::Render()
 			value = M_PI-mGuns[id].mSpread;
 			min = M_PI_2+M_PI_4/2;
 			max = M_PI;
-			if (id >= 1 && id <= 6) { //pistols
+			if ((id >= 1 && id <= 6) || id == 31) { //pistols
 			}
 			else if (id >= 7 && id <= 8) { //shotguns
 			}
-			else if (id >= 9 && id <= 13) { //smgs
+			else if ((id >= 9 && id <= 13) || id == 29) { //smgs
 			}
 			else if (id == 16 || (id >= 21 && id <= 23)) { //snipers
 				min = 0;
 			}
-			else if (id >= 14 && id <= 20) { //rifles
+			else if ((id >= 14 && id <= 20) || id == 28) { //rifles
 			}
-			else if (id == 24) { //machine guns
+			else if (id == 24 || id == 30) { //machine guns
 			}
-			else if (id >= 25) { //nades
+			else if (id >= 25 && id <= 27) { //nades
 				value = 0;
 			}
 
@@ -381,23 +389,23 @@ void BuyMenu::Render()
 			value = 2000-mGuns[id].mDelay;
 			min = 1850;
 			max = 1950;
-			if (id >= 1 && id <= 6) { //pistols
+			if ((id >= 1 && id <= 6) || id == 31) { //pistols
 			}
 			else if (id >= 7 && id <= 8) { //shotguns
 				min = 500;
 				max = 3000;
 			}
-			else if (id >= 9 && id <= 13) { //smgs
+			else if ((id >= 9 && id <= 13) || id == 29) { //smgs
 			}
 			else if (id == 16 || (id >= 21 && id <= 23)) { //snipers
 				min = 250;
 				max = 3500;
 			}
-			else if (id >= 14 && id <= 20) { //rifles
+			else if ((id >= 14 && id <= 20) || id == 28) { //rifles
 			}
-			else if (id == 24) { //machine guns
+			else if (id == 24 || id == 30) { //machine guns
 			}
-			else if (id >= 25) { //nades
+			else if (id >= 25 && id <= 27) { //nades
 				value = 0;
 			}
 			width = 90*((value-min)/(max-min));

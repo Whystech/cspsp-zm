@@ -57,7 +57,7 @@ extern JLBFont* gHudFont;
 extern JQuad* gBgQuad;
 extern JQuad* gLogoQuad;
 
-extern Gun gGuns[28];
+extern Gun gGuns[32];
 extern JQuad** gGunHandQuads;
 extern JQuad** gGunGroundQuads;
 extern JQuad* gPlayersQuads[2][4][NUM_QUADS];
