@@ -76,6 +76,7 @@ public:
 	void CheckCollisions();
 	void NewGame();
 	void ResetRound();
+	void ResetHordeWave();
 	void Explode(Grenade* grenade);
 	void StopInput();
 

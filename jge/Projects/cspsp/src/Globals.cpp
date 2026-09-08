@@ -38,6 +38,10 @@ JQuad* gDecalQuads[5];
 JQuad* gMuzzleFlashQuads[3];
 JQuad* gHealthBorderQuad;
 JQuad* gHealthFillQuad;
+JQuad* gArmorBorderQuad;
+JQuad* gArmorFillQuad;
+JQuad* gArmorGroundQuad;
+JQuad* gHealthGroundQuad;
 JQuad* gAmmoBarQuad;
 JQuad* gIconQuad;
 JTexture* gIconTexture;
@@ -100,6 +104,22 @@ char* GetConfig(const char *location, char searchstr[]) {
 	}
 	fclose(file);
 	return NULL;
+}
+
+int GetArmorDamageReduction()
+{
+	static int damageReduction = -1;
+	if (damageReduction < 0) {
+		damageReduction = 30;
+		char* value = GetConfig("data/armor.txt","damage_reduction");
+		if (value != NULL) {
+			damageReduction = atoi(value);
+			if (damageReduction < 0) damageReduction = 0;
+			if (damageReduction > 100) damageReduction = 100;
+			delete[] value;
+		}
+	}
+	return damageReduction;
 }
 
 u32 gLastKey;

@@ -29,6 +29,12 @@
 #define KNIFE 2
 #define GRENADE 3
 
+#define BUY_ITEM_ARMOR -2
+#define BUY_ITEM_HEALTH -4
+#define ARMOR_COST 650
+#define HEALTH_COST 500
+#define MAX_ARMOR 100
+
 #define BODY 0
 #define RIGHTARM 1
 #define RIGHTHAND 2
@@ -120,6 +126,7 @@ public:
 	float mFadeTime;
 	float mStepTime;
 	int mHealth;
+	int mArmor;
 	int mMoney;
 	float mFacingAngle;
 	float mRecoilAngle;

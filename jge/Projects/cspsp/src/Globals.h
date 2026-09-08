@@ -36,6 +36,7 @@ extern int gSinglePlayerMode;
 
 #define SINGLEPLAYER_INFECTION 0
 #define SINGLEPLAYER_ELIMINATION 1
+#define SINGLEPLAYER_HORDE 2
 extern bool gReconnect;
 extern bool gLogout;
 extern char gName[32];
@@ -68,6 +69,10 @@ extern JQuad* gDecalQuads[5];
 extern JQuad* gMuzzleFlashQuads[3];
 extern JQuad* gHealthBorderQuad;
 extern JQuad* gHealthFillQuad;
+extern JQuad* gArmorBorderQuad;
+extern JQuad* gArmorFillQuad;
+extern JQuad* gArmorGroundQuad;
+extern JQuad* gHealthGroundQuad;
 extern JQuad* gAmmoBarQuad;
 extern JQuad* gIconQuad;
 extern JTexture* gIconTexture;
@@ -108,6 +113,7 @@ extern Socket* gSocket;
 extern HttpManager* gHttpManager;
 
 extern char* GetConfig(const char *location, char searchstr[]);
+extern int GetArmorDamageReduction();
 
 extern u32 gLastKey;
 extern float gKeyRepeatDelay;

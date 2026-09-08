@@ -27,10 +27,11 @@ void GameStateMenu::Create()
 		mGuiController->Add(new MenuItem(5, gFont, "Quit", SCREEN_WIDTH-20, 230, TYPE_MAIN, JGETEXT_RIGHT));
 	}
 	mSingleplayerController = new JGuiController(101, this);
-	// Infection and Elimination share map selection but use different rules in GameStatePlay.
+	// Local modes share map selection but use different rules in GameStatePlay.
 	mSingleplayerController->Add(new MenuItem(1, gFont, "Infection", SCREEN_WIDTH-20, 130, TYPE_MAIN, JGETEXT_RIGHT, true));
 	mSingleplayerController->Add(new MenuItem(2, gFont, "Extermination", SCREEN_WIDTH-20, 155, TYPE_MAIN, JGETEXT_RIGHT));
-	mSingleplayerController->Add(new MenuItem(3, gFont, "Return", SCREEN_WIDTH-20, 180, TYPE_MAIN, JGETEXT_RIGHT));
+	mSingleplayerController->Add(new MenuItem(3, gFont, "Horde", SCREEN_WIDTH-20, 180, TYPE_MAIN, JGETEXT_RIGHT));
+	mSingleplayerController->Add(new MenuItem(4, gFont, "Return", SCREEN_WIDTH-20, 205, TYPE_MAIN, JGETEXT_RIGHT));
 	mSingleplayerController->SetActive(false);
 }
 
@@ -174,7 +175,7 @@ void GameStateMenu::Render()
 	else if (mStage == STAGE_SINGLEPLAYER)
 	{
 		// This submenu sets gSinglePlayerMode before the map-selection state starts.
-		mRenderer->FillRect(0,128,SCREEN_WIDTH,75,ARGB(100,0,0,0));
+		mRenderer->FillRect(0,128,SCREEN_WIDTH,100,ARGB(100,0,0,0));
 		int i = mSingleplayerController->GetCurr();
 		mRenderer->FillRect(0,128+i*25,SCREEN_WIDTH,25,ARGB(255,0,0,0));
 		mSingleplayerController->Render();
@@ -183,6 +184,7 @@ void GameStateMenu::Render()
 		char info[256];
 		if (i == 0) strcpy(info,"Play infection against bots");
 		else if (i == 1) strcpy(info,"Eliminate the opposing team");
+		else if (i == 2) strcpy(info,"Survive consecutive zombie waves");
 		else strcpy(info,"Return to the main menu");
 		gFont->DrawString(info,10,133+i*25);
 	}
@@ -250,6 +252,10 @@ void GameStateMenu::ButtonPressed(int controllerId, int controlId)
 			mParent->SetNextState(GAME_STATE_NEW_GAME);
 		}
 		else if (controlId == 3) {
+			gSinglePlayerMode = SINGLEPLAYER_HORDE;
+			mParent->SetNextState(GAME_STATE_NEW_GAME);
+		}
+		else if (controlId == 4) {
 			mStage = STAGE_MENU;
 			mSingleplayerController->SetActive(false);
 		}

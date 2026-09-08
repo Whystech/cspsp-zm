@@ -196,6 +196,8 @@ void GameStatePlay::Start()
 
 	mGameType = TEAM;
 	mIsInfectionMode = (gSinglePlayerMode == SINGLEPLAYER_INFECTION);
+	mIsHordeMode = (gSinglePlayerMode == SINGLEPLAYER_HORDE);
+	mHordeWave = 1;
 	mRespawnTimer = 3000.0f;
 	mFFAWinner = NULL;
 
@@ -674,7 +676,7 @@ void GameStatePlay::Update(float dt)
 	else if (mBuyMenu->mIsActive) {
 		mBuyMenu->Update(dt);
 		if (mBuyMenu->mIsSelected) {
-			if (mBuyTimer > 0.0f || mGameType != TEAM) {
+			if (mIsHordeMode || mBuyTimer > 0.0f || mGameType != TEAM) {
 				int choice = mBuyMenu->GetChoice();
 				Buy(choice);
 			}
@@ -755,8 +757,15 @@ void GameStatePlay::Update(float dt)
 		}
 	}
 
-	if (mRoundEndTimer >= mRoundEndTime*0.33f) {
-		ResetRound();
+	float roundEndThreshold = (mIsHordeMode && mWinner == CT) ? mRoundEndTime : mRoundEndTime*0.33f;
+	if (mRoundEndTimer >= roundEndThreshold) {
+		if (mIsHordeMode && mWinner == CT) {
+			ResetHordeWave();
+		}
+		else {
+			if (mIsHordeMode) mHordeWave = 1;
+			ResetRound();
+		}
 	}
 	/*if (mNumRemainingCTs == 0 || mNumRemainingTs == 0) {
 		mRoundEndTimer += dt;
@@ -837,6 +846,13 @@ void GameStatePlay::Update(float dt)
 void GameStatePlay::Render() 
 {
 	Game::Render();
+	if (mIsHordeMode) {
+		char buffer[32];
+		sprintf(buffer,"Wave %d",mHordeWave);
+		gFont->SetScale(0.75f);
+		gFont->SetColor(ARGB(255,255,200,0));
+		gFont->DrawShadowedString(buffer,SCREEN_WIDTH_2,8,JGETEXT_CENTER);
+	}
 }
 
 void GameStatePlay::NewGame() {
@@ -892,6 +908,19 @@ void GameStatePlay::NewGame() {
 			mRoundFreezeTime = 3;
 		}
 		delete freezeTime;
+	}
+	mHordeRegroupStyle = RESPAWN_BASE;
+	char* hordeRegroup = GetConfig("data/config.txt","horde_regroup");
+	if (hordeRegroup != NULL) {
+		if (strcmp(hordeRegroup,"inplace") == 0) mHordeRegroupStyle = RESPAWN_INPLACE;
+		delete hordeRegroup;
+	}
+	mHordeWaveDelay = 3;
+	char* hordeWaveDelay = GetConfig("data/config.txt","horde_wave_delay");
+	if (hordeWaveDelay != NULL) {
+		int seconds = atoi(hordeWaveDelay);
+		if (seconds == 3 || seconds == 5 || seconds == 10 || seconds == 15) mHordeWaveDelay = seconds;
+		delete hordeWaveDelay;
 	}
 	mRoundTime = 120;
 	mRoundEndTime = 3;
@@ -991,10 +1020,12 @@ void GameStatePlay::ResetRound() {
 		delete mBullets[i];
 	}
 	mBullets.clear();
-	for (unsigned int i=0;i<mGunObjects.size();i++) {
-		delete mGunObjects[i];
+	if (!mIsHordeMode) {
+		for (unsigned int i=0;i<mGunObjects.size();i++) {
+			delete mGunObjects[i];
+		}
+		mGunObjects.clear();
 	}
-	mGunObjects.clear();
 	
 	for (int i=0; i<3; i++) {
 		gParticleSystems[i]->Stop(true);
@@ -1095,6 +1126,70 @@ void GameStatePlay::ResetRound() {
 
 	Hash();
 }	
+
+void GameStatePlay::ResetHordeWave() {
+	mTimeMultiplier = 1.0f;
+	mHordeWave++;
+	mNumRounds++;
+	mRoundState = FREEZETIME;
+	mRoundTimer = mHordeWaveDelay;
+	mRoundEndTimer = 0;
+	mBuyTimer = mBuyTime;
+	mWinner = NONE;
+	mFFAWinner = NULL;
+
+	mGrid->ClearCells();
+	for (unsigned int i=0; i<mBullets.size(); i++) delete mBullets[i];
+	mBullets.clear();
+	for (int i=0; i<3; i++) gParticleSystems[i]->Stop(true);
+	mMap->ClearDecals();
+
+	int ctspawnindex = rand()%mMap->mNumCTs;
+	int tspawnindex = rand()%mMap->mNumTs;
+	mNumRemainingCTs = 0;
+	mNumRemainingTs = 0;
+
+	for (unsigned int i=0; i<mPeople.size(); i++) {
+		Person* person = mPeople[i];
+		if (person->mTeam == CT) {
+			if (person->mState == DEAD) continue;
+			person->mHealth = 100;
+			person->mMoney += 3250;
+			if (person->mMoney > 16000) person->mMoney = 16000;
+			person->mIsActive = (mHordeRegroupStyle == RESPAWN_INPLACE);
+			person->SetMoveState(NOTMOVING);
+			person->mSpeed = 0.0f;
+			person->mIsFlashed = false;
+			if (mHordeRegroupStyle == RESPAWN_BASE) {
+				person->Teleport(mMap->mCTSpawns[ctspawnindex]->x,mMap->mCTSpawns[ctspawnindex]->y);
+				ctspawnindex = (ctspawnindex+1)%mMap->mNumCTs;
+			}
+			for (int slot=PRIMARY; slot<=GRENADE; slot++) {
+				GunObject* weapon = person->mGuns[slot];
+				if (weapon == NULL) continue;
+				weapon->mClipAmmo = weapon->mGun->mClip;
+				weapon->mRemainingAmmo = weapon->mGun->mClip*(weapon->mGun->mNumClips-1);
+			}
+			mNumRemainingCTs++;
+		}
+		else if (person->mTeam == T) {
+			bool keepCorpse = person->mHasCorpse;
+			person->Reset();
+			person->mHasCorpse = keepCorpse;
+			person->Teleport(mMap->mTSpawns[tspawnindex]->x,mMap->mTSpawns[tspawnindex]->y);
+			tspawnindex = (tspawnindex+1)%mMap->mNumTs;
+			mNumRemainingTs++;
+		}
+	}
+
+	if (mPlayer->mState != DEAD) {
+		mSpec = mPlayer;
+		mSpecState = NONE;
+		mCamera->mX = mPlayer->mX;
+		mCamera->mY = mPlayer->mY;
+	}
+	Hash();
+}
 
 
 void GameStatePlay::Explode(Grenade* grenade) {

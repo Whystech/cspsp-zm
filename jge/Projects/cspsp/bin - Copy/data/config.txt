@@ -1,9 +1,0 @@
-movement = absolute
-music = off
-ff = off
-menu = dirpad
-respawn = base
-infection_respawn_delay = 1
-round_freeze_time = 1
-name = PPSSPP
-map = gunstest

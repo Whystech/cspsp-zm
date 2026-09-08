@@ -44,8 +44,27 @@ BuyMenu::BuyMenu(Person* player, Gun guns[])
 			mCategories[CT][guns[i].mBuyCategory].buttons.push_back(Button(i,guns[i].mName));
 		}
 	}
+	if (!mPlayer->mIsPlayerOnline) {
+		mCategories[T][EQUIPMENT].buttons.push_back(Button(BUY_ITEM_ARMOR,"Armor"));
+		mCategories[T][EQUIPMENT].buttons.push_back(Button(BUY_ITEM_HEALTH,"Health"));
+		mCategories[CT][EQUIPMENT].buttons.push_back(Button(BUY_ITEM_ARMOR,"Armor"));
+		mCategories[CT][EQUIPMENT].buttons.push_back(Button(BUY_ITEM_HEALTH,"Health"));
+	}
 
 	mIsOldStyle = true;
+}
+
+void BuyMenu::RenderItemIcon(int id, float x, float y, float scale)
+{
+	if (id == BUY_ITEM_ARMOR) {
+		mRenderer->RenderQuad(gArmorGroundQuad,x,y,0,scale,scale);
+	}
+	else if (id == BUY_ITEM_HEALTH) {
+		mRenderer->RenderQuad(gHealthGroundQuad,x,y,0,scale,scale);
+	}
+	else if (id >= 0 && id < MAX_GUNS && mGuns[id].mGroundQuad != NULL) {
+		mRenderer->RenderQuad(mGuns[id].mGroundQuad,x,y,0,scale,scale);
+	}
 }
 
 //------------------------------------------------------------------------------------------------
@@ -205,17 +224,13 @@ void BuyMenu::Render()
 			if (!mIsOldStyle) {
 				mRenderer->FillRect(x-radialSelectedSize/2,y-radialSelectedSize/2,radialSelectedSize,radialSelectedSize,ARGB(220,0,0,0));
 				mRenderer->DrawRect(x-radialSelectedSize/2,y-radialSelectedSize/2,radialSelectedSize,radialSelectedSize,ARGB(255,255,128,0));
-				if (mGuns[id].mGroundQuad != NULL) {
-					mRenderer->RenderQuad(mGuns[id].mGroundQuad,x,y-5,0,radialSelectedIconScale,radialSelectedIconScale);
-				}
+				RenderItemIcon(id,x,y-5,radialSelectedIconScale);
 				gFont->DrawShadowedString(mCategories[team][mCategoryIndex].buttons[i].name,x,y,JGETEXT_CENTER);
 			}
 			else {
 				mRenderer->FillRect(x,y,200,25,ARGB(220,0,0,0));
 				mRenderer->DrawRect(x,y,200,25,ARGB(255,255,128,0));
-				if (mGuns[id].mGroundQuad != NULL) {
-					mRenderer->RenderQuad(mGuns[id].mGroundQuad,x+25,y+12,0,1.4f,1.4f);
-				}
+				RenderItemIcon(id,x+25,y+12,1.4f);
 				gFont->DrawShadowedString(mCategories[team][mCategoryIndex].buttons[i].name,x+50,y+3);
 			}
 			//mRenderer->FillPolygon(x,y,150,3,M_PI-theta,ARGB(200,255,255,255));
@@ -235,9 +250,7 @@ void BuyMenu::Render()
 			if (!mIsOldStyle) {
 				mRenderer->FillRect(x-radialCardSize/2,y-radialCardSize/2,radialCardSize,radialCardSize,ARGB(220,0,0,0));
 				mRenderer->DrawRect(x-radialCardSize/2,y-radialCardSize/2,radialCardSize,radialCardSize,ARGB(255,255,128,0));
-				if (mGuns[id].mGroundQuad != NULL) {
-					mRenderer->RenderQuad(mGuns[id].mGroundQuad,x,y-5,0,radialIconScale,radialIconScale);
-				}
+				RenderItemIcon(id,x,y-5,radialIconScale);
 				if (size <= 10) {
 					gFont->DrawShadowedString(mCategories[team][mCategoryIndex].buttons[i].name,x,y+3,JGETEXT_CENTER);
 				}
@@ -245,9 +258,7 @@ void BuyMenu::Render()
 			else {
 				mRenderer->FillRect(x,y,200,25,ARGB(220,0,0,0));
 				mRenderer->DrawRect(x,y,200,25,ARGB(255,255,128,0));
-				if (mGuns[id].mGroundQuad != NULL) {
-					mRenderer->RenderQuad(mGuns[id].mGroundQuad,x+25,y+12);
-				}
+				RenderItemIcon(id,x+25,y+12,1.0f);
 				gFont->DrawShadowedString(mCategories[team][mCategoryIndex].buttons[i].name,x+50,y+6);
 			}
 
@@ -305,12 +316,28 @@ void BuyMenu::Render()
 	gFont->SetScale(0.6f);
 	if (mCategoryIndex != MAIN && mSelectedIndex != -1) {
 		int id = mCategories[team][mCategoryIndex].buttons[mSelectedIndex].id;
-		if (mGuns[id].mGroundQuad != NULL) {
-			mRenderer->RenderQuad(mGuns[id].mGroundQuad,330,155,0,1.4f,1.4f);
-		}
+		RenderItemIcon(id,330,155,1.4f);
 
 		float x = 310;
 		float y = 175;
+		if (id == BUY_ITEM_ARMOR) {
+			char reduction[8];
+			sprintf(reduction,"%i%%",GetArmorDamageReduction());
+			gFont->DrawString("Damage reduction:",x,y);
+			gFont->DrawString(reduction,x+110,y);
+			y += 12;
+			gFont->DrawString("Price",x,y);
+			gFont->DrawString("$650",x+60,y);
+			return;
+		}
+		if (id == BUY_ITEM_HEALTH) {
+			gFont->DrawString("Restores health:",x,y);
+			gFont->DrawString("Full",x+100,y);
+			y += 12;
+			gFont->DrawString("Price",x,y);
+			gFont->DrawString("$500",x+60,y);
+			return;
+		}
 		int width = 0;
 		float value = 0.0f;
 		float min = 0.0f;

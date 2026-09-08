@@ -4,6 +4,7 @@
 
 JRenderer* Person::mRenderer = NULL;
 JSoundSystem* Person::mSoundSystem = NULL;
+
 //------------------------------------------------------------------------------------------------
 Person::Person(JQuad* quads[], JQuad* deadquad, std::vector<Bullet*>* bullets, std::vector<GunObject*>* guns, int team, char* name, int movementstyle)
 {
@@ -24,6 +25,7 @@ Person::Person(JQuad* quads[], JQuad* deadquad, std::vector<Bullet*>* bullets, s
 	//mState = 0;
 	mStateTime = 0.0f;
 	mHealth = (team == T) ? 150 : 100;
+	mArmor = 0;
 	mMoney = 800;
 	mRecoilAngle = 0.0f;
 	SetTotalRotation(M_PI_2);
@@ -1096,6 +1098,7 @@ void Person::Die()
 		mGuns[GRENADE] = NULL;
 	}
 	mGunIndex = KNIFE;
+	mArmor = 0;
 
 	mNumDryFire = 0;
 
@@ -1160,6 +1163,12 @@ void Person::TakeDamage(int damage) {
 	if (mState != DEAD) {
 		SetMoveState(NOTMOVING);
 		mSpeed *= 0.1f;
+		if (mArmor > 0) {
+			int absorbedDamage = damage*GetArmorDamageReduction()/100;
+			if (absorbedDamage > mArmor) absorbedDamage = mArmor;
+			mArmor -= absorbedDamage;
+			damage -= absorbedDamage;
+		}
 		mHealth -= damage;
 		if (mHealth <= 0) {
 			mHealth = 0;
