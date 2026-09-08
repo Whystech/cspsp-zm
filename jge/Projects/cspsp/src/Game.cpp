@@ -28,6 +28,10 @@ Game::Game(GameApp* parent): GameState(parent)
 	mIsInfectionMode = false;
 	mRespawnStyle = RESPAWN_BASE;
 	mInfectionRespawnDelay = 1;
+	mIsHordeMode = false;
+	mHordeWave = 1;
+	mHordeRegroupStyle = RESPAWN_BASE;
+	mHordeWaveDelay = 3;
 	mRespawnTimer = 3000.0f;
 	mFFAWinner = NULL;
 	mChatTimer = 0.0f;
@@ -1774,17 +1778,34 @@ void Game::Render()
 		//gHudFont->SetScale(2.0f);
 		//gHudFont->DrawString(buffer, 10.0f, SCREEN_HEIGHT_F-40.0f, JGETEXT_LEFT);
 		
+		//health display
 		int maxHealth = (mPlayer->mTeam == T) ? 150 : 100;
 		int height = 44*(mPlayer->mHealth/(float)maxHealth);
 		if (height < 1) height = 1;
 		if (height > 44) height = 44;
 		gHealthFillQuad->SetTextureRect(48,44-height+2,48,height);
-		mRenderer->RenderQuad(gHealthBorderQuad,10,SCREEN_HEIGHT-58);
-		mRenderer->RenderQuad(gHealthFillQuad,10,SCREEN_HEIGHT-58+44-height+2);
+		mRenderer->RenderQuad(gHealthBorderQuad,0,SCREEN_HEIGHT-58);
+		mRenderer->RenderQuad(gHealthFillQuad,0,SCREEN_HEIGHT-58+44-height+2);
 
 		gFont->SetColor(ARGB(255,255,255,255));
-		gFont->SetScale(0.7f);
-		gFont->DrawShadowedString(buffer, 10+((mPlayer->mHealth == 100)?22:24), SCREEN_HEIGHT_F-40.0f, JGETEXT_CENTER);
+		gFont->SetScale(0.5f);
+		//health text (numbers)
+		gFont->DrawShadowedString(buffer, 26, SCREEN_HEIGHT_F-40.0f, JGETEXT_CENTER);
+		
+		// armor display 
+		if (mPlayer->mTeam == CT) {
+			int armorHeight = 44*(mPlayer->mArmor/(float)MAX_ARMOR);
+			if (armorHeight < 0) armorHeight = 0;
+			if (armorHeight > 44) armorHeight = 44;
+			mRenderer->RenderQuad(gArmorBorderQuad,26,SCREEN_HEIGHT-58);
+			if (armorHeight > 0) {
+				gArmorFillQuad->SetTextureRect(48,44-armorHeight+2,48,armorHeight);
+				mRenderer->RenderQuad(gArmorFillQuad,26,SCREEN_HEIGHT-58+44-armorHeight+2);
+			}
+			sprintf(buffer,"%i",mPlayer->mArmor);
+			//armor text
+			gFont->DrawShadowedString(buffer, 52, SCREEN_HEIGHT_F-40.0f, JGETEXT_CENTER);
+		}
 
 		//gHudFont->SetScale(1.5f);
 
@@ -2773,10 +2794,20 @@ void Game::Render()
 	}
 	else {
 		if (mWinner == T) {
-			gFont->DrawShadowedString("Zombies Win", 240.0f, 100.0f, JGETEXT_CENTER);
+			if (mIsHordeMode) {
+				gFont->DrawShadowedString("Squad Wiped", 240.0f, 100.0f, JGETEXT_CENTER);
+			}
+			else {
+				gFont->DrawShadowedString("Zombies Win", 240.0f, 100.0f, JGETEXT_CENTER);
+			}
 		}
 		else if (mWinner == CT) {
-			gFont->DrawShadowedString("UN Forces Win", 240.0f, 100.0f, JGETEXT_CENTER);
+			if (mIsHordeMode) {
+				gFont->DrawShadowedString("Wave Cleared", 240.0f, 100.0f, JGETEXT_CENTER);
+			}
+			else {
+				gFont->DrawShadowedString("UN Forces Win", 240.0f, 100.0f, JGETEXT_CENTER);
+			}
 		}
 		else if (mWinner == TIE) {
 			gFont->DrawShadowedString("Round Draw", 240.0f, 100.0f, JGETEXT_CENTER);
@@ -2965,7 +2996,7 @@ void Game::UpdateScores(Person* attacker, Person* victim, Gun* weapon) {
 					mWinner = CT;
 					mNumCTWins++;
 					gSfxManager->PlaySample(gRoundEndSounds[CT]);
-					mTimeMultiplier = 0.33f;
+					mTimeMultiplier = mIsHordeMode ? 1.0f : 0.33f;
 				}
 			}
 		}
@@ -2996,6 +3027,12 @@ void Game::NewSpec(Person* attacker, int index) {
 	//mPlayerDead = true;
 	mSpec = attacker;
 	mSpecIndex = index;
+	for (unsigned int i=0; i<mPeople.size(); i++) {
+		if (mPeople[i] == mSpec) {
+			mSpecIndex = i;
+			break;
+		}
+	}
 
 	if (mSpec->mState == DEAD) {
 		bool alldead = true;
@@ -3016,10 +3053,42 @@ void Game::NewSpec(Person* attacker, int index) {
 			//}
 		}
 	}
+		if (mSpec->mState != DEAD) {
+			mSpecState = THIRDPERSON;
+		}
 }
 
 void Game::Buy(int index) {
 	bool hasMoney = true;
+	if (index == BUY_ITEM_HEALTH) {
+		int maxHealth = (mPlayer->mTeam == T) ? 150 : 100;
+		if (mPlayer->mHealth >= maxHealth) {
+			mHud->SetMessage("Health is already full");
+			return;
+		}
+		if (mPlayer->mMoney < HEALTH_COST) {
+			mHud->SetMessage("You don't have enough money!");
+			return;
+		}
+		mPlayer->mMoney -= HEALTH_COST;
+		mPlayer->mHealth = maxHealth;
+		gSfxManager->PlaySample(gPickUpSound, mPlayer->mX, mPlayer->mY);
+		return;
+	}
+	if (index == BUY_ITEM_ARMOR) {
+		if (mPlayer->mArmor >= MAX_ARMOR) {
+			mHud->SetMessage("Armor is already full");
+			return;
+		}
+		if (mPlayer->mMoney < ARMOR_COST) {
+			mHud->SetMessage("You don't have enough money!");
+			return;
+		}
+		mPlayer->mMoney -= ARMOR_COST;
+		mPlayer->mArmor = MAX_ARMOR;
+		gSfxManager->PlaySample(gPickUpSound, mPlayer->mX, mPlayer->mY);
+		return;
+	}
 	if (index < -1 || index >= MAX_GUNS ||
 		(index >= 0 && (mGuns[index].mId != index || mGuns[index].mName[0] == '\0' ||
 		mGuns[index].mHandQuad == NULL || mGuns[index].mGroundQuad == NULL))) {

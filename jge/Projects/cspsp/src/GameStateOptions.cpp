@@ -19,6 +19,8 @@ void GameStateOptions::Create()
 	menustyle = ANALOG;
 	respawnstyle = RESPAWN_BASE;
 	freezetime = FREEZE_TIME_3;
+	horderegroup = HORDE_REGROUP_BASE;
+	hordewavedelay = HORDE_DELAY_3;
 
 
 	//initial check to use nickname
@@ -115,58 +117,74 @@ void GameStateOptions::Create()
 	strcpy(mConfigInfo[0],"Change your player's movement style");
 
 	mGuiControllers[1] = new JGuiController(1, this, JGUI_STYLE_LEFTRIGHT);
-	mGuiControllers[1]->Add(new MenuItem(ON, gFont, "on", x, 58, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[1]->Add(new MenuItem(OFF, gFont, "off", x+50, 58, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[1]->Add(new MenuItem(ON, gFont, "on", x, 55, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[1]->Add(new MenuItem(OFF, gFont, "off", x+50, 55, TYPE_OPTION, JGETEXT_LEFT));
 	mGuiControllers[1]->SetActive(false);
 	strcpy(mConfigs[1],"Music");
 	strcpy(mConfigInfo[1],"Enable or disable the background music in Singleplayer");
 
 	mGuiControllers[2] = new JGuiController(2, this, JGUI_STYLE_LEFTRIGHT);
-	mGuiControllers[2]->Add(new MenuItem(ON, gFont, "on", x, 78, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[2]->Add(new MenuItem(OFF, gFont, "off", x+50, 78, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[2]->Add(new MenuItem(ON, gFont, "on", x, 72, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[2]->Add(new MenuItem(OFF, gFont, "off", x+50, 72, TYPE_OPTION, JGETEXT_LEFT));
 	mGuiControllers[2]->SetActive(false);
 	strcpy(mConfigs[2],"Friendly Fire");
 	strcpy(mConfigInfo[2],"Enable or disable friendly fire in Singleplayer");
 
 	mGuiControllers[3] = new JGuiController(3, this, JGUI_STYLE_LEFTRIGHT);
-	mGuiControllers[3]->Add(new MenuItem(ANALOG, gFont, "Analog", x, 98, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[3]->Add(new MenuItem(DIRPAD, gFont, "Dir Pad", x+100, 98, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[3]->Add(new MenuItem(ANALOG, gFont, "Analog", x, 89, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[3]->Add(new MenuItem(DIRPAD, gFont, "Dir Pad", x+100, 89, TYPE_OPTION, JGETEXT_LEFT));
 	mGuiControllers[3]->SetActive(false);
 	strcpy(mConfigs[3],"Menu Style");
 	strcpy(mConfigInfo[3],"Change the style of the in-game team select and buy menu");
 
 	mGuiControllers[4] = new JGuiController(4, this, JGUI_STYLE_LEFTRIGHT);
 	// Respawn selects the location used only when Infection converts a CT into a Zombie.
-	mGuiControllers[4]->Add(new MenuItem(RESPAWN_INPLACE, gFont, "In-Place", x, 118, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[4]->Add(new MenuItem(RESPAWN_BASE, gFont, "Base", x+100, 118, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[4]->Add(new MenuItem(RESPAWN_INPLACE, gFont, "In-Place", x, 106, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[4]->Add(new MenuItem(RESPAWN_BASE, gFont, "Base", x+100, 106, TYPE_OPTION, JGETEXT_LEFT));
 	mGuiControllers[4]->SetActive(false);
-	strcpy(mConfigs[4],"Respawn");
+	strcpy(mConfigs[4],"Infection Respawn");
 	strcpy(mConfigInfo[4],"Choose where infected players respawn");
 
 	mGuiControllers[5] = new JGuiController(5, this, JGUI_STYLE_LEFTRIGHT);
 	// Keep the delay as a numeric menu value so it can be saved and loaded directly.
-	mGuiControllers[5]->Add(new MenuItem(INFECTION_DELAY_0, gFont, "0", x, 138, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[5]->Add(new MenuItem(INFECTION_DELAY_1, gFont, "1", x+35, 138, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[5]->Add(new MenuItem(INFECTION_DELAY_2, gFont, "2", x+70, 138, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[5]->Add(new MenuItem(INFECTION_DELAY_3, gFont, "3", x+105, 138, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[5]->Add(new MenuItem(INFECTION_DELAY_4, gFont, "4", x+140, 138, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[5]->Add(new MenuItem(INFECTION_DELAY_0, gFont, "0", x, 123, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[5]->Add(new MenuItem(INFECTION_DELAY_1, gFont, "1", x+35, 123, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[5]->Add(new MenuItem(INFECTION_DELAY_2, gFont, "2", x+70, 123, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[5]->Add(new MenuItem(INFECTION_DELAY_3, gFont, "3", x+105, 123, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[5]->Add(new MenuItem(INFECTION_DELAY_4, gFont, "4", x+140, 123, TYPE_OPTION, JGETEXT_LEFT));
 	mGuiControllers[5]->SetActive(false);
 	strcpy(mConfigs[5],"Infection Delay");
 	strcpy(mConfigInfo[5],"Choose the infection respawn delay.");
 
 	mGuiControllers[6] = new JGuiController(6, this, JGUI_STYLE_LEFTRIGHT);
-	mGuiControllers[6]->Add(new MenuItem(FREEZE_TIME_0, gFont, "0", x, 158, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[6]->Add(new MenuItem(FREEZE_TIME_1, gFont, "1", x+35, 158, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[6]->Add(new MenuItem(FREEZE_TIME_2, gFont, "2", x+70, 158, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[6]->Add(new MenuItem(FREEZE_TIME_3, gFont, "3", x+105, 158, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[6]->Add(new MenuItem(FREEZE_TIME_4, gFont, "4", x+140, 158, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[6]->Add(new MenuItem(FREEZE_TIME_5, gFont, "5", x+175, 158, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[6]->Add(new MenuItem(FREEZE_TIME_0, gFont, "0", x, 140, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[6]->Add(new MenuItem(FREEZE_TIME_1, gFont, "1", x+35, 140, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[6]->Add(new MenuItem(FREEZE_TIME_2, gFont, "2", x+70, 140, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[6]->Add(new MenuItem(FREEZE_TIME_3, gFont, "3", x+105, 140, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[6]->Add(new MenuItem(FREEZE_TIME_4, gFont, "4", x+140, 140, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[6]->Add(new MenuItem(FREEZE_TIME_5, gFont, "5", x+175, 140, TYPE_OPTION, JGETEXT_LEFT));
 	mGuiControllers[6]->SetActive(false);
 	strcpy(mConfigs[6],"Freeze Time");
 	strcpy(mConfigInfo[6],"Choose the delay before each local round starts.");
 
-	strcpy(mConfigs[7],"Nickname");
-	strcpy(mConfigInfo[7],"Choose a name (15 characters max)");
+	mGuiControllers[7] = new JGuiController(7, this, JGUI_STYLE_LEFTRIGHT);
+	mGuiControllers[7]->Add(new MenuItem(HORDE_REGROUP_INPLACE, gFont, "In-Place", x, 157, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[7]->Add(new MenuItem(HORDE_REGROUP_BASE, gFont, "CT Base", x+100, 157, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[7]->SetActive(false);
+	strcpy(mConfigs[7],"Horde Regroup");
+	strcpy(mConfigInfo[7],"Keep survivors in place or return them to CT base.");
+
+	mGuiControllers[8] = new JGuiController(8, this, JGUI_STYLE_LEFTRIGHT);
+	mGuiControllers[8]->Add(new MenuItem(HORDE_DELAY_3, gFont, "3", x, 174, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[8]->Add(new MenuItem(HORDE_DELAY_5, gFont, "5", x+35, 174, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[8]->Add(new MenuItem(HORDE_DELAY_10, gFont, "10", x+70, 174, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[8]->Add(new MenuItem(HORDE_DELAY_15, gFont, "15", x+115, 174, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[8]->SetActive(false);
+	strcpy(mConfigs[8],"Wave Delay");
+	strcpy(mConfigInfo[8],"Choose the freeze time between Horde waves.");
+
+	strcpy(mConfigs[9],"Nickname");
+	strcpy(mConfigInfo[9],"Choose a name (15 characters max)");
 
 	strcpy(mConfigs[NUMCONFIGS-1],"Save");
 	strcpy(mConfigInfo[NUMCONFIGS-1],"Save any changes and return to the main menu");
@@ -281,6 +299,26 @@ void GameStateOptions::Start()
 	}
 	mGuiControllers[6]->SetCurr(freezetime);
 
+	horderegroup = HORDE_REGROUP_BASE;
+	char* hordeRegroup = GetConfig("data/config.txt","horde_regroup");
+	if (hordeRegroup != NULL) {
+		if (strcmp(hordeRegroup,"inplace") == 0) horderegroup = HORDE_REGROUP_INPLACE;
+		else if (strcmp(hordeRegroup,"base") == 0) horderegroup = HORDE_REGROUP_BASE;
+		delete hordeRegroup;
+	}
+	mGuiControllers[7]->SetCurr(horderegroup);
+
+	hordewavedelay = HORDE_DELAY_3;
+	char* hordeWaveDelay = GetConfig("data/config.txt","horde_wave_delay");
+	if (hordeWaveDelay != NULL) {
+		int seconds = atoi(hordeWaveDelay);
+		if (seconds == 5) hordewavedelay = HORDE_DELAY_5;
+		else if (seconds == 10) hordewavedelay = HORDE_DELAY_10;
+		else if (seconds == 15) hordewavedelay = HORDE_DELAY_15;
+		delete hordeWaveDelay;
+	}
+	mGuiControllers[8]->SetCurr(hordewavedelay);
+
 	char* nameconfig = GetConfig("data/config.txt","name");
 	if (nameconfig != NULL) {
 		strncpy(name,nameconfig,15);
@@ -333,6 +371,8 @@ void GameStateOptions::Update(float dt)
 			mGuiControllers[5]->SetCurr(infectiondelay);
 			mGuiControllers[4]->SetCurr(respawnstyle);
 			mGuiControllers[6]->SetCurr(freezetime);
+			mGuiControllers[7]->SetCurr(horderegroup);
+			mGuiControllers[8]->SetCurr(hordewavedelay);
 
 			main = true;
 			mInfoX = -400.0f;
@@ -375,7 +415,7 @@ void GameStateOptions::Update(float dt)
 				}
 
 				if (mEngine->GetButtonClick(PSP_CTRL_CROSS)) {
-					if (index == 7) {
+					if (index == 9) {
 						main = false;
 						gDanzeff->Enable();
 						gDanzeff->mString = name;
@@ -412,6 +452,8 @@ void GameStateOptions::Update(float dt)
 					mGuiControllers[4]->SetCurr(respawnstyle);
 					mGuiControllers[5]->SetCurr(infectiondelay);
 					mGuiControllers[6]->SetCurr(freezetime);
+					mGuiControllers[7]->SetCurr(horderegroup);
+					mGuiControllers[8]->SetCurr(hordewavedelay);
 
 					main = true;
 				}
@@ -492,8 +534,8 @@ void GameStateOptions::Render()
 	
 	if (mState == OPTIONS) {
 		mRenderer->FillRect(0,30,SCREEN_WIDTH,5,ARGB(100,0,0,0));
-		mRenderer->FillRect(0,35,SCREEN_WIDTH,200,ARGB(100,0,0,0));
-		mRenderer->FillRect(0,35+200,SCREEN_WIDTH,30,ARGB(175,0,0,0));
+		mRenderer->FillRect(0,35,SCREEN_WIDTH,205,ARGB(100,0,0,0));
+		mRenderer->FillRect(0,240,SCREEN_WIDTH,25,ARGB(175,0,0,0));
 
 		mRenderer->FillRect(155-62,5,125,25,ARGB(100,0,0,0));
 		mRenderer->FillRect(325-62,5,125,25,ARGB(175,0,0,0));
@@ -515,11 +557,11 @@ void GameStateOptions::Render()
 		gFont->SetColor(ARGB(255,255,255,255));
 
 		if (main) {
-			mRenderer->FillRect(0,35+index*20,SCREEN_WIDTH,20,ARGB(255,0,0,0));
+			mRenderer->FillRect(0,35+index*17,SCREEN_WIDTH,17,ARGB(255,0,0,0));
 			gFont->DrawShadowedString("[X] Select     [O] Cancel and Return to Menu",SCREEN_WIDTH_2,SCREEN_HEIGHT_F-20,JGETEXT_CENTER);
 		}
 		else {
-			mRenderer->FillRect(0,35+index*20,SCREEN_WIDTH,20,ARGB(100,255,128,0));
+			mRenderer->FillRect(0,35+index*17,SCREEN_WIDTH,17,ARGB(100,255,128,0));
 			if (!gDanzeff->mIsActive) {
 				gFont->DrawShadowedString("[DIR PAD/ANALOG] Change Selection    [X] Select    [O] Cancel",SCREEN_WIDTH_2,SCREEN_HEIGHT_F-20,JGETEXT_CENTER);
 			}
@@ -527,23 +569,23 @@ void GameStateOptions::Render()
 				gFont->DrawShadowedString("[START] Enter    [SELECT] Cancel",SCREEN_WIDTH_2,SCREEN_HEIGHT_F-20,JGETEXT_CENTER);
 			}
 		}
-		mRenderer->DrawLine(160,35,160,35+200,ARGB(255,255,255,255));
+		mRenderer->DrawLine(160,35,160,240,ARGB(255,255,255,255));
 
 
-		gFont->SetScale(1.0f);
+		gFont->SetScale(0.75f);
 		float x = 160-10;
 		for (int i=0; i<NUMCONFIGS; i++) {
 			if (index == i) {
 				gFont->SetColor(ARGB(255,255,255,255));
 				gFont->SetScale(0.75f);
 				gFont->DrawShadowedString(mConfigInfo[i],10.0f+mInfoX,225);
-				gFont->SetScale(1.0f);
 				gFont->SetColor(ARGB(255,255,128,0));
 			}
 			else {
 				gFont->SetColor(ARGB(255,255,255,255));
 			}
-			gFont->DrawShadowedString(mConfigs[i],x,38+20*i,JGETEXT_RIGHT);
+			gFont->SetScale(0.75f);
+			gFont->DrawShadowedString(mConfigs[i],x,38+17*i,JGETEXT_RIGHT);
 			if (mGuiControllers[i] != NULL) {
 				mGuiControllers[i]->Render();
 			}
@@ -566,11 +608,11 @@ void GameStateOptions::Render()
 		gFont->SetColor(ARGB(255,255,255,255));
 		gFont->SetScale(0.75f);
 		if (!gDanzeff->mIsActive) {
-			gFont->DrawShadowedString(name,160+10,178);
+			gFont->DrawShadowedString(name,160+10,191);
 		}
 		else if (gDanzeff->mIsActive) {
-			gFont->DrawShadowedString(tempname,160+10,178);
-			gFont->DrawShadowedString("|",160+10+gFont->GetStringWidth(tempname),178);
+			gFont->DrawShadowedString(tempname,160+10,191);
+			gFont->DrawShadowedString("|",160+10+gFont->GetStringWidth(tempname),191);
 			gDanzeff->Render(SCREEN_WIDTH-175,SCREEN_HEIGHT-175);
 		}
 	} 
@@ -651,6 +693,14 @@ void GameStateOptions::Save()
 	fprintf(file,"%d",freezetime);
 	fputs("\r\n",file);
 
+	if (horderegroup == HORDE_REGROUP_INPLACE) fputs("horde_regroup = inplace\r\n",file);
+	else fputs("horde_regroup = base\r\n",file);
+
+	const int hordeWaveDelays[] = {3,5,10,15};
+	fputs("horde_wave_delay = ",file);
+	fprintf(file,"%d",hordeWaveDelays[hordewavedelay]);
+	fputs("\r\n",file);
+
 	fputs("name = ",file);
 	fputs(name,file);
 	fputs("\r\n",file);
@@ -694,6 +744,12 @@ void GameStateOptions::ButtonPressed(int controllerId, int controlId)
 		break;
 	case 6:
 		freezetime = controlId;
+		break;
+	case 7:
+		horderegroup = controlId;
+		break;
+	case 8:
+		hordewavedelay = controlId;
 		break;
 	}
 

@@ -38,6 +38,7 @@ private:
 	Gun mGuns[MAX_GUNS];
 
 	float angle;
+	void RenderItemIcon(int id, float x, float y, float scale);
 
 protected:
 

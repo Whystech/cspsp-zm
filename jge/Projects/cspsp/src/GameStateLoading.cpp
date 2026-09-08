@@ -167,6 +167,16 @@ int GameStateLoading::Load(int stage) {
 			gHealthBorderQuad = new JQuad(healthTexture,0,0,48,48);
 			gHealthFillQuad = new JQuad(healthTexture,48,0,48,48);
 
+			JTexture* armorTexture = mRenderer->LoadTexture("gfx/armor.png", true);
+			gArmorBorderQuad = new JQuad(armorTexture,0,0,48,48);
+			gArmorFillQuad = new JQuad(armorTexture,48,0,48,48);
+			JTexture* armorGroundTexture = mRenderer->LoadTexture("gfx/armorground.png", true);
+			gArmorGroundQuad = new JQuad(armorGroundTexture,0,0,32,32);
+			gArmorGroundQuad->SetHotSpot(16,16);
+			JTexture* healthGroundTexture = mRenderer->LoadTexture("gfx/healthground.png", true);
+			gHealthGroundQuad = new JQuad(healthGroundTexture,0,0,32,32);
+			gHealthGroundQuad->SetHotSpot(16,16);
+
 			JTexture* ammobarTexture = mRenderer->LoadTexture("gfx/ammo.png", true);
 			gAmmoBarQuad = new JQuad(ammobarTexture,0,0,128,64);
 			gAmmoBarQuad->SetHotSpot(128,64);

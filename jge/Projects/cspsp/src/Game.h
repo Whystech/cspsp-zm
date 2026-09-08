@@ -111,6 +111,10 @@ public:
 	int mRespawnStyle;
 	int mInfectionRespawnDelay;
 	bool mIsInfectionMode;
+	bool mIsHordeMode;
+	int mHordeWave;
+	int mHordeRegroupStyle;
+	int mHordeWaveDelay;
 
 	Person* mPlayer;
 	std::vector<Person*> mPeople;

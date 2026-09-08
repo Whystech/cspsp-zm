@@ -14,7 +14,7 @@
 #define OPTIONS 0
 #define CONTROLS 1
 
-#define NUMCONFIGS 9
+#define NUMCONFIGS 11
 
 #define RELATIVE1 0
 #define ABSOLUTE1 1
@@ -41,8 +41,16 @@
 #define FREEZE_TIME_4 4
 #define FREEZE_TIME_5 5
 
-#define SAVE 8
-#define CANCEL 9
+#define HORDE_REGROUP_INPLACE 0
+#define HORDE_REGROUP_BASE 1
+
+#define HORDE_DELAY_3 0
+#define HORDE_DELAY_5 1
+#define HORDE_DELAY_10 2
+#define HORDE_DELAY_15 3
+
+#define SAVE 10
+#define CANCEL 11
 
 class GameStateOptions:	public GameState,
 	 					public JGuiListener
@@ -62,6 +70,8 @@ private:
 	int respawnstyle;
 	int infectiondelay;
 	int freezetime;
+	int horderegroup;
+	int hordewavedelay;
 	char name[16];
 	char* tempname;
 	JTexture* mControlsTex;

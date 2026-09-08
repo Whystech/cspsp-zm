@@ -5,5 +5,7 @@ menu = dirpad
 respawn = base
 infection_respawn_delay = 1
 round_freeze_time = 1
+horde_regroup = inplace
+horde_wave_delay = 3
 name = PPSSPP
 map = gunstest
