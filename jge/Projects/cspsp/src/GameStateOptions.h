@@ -14,7 +14,7 @@
 #define OPTIONS 0
 #define CONTROLS 1
 
-#define NUMCONFIGS 11
+#define NUMCONFIGS 13
 
 #define RELATIVE1 0
 #define ABSOLUTE1 1
@@ -49,8 +49,8 @@
 #define HORDE_DELAY_10 2
 #define HORDE_DELAY_15 3
 
-#define SAVE 10
-#define CANCEL 11
+#define SAVE 12
+#define CANCEL 13
 
 class GameStateOptions:	public GameState,
 	 					public JGuiListener
@@ -72,6 +72,8 @@ private:
 	int freezetime;
 	int horderegroup;
 	int hordewavedelay;
+	int showkillfeed;
+	int showroundtimer;
 	char name[16];
 	char* tempname;
 	JTexture* mControlsTex;

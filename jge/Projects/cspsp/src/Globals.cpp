@@ -6,6 +6,8 @@ int gServerPort;
 char* gMapName;
 int gTeam;
 int gSinglePlayerMode = SINGLEPLAYER_INFECTION;
+bool gShowKillFeed = true;
+bool gShowRoundTimer = true;
 bool gReconnect;
 bool gLogout;
 char gName[32];
@@ -104,6 +106,22 @@ char* GetConfig(const char *location, char searchstr[]) {
 	}
 	fclose(file);
 	return NULL;
+}
+
+void LoadHudDisplayOptions()
+{
+	gShowKillFeed = true;
+	gShowRoundTimer = true;
+	char* killFeed = GetConfig("data/config.txt","show_kill_feed");
+	if (killFeed != NULL) {
+		gShowKillFeed = strcmp(killFeed,"off") != 0;
+		delete[] killFeed;
+	}
+	char* roundTimer = GetConfig("data/config.txt","show_round_timer");
+	if (roundTimer != NULL) {
+		gShowRoundTimer = strcmp(roundTimer,"off") != 0;
+		delete[] roundTimer;
+	}
 }
 
 int GetArmorDamageReduction()

@@ -94,7 +94,7 @@ void Hud::Render()
 	if (mPlayer->mState == DEAD) {
 		ystart = 37;
 	}
-	for(unsigned int i=0; i<mKillEvents.size(); i++) {
+	for(unsigned int i=0; gShowKillFeed && i<mKillEvents.size(); i++) {
 		float x = 475.0f;
 		float y = ystart+i*15.0f;
 
