@@ -23,7 +23,8 @@ enum TracerStyle {
 	TRACER_ZIGZAG,
 	TRACER_FLARE,
 	TRACER_STREAK,
-	TRACER_SLUG
+	TRACER_SLUG,
+	TRACER_BLADE
 };
 
 struct TracerConfig {
@@ -90,6 +91,7 @@ void Bullet::LoadTracerConfig(const char* filename)
 		else if (strcmp(style,"flare") == 0) config.style = TRACER_FLARE;
 		else if (strcmp(style,"streak") == 0) config.style = TRACER_STREAK;
 		else if (strcmp(style,"slug") == 0) config.style = TRACER_SLUG;
+		else if (strcmp(style,"blade") == 0) config.style = TRACER_BLADE;
 		else continue;
 
 		config.red = ClampColor(config.red);
@@ -315,6 +317,29 @@ void Bullet::Render(float x, float y)
 		mRenderer->DrawLine(startX,startY,endX-offsetX,endY-offsetY,config.width*3.0f,ARGB(config.alpha,darkRed,darkGreen,darkBlue));
 		mRenderer->DrawLine(startX,startY,endX-offsetX,endY-offsetY,config.width,ARGB(config.alpha,config.red,config.green,config.blue));
 	}
+	else if (config.style == TRACER_BLADE) {
+		float tipX = endX-offsetX;
+		float tipY = endY-offsetY;
+		float radius = 5.0f+config.width*3.0f;
+		float spin = (mX+mY)*0.12f;
+		mRenderer->SetTexBlend(BLEND_SRC_ALPHA, BLEND_ONE);
+		mRenderer->DrawLine(limit(mX-tailX*0.3f,mStartX,signX)-offsetX,limit(mY-tailY*0.3f,mStartY,signY)-offsetY,tipX,tipY,config.width*2.0f,ARGB(config.alpha/3,darkRed,darkGreen,darkBlue));
+		mRenderer->SetTexBlend(BLEND_SRC_ALPHA, BLEND_ONE_MINUS_SRC_ALPHA);
+		for (int i=0; i<4; i++) {
+			float angle = spin+i*1.5707963f;
+			float innerX = tipX+cosf(angle)*radius*0.25f;
+			float innerY = tipY+sinf(angle)*radius*0.25f;
+			float outerX = tipX+cosf(angle)*radius;
+			float outerY = tipY+sinf(angle)*radius;
+			float edgeX = outerX+cosf(angle-1.1f)*radius*0.65f;
+			float edgeY = outerY+sinf(angle-1.1f)*radius*0.65f;
+			mRenderer->DrawLine(innerX,innerY,outerX,outerY,config.width*2.0f,ARGB(config.alpha,darkRed,darkGreen,darkBlue));
+			mRenderer->DrawLine(outerX,outerY,edgeX,edgeY,config.width*2.0f,ARGB(config.alpha,darkRed,darkGreen,darkBlue));
+			mRenderer->DrawLine(innerX,innerY,outerX,outerY,config.width,ARGB(config.alpha,config.red,config.green,config.blue));
+			mRenderer->DrawLine(outerX,outerY,edgeX,edgeY,config.width,ARGB(config.alpha,config.red,config.green,config.blue));
+		}
+		mRenderer->FillRect(tipX-config.width,tipY-config.width,config.width*2.0f,config.width*2.0f,ARGB(config.alpha,config.red,config.green,config.blue));
+	}
 	else {
 		mRenderer->SetTexBlend(BLEND_SRC_ALPHA, BLEND_ONE);
 		mRenderer->DrawLine(limit(mX-tailX,mStartX,signX)-offsetX,limit(mY-tailY,mStartY,signY)-offsetY,endX-offsetX,endY-offsetY,config.width*0.7f,ARGB(config.alpha/3,darkRed,darkGreen,darkBlue));
@@ -325,7 +350,7 @@ void Bullet::Render(float x, float y)
 		mRenderer->DrawLine(limit(mX-tailX*0.5f,mStartX,signX)-offsetX,limit(mY-tailY*0.5f,mStartY,signY)-offsetY,endX-offsetX,endY-offsetY,config.width*0.8f,ARGB(config.alpha*5/9,config.red,config.green,config.blue));
 		mRenderer->DrawLine(limit(mX-tailX*0.25f,mStartX,signX)-offsetX,limit(mY-tailY*0.25f,mStartY,signY)-offsetY,endX-offsetX,endY-offsetY,config.width*0.9f,ARGB(config.alpha,config.red,config.green,config.blue));
 	}
-	if (config.style != TRACER_BOLT && config.style != TRACER_PLASMA && config.style != TRACER_COMET && config.style != TRACER_PULSE) {
+	if (config.style != TRACER_BOLT && config.style != TRACER_PLASMA && config.style != TRACER_COMET && config.style != TRACER_PULSE && config.style != TRACER_BLADE) {
 		int endpointAlpha = config.customized ? config.alpha : 255;
 		mRenderer->FillRect(endX-offsetX,endY-offsetY-1,1,1,ARGB(endpointAlpha,config.red,config.green,config.blue));
 	}
