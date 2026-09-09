@@ -33,6 +33,8 @@ extern char* gMapName;
 extern int gTeam;
 // Selected by the main-menu Singleplayer submenu before map selection.
 extern int gSinglePlayerMode;
+extern bool gShowKillFeed;
+extern bool gShowRoundTimer;
 
 #define SINGLEPLAYER_INFECTION 0
 #define SINGLEPLAYER_ELIMINATION 1
@@ -113,6 +115,7 @@ extern Socket* gSocket;
 extern HttpManager* gHttpManager;
 
 extern char* GetConfig(const char *location, char searchstr[]);
+extern void LoadHudDisplayOptions();
 extern int GetArmorDamageReduction();
 
 extern u32 gLastKey;

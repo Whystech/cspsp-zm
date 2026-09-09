@@ -1822,15 +1822,17 @@ void Game::Render()
 		gFont->SetScale(1.0f);
 		gFont->SetColor(ARGB(230,255,64,64));
 
-		int seconds = (int)floorf(mRoundTimer);
-		int minutes = (int)floorf(seconds/60.0f);
-		int centiseconds = (int)floorf((mRoundTimer-seconds)*100);
-		sprintf(buffer,"%02d:%02d.%02d",minutes,seconds%60,centiseconds);
+		if (gShowRoundTimer) {
+			int seconds = (int)floorf(mRoundTimer);
+			int minutes = (int)floorf(seconds/60.0f);
+			int centiseconds = (int)floorf((mRoundTimer-seconds)*100);
+			sprintf(buffer,"%02d:%02d.%02d",minutes,seconds%60,centiseconds);
 
-		//gHudFont->SetColor(ARGB(230,255,64,64));
-		//gHudFont->DrawString(buffer, SCREEN_WIDTH_2, SCREEN_HEIGHT-30, JGETEXT_CENTER);
+			//gHudFont->SetColor(ARGB(230,255,64,64));
+			//gHudFont->DrawString(buffer, SCREEN_WIDTH_2, SCREEN_HEIGHT-30, JGETEXT_CENTER);
 
-		gFont->DrawShadowedString(buffer, SCREEN_WIDTH_2, SCREEN_HEIGHT-25, JGETEXT_CENTER);
+			gFont->DrawShadowedString(buffer, SCREEN_WIDTH_2, SCREEN_HEIGHT-25, JGETEXT_CENTER);
+		}
 
 		/*if (mPlayer->GetCurrentGun() != NULL) {
 			gHudFont->SetColor(ARGB(230,255,200,0));

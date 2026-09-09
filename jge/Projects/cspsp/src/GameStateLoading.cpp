@@ -9,6 +9,7 @@ GameStateLoading::~GameStateLoading() {
 void GameStateLoading::Start()
 {
 	mStage = 0;
+	LoadHudDisplayOptions();
 	mRenderer->ResetPrivateVRAM();
 
 	mRenderer->EnableVSync(true);

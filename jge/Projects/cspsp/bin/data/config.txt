@@ -7,5 +7,7 @@ infection_respawn_delay = 1
 round_freeze_time = 1
 horde_regroup = inplace
 horde_wave_delay = 3
+show_kill_feed = off
+show_round_timer = off
 name = PPSSPP
 map = gunstest
