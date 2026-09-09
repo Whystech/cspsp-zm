@@ -411,6 +411,7 @@ int GameStateLoading::Load(int stage) {
 				}
 			}
 			fclose(file);
+			Bullet::LoadTracerConfig("data/tracers.txt");
 
 			break;
 		}
