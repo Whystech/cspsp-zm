@@ -75,7 +75,7 @@ bool TileMap::Load(char *mapFile, Gun guns[], int gameType)
     fgets(line,4096,file);
     sscanf(line,"%d,%d",&w,&h);
 	if (w != 0 && h != 0) {
-		if (gameType != TEAM) {
+		if (gameType != TEAM && gameType != EXTERMINATION && gameType != INFECTION && gameType != HORDE) {
 			fclose(file);
 			return false;
 		}

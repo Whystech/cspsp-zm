@@ -50,6 +50,8 @@ TeamMenu::TeamMenu()
 	mIsOldStyle = true;
 
 	FormatText(mTeamLines,"Zombies are infecting the last survivors. Neutralize the threat before humanity is wiped out.",150,0.6f);
+	FormatText(mExterminationLines,"Eliminate the opposing team. A round ends when one team has no survivors.",150,0.6f);
+	FormatText(mHordeLines,"Survive each Zombie wave. Eliminated UN Forces return only when the run restarts.",150,0.6f);
 	FormatText(mCTFLines,"Capture the enemy flag while defending your own. The team with the most captures by the end of the round wins.",150,0.6f);
 	FormatText(mFFALines,"Eliminate everyone else. The player with the most kills by the end of the round wins.\n\nTeam selection only matters for your appearance and weapons.",150,0.6f);
 }
@@ -157,12 +159,19 @@ void TeamMenu::Render()
 	}
 
 	if (mCategoryIndex == MAIN1) {
-		if (*mGameType == TEAM) {
+		if (*mGameType == TEAM || *mGameType == EXTERMINATION || *mGameType == INFECTION || *mGameType == HORDE) {
 			gFont->SetScale(0.75f);
-			gFont->DrawString("Infection",310,140);
+			const char* modeName = "Infection";
+			if (*mGameType == EXTERMINATION) modeName = "Extermination";
+			else if (*mGameType == INFECTION) modeName = "Infection";
+			else if (*mGameType == HORDE) modeName = "Horde";
+			gFont->DrawString(modeName,310,140);
 			gFont->SetScale(0.6f);
-			for (int i=0; i<mTeamLines.size(); i++) {
-				gFont->DrawString(mTeamLines[i],315,160+10*i);
+			std::vector<char*>* lines = &mExterminationLines;
+			if (*mGameType == TEAM || *mGameType == INFECTION) lines = &mTeamLines;
+			else if (*mGameType == HORDE) lines = &mHordeLines;
+			for (unsigned int i=0; i<lines->size(); i++) {
+				gFont->DrawString((*lines)[i],315,160+10*i);
 			}
 		}
 		else if (*mGameType == FFA) {

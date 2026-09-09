@@ -36,6 +36,8 @@ private:
 	Person* mT;
 
 	std::vector<char*> mTeamLines;
+	std::vector<char*> mExterminationLines;
+	std::vector<char*> mHordeLines;
 	std::vector<char*> mCTFLines;
 	std::vector<char*> mFFALines;
 

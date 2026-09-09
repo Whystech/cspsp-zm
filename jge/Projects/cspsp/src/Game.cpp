@@ -1,9 +1,19 @@
 
 #include "Game.h"
 
+static bool IsTeamRoundMode(int gameType)
+{
+	return gameType == TEAM || gameType == EXTERMINATION || gameType == INFECTION || gameType == HORDE;
+}
+
 //------------------------------------------------------------------------------------------------
 Game::Game(GameApp* parent): GameState(parent) 
 {
+	for (int i=0; i<MAX_GUNS; i++) {
+		Gun gun = {};
+		mGuns[i] = gun;
+	}
+
 	mSpecState = FREELOOK;
 	mSpecDead = false;
 
@@ -2257,7 +2267,7 @@ void Game::Render()
 		DWORD color1 = ARGB(255,255,255,255);
 		DWORD color2 = ARGB(255,255,255,255);
 
-		if (mGameType == TEAM) {
+		if (IsTeamRoundMode(mGameType)) {
 			maxNum = 8;
 			spacing = 7;
 			textspacing = 10;
@@ -2401,7 +2411,7 @@ void Game::Render()
 		// Infection can move a player from CT to T, so scoreboard totals must use current teams.
 		int scoreboardCTs = mNumCTs;
 		int scoreboardTs = mNumTs;
-		if (mGameType == TEAM) {
+		if (IsTeamRoundMode(mGameType)) {
 			scoreboardCTs = 0;
 			scoreboardTs = 0;
 			for (unsigned int i=0; i<mPeople.size(); i++) {
@@ -2512,7 +2522,7 @@ void Game::Render()
 			else {
 				gFont->SetColor(ARGB(255,255,64,64));
 				char buffer[128];
-				if (mGameType == TEAM) {
+				if (IsTeamRoundMode(mGameType)) {
 					sprintf(buffer,"Zombies (%d/%d)",mNumRemainingTs,scoreboardTs);
 				}
 				else if (mGameType == CTF) {
@@ -2520,7 +2530,7 @@ void Game::Render()
 				}
 				gFont->DrawString(buffer, 55.0f, y, JGETEXT_LEFT);
 
-				if (mGameType == TEAM) {
+				if (IsTeamRoundMode(mGameType)) {
 					sprintf(buffer,"%i",mNumTWins);	
 				}
 				else if (mGameType == CTF) {
@@ -2580,7 +2590,7 @@ void Game::Render()
 				gFont->SetColor(ARGB(255,153,204,255));
 				//char buffer[128];
 
-				if (mGameType == TEAM) {
+				if (IsTeamRoundMode(mGameType)) {
 					sprintf(buffer,"UN Forces (%d/%d)",mNumRemainingCTs,scoreboardCTs);
 				}
 				else if (mGameType == CTF) {
@@ -2588,7 +2598,7 @@ void Game::Render()
 				}
 				gFont->DrawString(buffer, 55.0f, y, JGETEXT_LEFT);
 
-				if (mGameType == TEAM) {
+				if (IsTeamRoundMode(mGameType)) {
 					sprintf(buffer,"%i",mNumCTWins);	
 				}
 				else if (mGameType == CTF) {
@@ -2954,7 +2964,7 @@ void Game::UpdateScores(Person* attacker, Person* victim, Gun* weapon) {
 			mRespawnTimer = mRespawnTime*1000;
 		}
 	}
-	else if (mGameType == TEAM) {
+	else if (IsTeamRoundMode(mGameType)) {
 		bool infectedRespawn = false;
 		if (mIsInfectionMode && !mIsOnline && victim->mOriginalTeam == CT && victim->mTeam == CT) {
 			// A CT becomes a Zombie after the configured delay; Elimination uses normal team rules.

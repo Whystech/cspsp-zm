@@ -6,7 +6,8 @@
 #include "JSoundSystem.h"
 #include <vector>
 
-#define MAX_GUNS 64
+#define MAX_GUNS 128
+#define GUNS_PER_ATLAS 64
 #define FIREMODE_SEMI 0
 #define FIREMODE_AUTO 1
 #define MAX_PELLETS 16

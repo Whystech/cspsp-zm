@@ -60,7 +60,9 @@ enum {
 	DROPFLAG,
 	RETURNFLAG,
 	CAPTUREFLAG,
-	TIME
+	TIME,
+	HORDESTATE,
+	AMMOUPDATE
 };
 
 class Packet;
