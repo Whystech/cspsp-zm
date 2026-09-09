@@ -51,6 +51,7 @@ public:
 
 	virtual void Update(float dt);
 	virtual void Render(float x, float y);
+	static void LoadTracerConfig(const char* filename);
 	void SetAngle(float angle);
 	void Reset(float x, float y, float px, float py, float angle, float speed, int damage, Person *parent);
 

@@ -39,11 +39,11 @@
 # id damage delay spread clip numclips reloaddelay walkingspeed bulletspeed viewangle cost type firemode pellets scope category teams name
 # 0.0 viewangle disables scope
 # HOW TO ADD A WEAPON
-# The first line is the number of weapon records loaded. Change 32 to 33
-# when adding ID 32, to 34 when adding ID 33, and so on (maximum 64).
-# Insert every new weapon record ABOVE these notes. Do not put blank or
-# comment lines between records included by the count.
-# Keep IDs sequential and equal to the record position: 0, 1, 2, ... 63.
+# The first line is the number (count) of weapon records loaded. +1 everytime when you add a new weapon.
+# When adding ID 64 (maximum) for example, the count should be 65 (maximum 128).
+# Insert every new weapon record ABOVE these notes. Do not put blank.
+# Do not put comment lines between records included by the count.
+# Keep IDs sequential and equal to the record position: 0, 1, 2, ... 127.
 # The ID selects the matching 32x32 cell in guns.PNG and gunsground.png.
 # With the 128-pixel-wide sheets, each row contains four IDs.
 #

@@ -1,0 +1,89 @@
+# Client-only tracer overrides keyed by gun ID.
+# Missing IDs use the original orange line tracer.
+# Format: gunId style red green blue alpha length width
+# Styles: none, line, laser, dot, dashed, beam, plasma, bolt,
+# comet, pulse, rail, spark, needle, twin, zigzag, flare, streak, slug
+#
+# COLUMN REFERENCE
+# gunId  Weapon ID from the first column of guns.txt. Valid range: 0-127.
+# style  Shape used to draw the tracer. Valid names are listed above.
+# red    Amount of red in the tracer color. Range: 0-255.
+# green  Amount of green in the tracer color. Range: 0-255.
+# blue   Amount of blue in the tracer color. Range: 0-255.
+# alpha  Tracer opacity/intensity. 0 is invisible; 255 is fully visible.
+# length Trail length in world pixels. 0 uses the original speed-scaled length.
+# width  Line/projectile thickness. Must be greater than 0; decimals are valid.
+#
+# RGB examples: 255 0 0 = red, 0 255 0 = green, 0 0 255 = blue,
+# 255 255 255 = white, and 255 165 0 = the original orange.
+# The active test assignments at the bottom give every current weapon a style.
+#
+# HOW TO ATTACH A TRACER TO A WEAPON
+# 1. Find the weapon ID in data/guns.txt (the first value in its row).
+# 2. Add one tracer row below using that same ID.
+# 3. Do not start the row with #; # makes a row a comment and disables it.
+# 4. Restart the game after saving this file.
+# Example: AK47 is ID 18 in guns.txt. This active row would give it a red laser:
+# 18 laser 255 30 30 255 64.0 1.0
+# Only one active row should be used per gun ID. Guns without a row keep the
+# original orange tracer. This file affects client graphics only, not damage,
+# bullet speed, collision, server behavior, or network compatibility.
+#
+# Examples:
+# 1 dot 255 210 120 255 0.0 1.5        pistol projectile point
+# 17 line 255 180 40 225 28.0 1.0      standard rifle tracer
+# 18 dashed 255 200 70 230 72.0 1.5    machine-gun tracer
+# 23 laser 255 30 30 255 64.0 1.0      thin laser
+# 36 beam 70 180 255 240 80.0 1.5      energy beam with white core
+# 37 plasma 80 255 190 220 48.0 1.5    glowing plasma projectile
+# 38 bolt 210 180 120 255 24.0 1.5     arrow or crossbow bolt
+# 39 comet 100 220 255 230 60.0 1.5    bright head with a tapered tail
+# 40 pulse 180 80 255 230 72.0 1.5     five fading energy points
+# 41 rail 80 200 255 245 90.0 1.0      twin rails with a white center
+# 42 spark 255 240 100 255 24.0 1.0    short trail with a cross-shaped tip
+# 43 needle 230 230 255 255 36.0 1.0   very thin, short projectile streak
+# 44 twin 255 80 80 230 56.0 1.0       two parallel tracer lines
+# 45 zigzag 120 200 255 230 64.0 1.0   electric zigzag path
+# 46 flare 255 120 40 240 32.0 1.0     bright star-shaped projectile tip
+# 47 streak 255 220 140 230 72.0 1.0  long dim tail with a bright front
+# 48 slug 190 190 190 255 28.0 1.5    short, thick physical projectile
+# 25 none 255 255 255 0 0.0 1.0        hidden tracer
+
+# ACTIVE TEST ASSIGNMENTS FOR CURRENT WEAPONS (IDs 0-35)
+# Knife and grenades use none because they do not create ordinary bullets.
+0 none 255 255 255 0 0.0 1.0
+1 dot 255 210 120 255 0.0 1.5
+2 needle 220 240 255 255 32.0 1.0
+3 spark 255 220 100 245 28.0 1.0
+4 slug 255 170 70 255 30.0 1.5
+5 pulse 100 210 255 235 48.0 1.0
+6 twin 255 100 80 235 44.0 1.0
+7 comet 255 190 90 240 46.0 1.5
+8 plasma 255 120 40 225 42.0 1.3
+9 streak 255 230 120 220 50.0 0.8
+10 zigzag 255 100 70 225 52.0 0.8
+11 line 255 165 0 225 0.0 1.0
+12 laser 120 220 255 225 52.0 0.8
+13 pulse 255 220 80 230 58.0 1.0
+14 rail 100 200 255 235 60.0 0.8
+15 flare 255 160 60 235 54.0 1.0
+16 needle 220 255 220 245 64.0 0.8
+17 beam 100 180 255 230 58.0 0.8
+18 dashed 255 200 70 230 72.0 1.5
+19 laser 100 255 180 235 58.0 0.9
+20 zigzag 160 220 255 230 58.0 0.8
+21 twin 100 200 255 235 68.0 0.8
+22 rail 255 100 100 240 72.0 0.8
+23 beam 255 70 70 245 80.0 1.0
+24 dashed 255 230 100 230 76.0 1.2
+25 none 255 255 255 0 0.0 1.0
+26 none 255 255 255 0 0.0 1.0
+27 none 255 255 255 0 0.0 1.0
+28 streak 180 255 160 225 58.0 0.9
+29 comet 100 230 255 230 54.0 1.0
+30 slug 255 180 70 245 42.0 1.6
+31 spark 255 120 80 240 36.0 1.0
+32 flare 255 190 80 235 38.0 1.0
+33 plasma 180 100 255 225 42.0 1.1
+34 laser 100 255 140 225 48.0 0.8
+35 bolt 220 200 150 245 34.0 1.0
