@@ -13,6 +13,9 @@
 #define TEAM 0
 #define FFA 1
 #define CTF 2
+#define EXTERMINATION 3
+#define INFECTION 4
+#define HORDE 5
 
 struct CollisionPoint {
 	float x;

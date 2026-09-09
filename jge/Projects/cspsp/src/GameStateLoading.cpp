@@ -141,19 +141,31 @@ int GameStateLoading::Load(int stage) {
 			break;
 		}
 		case 1: {
+			JTexture* gunsTextures[2];
+			JTexture* gunsGroundTextures[2];
+			gunsTextures[0] = mRenderer->LoadTexture("gfx/guns.png", true);
+			gunsTextures[1] = mRenderer->LoadTexture("gfx/guns2.png", true);
+			gunsGroundTextures[0] = mRenderer->LoadTexture("gfx/gunsground.png", true);
+			gunsGroundTextures[1] = mRenderer->LoadTexture("gfx/gunsground2.png", true);
 
-			JTexture* gunsTexture = mRenderer->LoadTexture("gfx/guns.png", true);
-			JTexture* gunsgroundTexture = mRenderer->LoadTexture("gfx/gunsground.png", true);
-			int k = 0;
-			gGunHandQuads = new JQuad*[(gunsTexture->mTexWidth/32)*(gunsTexture->mTexHeight/32)];
-			gGunGroundQuads = new JQuad*[(gunsgroundTexture->mTexWidth/32)*(gunsgroundTexture->mTexHeight/32)];
-			for (int i=0;i<(gunsTexture->mTexHeight)/32;i++) {
-				for (int j=0;j<(gunsTexture->mTexWidth)/32;j++) {
-					gGunHandQuads[k] = new JQuad(gunsTexture,j*32.0f,i*32.0f,32.0f,32.0f);
-					gGunHandQuads[k]->SetHotSpot(16.0f,8.0f);
-					gGunGroundQuads[k] = new JQuad(gunsgroundTexture,j*32.0f,i*32.0f,32.0f,32.0f);
-					gGunGroundQuads[k]->SetHotSpot(16.0f,16.0f);
-					k++;
+			gGunHandQuads = new JQuad*[MAX_GUNS];
+			gGunGroundQuads = new JQuad*[MAX_GUNS];
+			for (int i=0; i<MAX_GUNS; i++) {
+				gGunHandQuads[i] = NULL;
+				gGunGroundQuads[i] = NULL;
+			}
+
+			for (int page=0; page<2; page++) {
+				int localId = 0;
+				for (int i=0; i<(gunsTextures[page]->mTexHeight)/32 && localId<GUNS_PER_ATLAS; i++) {
+					for (int j=0; j<(gunsTextures[page]->mTexWidth)/32 && localId<GUNS_PER_ATLAS; j++) {
+						int id = page*GUNS_PER_ATLAS+localId;
+						gGunHandQuads[id] = new JQuad(gunsTextures[page],j*32.0f,i*32.0f,32.0f,32.0f);
+						gGunHandQuads[id]->SetHotSpot(16.0f,8.0f);
+						gGunGroundQuads[id] = new JQuad(gunsGroundTextures[page],j*32.0f,i*32.0f,32.0f,32.0f);
+						gGunGroundQuads[id]->SetHotSpot(16.0f,16.0f);
+						localId++;
+					}
 				}
 			}
 

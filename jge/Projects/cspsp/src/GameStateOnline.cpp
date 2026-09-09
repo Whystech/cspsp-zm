@@ -1,5 +1,15 @@
 #include "GameStateOnline.h"
 
+static bool IsRoundBasedOnlineMode(int gameType)
+{
+	return gameType == TEAM || gameType == EXTERMINATION || gameType == INFECTION || gameType == HORDE;
+}
+
+static bool UsesTimedRespawn(int gameType)
+{
+	return gameType == FFA || gameType == CTF || gameType == INFECTION;
+}
+
 GameStateOnline::GameStateOnline(GameApp* parent): Game(parent) 
 {
 }
@@ -773,7 +783,7 @@ void GameStateOnline::Update(float dt)
 		else if (mBuyMenu->mIsActive) {
 			mBuyMenu->Update(dt);
 			if (mBuyMenu->mIsSelected) {
-				if (mBuyTimer > 0.0f || mGameType != TEAM) {
+				if (mBuyTimer > 0.0f || !IsRoundBasedOnlineMode(mGameType) || mGameType == HORDE) {
 					int choice = mBuyMenu->GetChoice();
 					
 					Packet sendpacket = Packet();
@@ -1359,6 +1369,8 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 				int playerid = packet.ReadInt8();
 				packet.ReadChar(mPlayer->mName,32);
 				float timeMultiplier = packet.ReadFloat();
+				int hordeWave = packet.ReadInt16();
+				int hordeWaveDelay = packet.ReadInt16();
 
 				int ackid = packet.ReadInt16();
 				if (sendack) {
@@ -1373,6 +1385,10 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 
 				//mMapName = mapname;
 				mGameType = gametype;
+				mIsInfectionMode = (mGameType == INFECTION);
+				mIsHordeMode = (mGameType == HORDE);
+				mHordeWave = hordeWave;
+				mHordeWaveDelay = hordeWaveDelay;
 
 				mFriendlyFire = ff;
 				//mNumCTs = numCTs;
@@ -1629,6 +1645,11 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 				float viewangle = packet.ReadFloat();
 				int cost = packet.ReadInt16();
 				int type = packet.ReadInt8();
+				int firemode = packet.ReadInt8();
+				int pellets = packet.ReadInt8();
+				int scope = packet.ReadInt8();
+				int buycategory = packet.ReadInt8();
+				int buyteams = packet.ReadInt8();
 				char name[15];
 				packet.ReadChar(name,15);
 				int ackid = packet.ReadInt16();
@@ -1643,7 +1664,7 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 				
 				//if (mGuns[id] != NULL) break;
 
-				Gun gun = {gGunHandQuads[id],gGunGroundQuads[id],id,delay,damage,spread,clip,numclips,reloaddelay,speed,bulletspeed,viewangle,cost,type};
+				Gun gun = {gGunHandQuads[id],gGunGroundQuads[id],id,delay,damage,spread,clip,numclips,reloaddelay,speed,bulletspeed,viewangle,cost,type,firemode,pellets,scope,buycategory,buyteams};
 				mGuns[id] = gun;
 
 				strcpy(mGuns[id].mName,name);
@@ -1718,6 +1739,7 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 				int numdeaths = packet.ReadInt16();
 				int movementstyle = packet.ReadInt8();
 				int money = packet.ReadInt16();
+				int health = packet.ReadInt16();
 				char name[32];
 				packet.ReadChar(name,32);
 				int ackid = packet.ReadInt16();
@@ -1767,6 +1789,7 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 				player->mNumDeaths = numdeaths;
 				player->mMovementStyle = movementstyle;
 				player->mMoney = money;
+				player->mHealth = health;
 				//player->mUdpManager = mUdpManager;
 				player->mId = id;
 
@@ -2005,7 +2028,7 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 					mHud->AddMessageEvent(buffer);
 				}
 
-				if (mGameType != TEAM) {
+				if (UsesTimedRespawn(mGameType)) {
 					if (player == mPlayer) {
 						mRespawnTimer = mRespawnTime*1000;
 					}
@@ -2063,7 +2086,7 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 					player->mIsActive = true;
 				}
 
-				if (mGameType != TEAM) {
+				if (mGameType == FFA || mGameType == CTF) {
 					player->mInvincibleTime = mInvincibleTime*1000;
 				}
 
@@ -2193,7 +2216,7 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 
 				if (exists) break;
 
-				if (gunindex >= 28 || gunindex < 0) break;
+				if (gunindex >= MAX_GUNS || gunindex < 0) break;
 				GunObjectOnline* gunobject = new GunObjectOnline(&mGuns[gunindex],clipammo,remainingammo);
 				gunobject->mX = x;
 				gunobject->mY = y;
@@ -2457,7 +2480,7 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 					exists = true;
 				}
 				if (exists) break;
-				if (gunindex >= 28 || gunindex < 0) break;
+				if (gunindex >= MAX_GUNS || gunindex < 0) break;
 
 				GunObjectOnline* gunobject = new GunObjectOnline(&mGuns[gunindex],clipammo,remainingammo);
 				gunobject->mId = gunid;
@@ -2547,6 +2570,7 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 				int parentid = packet.ReadInt8();
 				int ammo = packet.ReadInt8();
 				float time = packet.ReadFloat();
+				if (guntype < 0 || guntype >= MAX_GUNS || mGuns[guntype].mPellets <= 1) break;
 
 				int ackid = packet.ReadInt16();
 				if (sendack) {
@@ -2562,7 +2586,7 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 				if (exists) break;*/
 
 				if (!round) break;
-				if (guntype < 0 || guntype >= 28) break;
+				if (guntype < 0 || guntype >= MAX_GUNS) break;
 
 
 				PersonOnline* player = (PersonOnline*)GetPerson(parentid);
@@ -2636,16 +2660,8 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 					latency = 0.0f;
 				}
 
-				float speed = 0.3f;
-				int numBullets = 0;
-				if (guntype == 7) { //m3, 6 bullets
-					numBullets = 6;
-					speed *= mGuns[guntype].mBulletSpeed;
-				}
-				else if (guntype == 8) { // xm1014, 4 bullets
-					numBullets = 4;
-					speed *= mGuns[guntype].mBulletSpeed;
-				}
+				float speed = 0.3f*mGuns[guntype].mBulletSpeed;
+				int numBullets = mGuns[guntype].mPellets;
 				for (int i=0; i<numBullets; i++) {
 					//int id = packet.ReadInt16();
 					int angle = packet.ReadInt16();
@@ -2846,7 +2862,7 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 			}
 			case HIT: {
 				int id = packet.ReadInt8();
-				int health = packet.ReadInt8();
+				int health = packet.ReadInt16();
 				int ackid = packet.ReadInt16();
 				if (sendack) {
 					mUdpManager->SendAck(ackid);
@@ -2939,7 +2955,7 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 				if (victim == NULL) break;
 				if (victim->mState == DEAD) break;
 
-				if (gunindex >= 28 || gunindex < -1) break;
+				if (gunindex >= MAX_GUNS || gunindex < -1) break;
 
 				if (attacker == mPlayer) {
 					if (gKills != -1 || gDeaths != -1) {
@@ -2986,7 +3002,7 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 				if (mGameType == FFA) {
 					mFFAWinner = GetPerson(code);
 				}
-				else if (mGameType == TEAM || mGameType == CTF) {
+				else {
 					if (mWinner == NONE) {
 						if (code == T) {
 							mNumTWins++;
@@ -3372,6 +3388,41 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 				
 				break;
 			}
+			case HORDESTATE: {
+				int wave = packet.ReadInt16();
+				int roundstate = packet.ReadInt8();
+				float roundtimer = packet.ReadFloat();
+				int remainingCTs = packet.ReadInt8();
+				int remainingTs = packet.ReadInt8();
+				int ackid = packet.ReadInt16();
+				if (sendack) mUdpManager->SendAck(ackid,true);
+				if (!mUdpManager->HandleSequence(ackid,packet,startindex)) break;
+				if (!round || mGameType != HORDE) break;
+
+				mHordeWave = wave;
+				mRoundState = roundstate;
+				mRoundTimer = roundtimer;
+				mNumRemainingCTs = remainingCTs;
+				mNumRemainingTs = remainingTs;
+				mWinner = NONE;
+				break;
+			}
+			case AMMOUPDATE: {
+				int id = packet.ReadInt8();
+				int slot = packet.ReadInt8();
+				int clip = packet.ReadInt16();
+				int reserve = packet.ReadInt16();
+				int ackid = packet.ReadInt16();
+				if (sendack) mUdpManager->SendAck(ackid,true);
+				if (!mUdpManager->HandleSequence(ackid,packet,startindex)) break;
+				if (!round || slot < 0 || slot >= 5) break;
+
+				Person* player = GetPerson(id);
+				if (player == NULL || player->mGuns[slot] == NULL) break;
+				player->mGuns[slot]->mClipAmmo = clip;
+				player->mGuns[slot]->mRemainingAmmo = reserve;
+				break;
+			}
 		}
 	}
 }
@@ -3441,7 +3492,7 @@ void GameStateOnline::ResetRound() {
 		//mPeople[i]->Reset();
 	}	
 
-	if (mGameType == TEAM) {
+	if (IsRoundBasedOnlineMode(mGameType)) {
 		if (mWinner == NONE) {
 			/*if (mPlayer->mMoney < 3400) {
 				mPlayer->mMoney += 1400;
