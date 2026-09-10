@@ -1,0 +1,19 @@
+# CLIENT VISUAL EFFECTS AND PERFORMANCE
+# Loaded when CSPSP starts. These settings are visual only and safe online.
+# High counts can reduce PSP performance or exhaust memory.
+#
+# max_decals: maximum retained bullet/blood decals, 0-10000.
+# particle_pool_size: total reusable particle capacity, 1-10000. Keep this at
+# least as large as the number of simultaneously visible particles you expect.
+# *_particle_count: particles emitted per event, 0-1000.
+# *_lifetime_ms: particle or muzzle-flash duration in milliseconds;
+# particle lifetimes are 1-60000 and muzzle flash is 0-10000.
+max_decals = 100
+particle_pool_size = 100
+blood_particle_count = 5
+impact_particle_count = 2
+shell_particle_count = 1
+blood_particle_lifetime_ms = 200
+impact_particle_lifetime_ms = 250
+shell_particle_lifetime_ms = 500
+muzzle_flash_lifetime_ms = 50

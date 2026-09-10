@@ -301,11 +301,11 @@ void GameStateOnline::CheckInput(float dt)
 {
 	if (mEngine->GetButtonState(PSP_CTRL_LTRIGGER))
 	{
-		mPlayer->RotateFacing(-0.005f*dt*mTimeMultiplier);
+		mPlayer->RotateFacing(-gCameraConfig.rotationSpeed*dt*mTimeMultiplier);
 	}
 	if (mEngine->GetButtonState(PSP_CTRL_RTRIGGER))
 	{
-		mPlayer->RotateFacing(0.005f*dt*mTimeMultiplier);
+		mPlayer->RotateFacing(gCameraConfig.rotationSpeed*dt*mTimeMultiplier);
 	}
 
 	if (mEngine->GetButtonClick(PSP_CTRL_SQUARE))
@@ -547,7 +547,7 @@ void GameStateOnline::CheckCollisions()
 							float angle = atan2f((y2-y),x2-x)+M_PI;
 							float anglediff = fabs(fabs(angle-mPeople[i]->mFacingAngle)-M_PI);
 							if (anglediff <= 0.5f) {
-								gParticleEngine->GenerateParticles(BLOOD,x2,y2,5);
+								gParticleEngine->GenerateParticles(BLOOD,x2,y2,gEffectsConfig.bloodParticleCount);
 								mMap->AddDecal(x2,y2,DECAL_BLOOD);
 								gSfxManager->PlaySample(gKnifeHitSound,x,y);
 								//mPeopleTemp[j]->TakeDamage(mPeople[i]->mGuns[KNIFE]->mGun->mDamage);
@@ -562,7 +562,7 @@ void GameStateOnline::CheckCollisions()
 							float angle = atan2f((y-y2),x-x2)+M_PI;
 							float anglediff = fabs(fabs(angle-mPeopleTemp[j]->mFacingAngle)-M_PI);
 							if (anglediff <= 0.5f) {
-								gParticleEngine->GenerateParticles(BLOOD,x,y,5);
+								gParticleEngine->GenerateParticles(BLOOD,x,y,gEffectsConfig.bloodParticleCount);
 								mMap->AddDecal(x,y,DECAL_BLOOD);
 								gSfxManager->PlaySample(gKnifeHitSound,x2,y2);
 								//mPeople[i]->TakeDamage(mPeopleTemp[j]->mGuns[KNIFE]->mGun->mDamage);
@@ -607,7 +607,7 @@ void GameStateOnline::CheckCollisions()
 				float ll = d.Dot(d);
 				int r = 16;
 				if (ll < (r * r)) {
-					gParticleEngine->GenerateParticles(BLOOD,mBullets[k]->mX,mBullets[k]->mY,5);
+					gParticleEngine->GenerateParticles(BLOOD,mBullets[k]->mX,mBullets[k]->mY,gEffectsConfig.bloodParticleCount);
 					mMap->AddDecal(mBullets[k]->mX,mBullets[k]->mY,DECAL_BLOOD);
 					gSfxManager->PlaySample(gHitSounds[rand()%3],mBullets[k]->mX,mBullets[k]->mY);
 					//mPeople[j]->TakeDamage(mBullets[k]->mDamage);
@@ -1740,6 +1740,7 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 				int movementstyle = packet.ReadInt8();
 				int money = packet.ReadInt16();
 				int health = packet.ReadInt16();
+				int armor = packet.ReadInt16();
 				char name[32];
 				packet.ReadChar(name,32);
 				int ackid = packet.ReadInt16();
@@ -1790,6 +1791,7 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 				player->mMovementStyle = movementstyle;
 				player->mMoney = money;
 				player->mHealth = health;
+				player->mArmor = armor;
 				//player->mUdpManager = mUdpManager;
 				player->mId = id;
 
@@ -2863,6 +2865,7 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 			case HIT: {
 				int id = packet.ReadInt8();
 				int health = packet.ReadInt16();
+				int armor = packet.ReadInt16();
 				int ackid = packet.ReadInt16();
 				if (sendack) {
 					mUdpManager->SendAck(ackid);
@@ -2873,11 +2876,12 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 				Person* player = GetPerson(id);
 				if (player == NULL) break;
 				if (player->mState == DEAD) break;
-				if (player->mHealth == health) break;
+				if (player->mHealth == health && player->mArmor == armor) break;
 
 				player->mHealth = health;
+				player->mArmor = armor;
 				player->SetMoveState(NOTMOVING);
-				player->mSpeed *= 0.1f;
+				player->mSpeed *= gPlayerConfig.damageSpeedMultiplier;
 				((PersonOnline*)player)->mSSpeed *= 0.1f;
 				//player->TakeDamage(damage);
 
@@ -3085,7 +3089,7 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 					mPeople[i]->Die();
 					mPeople[i]->mNumKills = 0;
 					mPeople[i]->mNumDeaths = 0;
-					mPeople[i]->mMoney = 800;
+					mPeople[i]->mMoney = gPlayerConfig.startingMoney;
 				}
 				break;
 			}
@@ -3423,6 +3427,34 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 				player->mGuns[slot]->mRemainingAmmo = reserve;
 				break;
 			}
+			case PICKUPSTATE: {
+				int pickupId = packet.ReadInt16();
+				bool active = packet.ReadInt8() != 0;
+				int playerId = packet.ReadInt8();
+				int health = packet.ReadInt16();
+				int armor = packet.ReadInt16();
+				int ackid = packet.ReadInt16();
+				if (sendack) mUdpManager->SendAck(ackid,true);
+				if (!mUdpManager->HandleSequence(ackid,packet,startindex)) break;
+
+				int pickupType = -1;
+				for (unsigned int i=0; i<mMap->mPickups.size(); i++) {
+					if (mMap->mPickups[i].id == pickupId) {
+						pickupType = mMap->mPickups[i].type;
+						mMap->mPickups[i].active = active;
+						break;
+					}
+				}
+				if (playerId >= 0) {
+					Person* player = GetPerson(playerId);
+					if (player != NULL) {
+						player->mHealth = health;
+						player->mArmor = armor;
+						if (!active) gSfxManager->PlaySample(pickupType == PICKUP_AMMO ? gAmmoSound : gPickUpSound,player->mX,player->mY);
+					}
+				}
+				break;
+			}
 		}
 	}
 }
@@ -3691,7 +3723,7 @@ void GameStateOnline::Explode(float x, float y, int type) {
 				continue;
 			}
 
-			gParticleEngine->GenerateParticles(BLOOD,mPeople[i]->mX,mPeople[i]->mY,5);
+			gParticleEngine->GenerateParticles(BLOOD,mPeople[i]->mX,mPeople[i]->mY,gEffectsConfig.bloodParticleCount);
 			mMap->AddDecal(mPeople[i]->mX,mPeople[i]->mY,DECAL_BLOOD);
 			gSfxManager->PlaySample(gHitSounds[rand()%3],mPeople[i]->mX,mPeople[i]->mY);
 		}

@@ -1,0 +1,10 @@
+# CLIENT HUD QUEUE CAPACITIES
+# Loaded when CSPSP starts. These are presentation/memory limits, not gameplay
+# rules. Larger queues retain more events but consume more memory and screen space.
+#
+# kill_feed_events: stored kill notifications, range 1-100.
+# message_events: stored general notifications, range 1-100.
+# active_message_events: messages shown at once, range 1-message_events.
+kill_feed_events = 5
+message_events = 9
+active_message_events = 3

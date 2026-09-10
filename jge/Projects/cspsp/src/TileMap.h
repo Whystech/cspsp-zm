@@ -6,7 +6,6 @@
 #include "GunObject.h"
 #include "Collision.h"
 
-#define MAXDECALS 100
 #define DECAL_BLOOD 0
 #define DECAL_EXPLOSION 1
 
@@ -49,6 +48,21 @@ struct BuyZone {
 	float y2;
 };
 
+#define PICKUP_HEALTH 0
+#define PICKUP_ARMOR 1
+#define PICKUP_AMMO 2
+
+struct MapPickup {
+	int type;
+	int id;
+	float x;
+	float y;
+	int amount;
+	float respawnTime;
+	float respawnTimer;
+	bool active;
+};
+
 //------------------------------------------------------------------------------------------------
 class TileMap
 {
@@ -80,6 +94,8 @@ public:
 	std::vector<BuyZone> mCTBuyZones;
 	std::vector<BuyZone> mTBuyZones;
 	std::vector<Node*> mNodes;
+	std::vector<MapPickup> mPickupSpawns;
+	std::vector<MapPickup> mPickups;
 	int mNumPoints;
 	int mNumCTs;
 	int mNumTs;

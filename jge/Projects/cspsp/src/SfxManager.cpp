@@ -1,5 +1,6 @@
 
 #include "SfxManager.h"
+#include "Globals.h"
 JSoundSystem* SfxManager::mSoundSystem = NULL;
 
 //------------------------------------------------------------------------------------------------
@@ -18,7 +19,7 @@ SfxManager::~SfxManager()
 //------------------------------------------------------------------------------------------------
 int SfxManager::PlaySample(JSample *sample)
 {
-	sample->mVolume = 256;
+	sample->mVolume = gAudioConfig.globalVolume;
 	//sample->mVolume *= 255*powf((1*1)/(1*1+distance*distance),0.5);
 	sample->mPanning = 127;
 
@@ -33,10 +34,10 @@ int SfxManager::PlaySample(JSample *sample, float x, float y)
 	float dx = mX-x;
 	float dy = mY-y;
 	float distance = sqrtf(dx*dx+dy*dy);
-	if (distance <= 500) {
-		sample->mVolume = (int)(256-distance*(256.0f/500.0f));
+	if (distance <= gAudioConfig.positionalDistance) {
+		sample->mVolume = (int)(gAudioConfig.globalVolume-distance*(gAudioConfig.globalVolume/gAudioConfig.positionalDistance));
 		//sample->mVolume *= 255*powf((1*1)/(1*1+distance*distance),0.5);
-		if (distance > 5) {
+		if (distance > gAudioConfig.panningDeadzone) {
 			sample->mPanning = (int)(127.5f-(127.5f*(dx/distance)));
 		}
 		else {

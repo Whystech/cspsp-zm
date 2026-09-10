@@ -24,9 +24,9 @@ Person::Person(JQuad* quads[], JQuad* deadquad, std::vector<Bullet*>* bullets, s
 	mState = DEAD;
 	//mState = 0;
 	mStateTime = 0.0f;
-	mHealth = (team == T) ? 150 : 100;
-	mArmor = 0;
-	mMoney = 800;
+	mHealth = team == T ? gPlayerConfig.tSpawnHealth : gPlayerConfig.ctSpawnHealth;
+	mArmor = team == T ? gPlayerConfig.tSpawnArmor : gPlayerConfig.ctSpawnArmor;
+	mMoney = gPlayerConfig.startingMoney;
 	mRecoilAngle = 0.0f;
 	SetTotalRotation(M_PI_2);
 	//mRotation = 0.0f;
@@ -257,7 +257,7 @@ void Person::Update(float dt)
 	if (mIsActive) {
 		if (mMoveState == NOTMOVING) {
 			if (!mIsPlayerOnline) {
-				mSpeed -= .0005f*dt;
+				mSpeed -= gPlayerConfig.deceleration*dt;
 				if (mSpeed < 0) {
 					mSpeed = 0;
 				}
@@ -266,7 +266,7 @@ void Person::Update(float dt)
 		}
 		else if (mMoveState == MOVING) {
 			if (!mIsPlayerOnline) {
-				mSpeed += .0005f*dt;
+				mSpeed += gPlayerConfig.acceleration*dt;
 				if (mSpeed > mMaxSpeed) {
 					mSpeed = mMaxSpeed;
 				}
@@ -643,13 +643,13 @@ std::vector<Bullet*> Person::Fire()
 					bullets.push_back(bullet);
 					mBullets->push_back(bullet);
 				}
-				gParticleEngine->GenerateParticles(BULLETSHELL,mX+10*cosf(mFacingAngle),mY+10*sinf(mFacingAngle),1);
+				gParticleEngine->GenerateParticles(BULLETSHELL,mX+10*cosf(mFacingAngle),mY+10*sinf(mFacingAngle),gEffectsConfig.shellParticleCount);
 				SetState(ATTACKING);
 				mGuns[mGunIndex]->mClipAmmo--;
 				//JSample *test = mEngine->LoadSample("sfx/m249.wav");
 				gSfxManager->PlaySample(mGuns[mGunIndex]->mGun->mFireSound,mX,mY);
 
-				mMuzzleFlashTime = 50.0f;
+				mMuzzleFlashTime = gEffectsConfig.muzzleFlashLifetime;
 				mMuzzleFlashAngle = mFacingAngle;
 				mMuzzleFlashIndex = mGuns[mGunIndex]->mGun->mType*3 + rand()%3;
 
@@ -1131,7 +1131,8 @@ void Person::Reset()
 	mFadeTime = 1000.0f;
 	mInvincibleTime = 0.0f;
 	mHasCorpse = false;
-	mHealth = (mTeam == T) ? 150 : 100;
+	mHealth = mTeam == T ? gPlayerConfig.tSpawnHealth : gPlayerConfig.ctSpawnHealth;
+	mArmor = mTeam == T ? gPlayerConfig.tSpawnArmor : gPlayerConfig.ctSpawnArmor;
 	if (mTeam == T || mTeam == CT) {
 		SetKnifeForTeam(mTeam);
 	}
@@ -1162,7 +1163,7 @@ void Person::TakeDamage(int damage) {
 	if (mInvincibleTime > 0.0f) return;
 	if (mState != DEAD) {
 		SetMoveState(NOTMOVING);
-		mSpeed *= 0.1f;
+		mSpeed *= gPlayerConfig.damageSpeedMultiplier;
 		if (mArmor > 0) {
 			int absorbedDamage = damage*GetArmorDamageReduction()/100;
 			if (absorbedDamage > mArmor) absorbedDamage = mArmor;
@@ -1180,7 +1181,7 @@ void Person::TakeDamage(int damage) {
 void Person::ReceiveFlash(float intensity) {
 	if (mInvincibleTime > 0.0f) return;
 	mIsFlashed = true;
-	mFlashTime = 15000.0f;
+	mFlashTime = gGrenadeConfig.flashDuration;
 	if (intensity < 0.01f) {
 		intensity = 0.01f;
 	}

@@ -74,6 +74,7 @@ public:
 
 	void CheckInput(float dt);
 	void CheckCollisions();
+	void CheckMapPickups(Person* person);
 	void NewGame();
 	void ResetRound();
 	void ResetHordeWave();

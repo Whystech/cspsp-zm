@@ -1,0 +1,31 @@
+# CLIENT TEXTURE PATHS
+# Loaded when CSPSP starts. Paths are relative to the game directory and are
+# client-only. Restart after changing a path or replacing an image.
+# Keep replacement image dimensions/layout compatible with the original sprite
+# sheet because code selects fixed pixel regions from several textures.
+# Missing required images can prevent loading or leave graphics blank.
+#
+# radar is the 64x64 frame/overlay. The actual map layer comes separately from
+# maps/<map name>/overview.png and is not selected by this file.
+background = gfx/bg.png
+logo = gfx/logo.png
+players = gfx/players.png
+players_dead = gfx/playersdead.png
+radar = gfx/radar.png
+buyzone = gfx/buyzone.png
+decals = gfx/decals.png
+guns_page_1 = gfx/guns.png
+guns_page_2 = gfx/guns2.png
+guns_ground_page_1 = gfx/gunsground.png
+guns_ground_page_2 = gfx/gunsground2.png
+muzzle_flash = gfx/muzzleflash.png
+health_hud = gfx/health.png
+armor_hud = gfx/armor.png
+health_ground = gfx/healthground.png
+armor_ground = gfx/armorground.png
+ammo_ground = gfx/ammoground.png
+ammo_hud = gfx/ammo.png
+damage_indicator = gfx/damageindicator.png
+score_icons = gfx/scoreicons.png
+ctf = gfx/ctf.png
+particles = gfx/particles.png

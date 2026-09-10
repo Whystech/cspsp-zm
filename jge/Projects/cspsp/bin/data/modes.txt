@@ -1,0 +1,17 @@
+# LOCAL MODE FALLBACKS
+# Used only when the matching key is absent from data/config.txt.
+# Saving the Options screen writes config.txt and does not change this file.
+# Values are read when a local game starts; online rules come from the server.
+#
+# friendly_fire: on/off; permits damage to teammates in local team modes.
+# respawn: base/inplace; where a CT converted in Infection reappears.
+# infection_respawn_delay: conversion delay in seconds, supported range 0-4.
+# round_freeze_time: local round-start freeze in seconds, supported range 0-5.
+# horde_regroup: base/inplace; where survivors regroup between Horde waves.
+# horde_wave_delay: seconds before the next Horde wave; use 3, 5, 10 or 15.
+friendly_fire = on
+respawn = base
+infection_respawn_delay = 1
+round_freeze_time = 3
+horde_regroup = inplace
+horde_wave_delay = 3

@@ -1,0 +1,19 @@
+# OFFLINE GRENADE GAMEPLAY
+# Loaded when CSPSP starts. Restart after editing. Online grenade damage and
+# timing remain server-authoritative where the server handles them.
+#
+# *_ms values are milliseconds. Distance and falloff values are world units.
+# fuse_time_ms: delay between throwing and detonation, range 0-60000.
+# flash_duration_ms: maximum blinded duration, range 0-60000.
+# flash_min_distance: full-strength flash distance, range 1-10000.
+# flash_falloff: distance over which flash strength decreases, range 0-10000.
+# he_min_distance: full-strength HE damage distance, range 1-10000.
+# he_max_distance: outer HE effect radius; never lower than he_min_distance.
+# he_falloff: distance used to reduce HE damage, range 0-10000.
+fuse_time_ms = 1500
+flash_duration_ms = 15000
+flash_min_distance = 20
+flash_falloff = 20
+he_min_distance = 40
+he_max_distance = 200
+he_falloff = 40

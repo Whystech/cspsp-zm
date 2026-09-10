@@ -1,0 +1,30 @@
+# OFFLINE PLAYER GAMEPLAY
+# Loaded when CSPSP starts. Restart after editing.
+# These values affect local games only; an online server sends authoritative
+# health, armor, damage, pickup and money results.
+#
+# *_max_health / *_max_armor: team-specific pickup caps, range 1-32767 for
+# health and 0-32767 for armor.
+# *_spawn_health / *_spawn_armor: value given on spawn; automatically clamped
+# to that team's corresponding maximum.
+# armor_damage_reduction: armor protection percentage, range 0-100.
+# pickup_radius: collection distance in world units, range 1-256.
+# starting_money: local starting cash, range 0-32767.
+# damage_speed_multiplier: movement retained after a hit, range 0.0-1.0.
+# player_acceleration / player_deceleration: speed change per millisecond,
+# range 0.0-1.0. Larger values produce faster starts and stops.
+
+ct_max_health = 100
+t_max_health = 150
+ct_max_armor = 100
+t_max_armor = 100
+ct_spawn_health = 100
+t_spawn_health = 150
+ct_spawn_armor = 0
+t_spawn_armor = 0
+armor_damage_reduction = 30
+pickup_radius = 16
+starting_money = 800
+damage_speed_multiplier = 0.1
+player_acceleration = 0.0005
+player_deceleration = 0.0005

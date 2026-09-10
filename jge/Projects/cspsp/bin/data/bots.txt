@@ -1,0 +1,27 @@
+# OFFLINE BOT BEHAVIOR
+# Loaded when CSPSP starts. These values do not configure dedicated-server bots;
+# server owners use CSPSPServer/data/gameplay_config.txt instead.
+# Distances are world units and *_ms values are milliseconds.
+#
+# vision_range: maximum enemy detection range, 1-10000.
+# reaction_time_ms: delay before reacting to a detected target, 1-60000.
+# stuck_time_ms: time without progress before path recovery, 1-60000.
+# waypoint_tolerance: distance accepted as reaching a waypoint, 1-10000.
+# path_tolerance: distance accepted around the active path target, 1-10000.
+# rotation_speed: turning rate per millisecond, 0.0-1.0.
+# movement_speed: bot movement speed, 0.0-10.0.
+# fire_delay_min_ms / fire_delay_max_ms: random pause between attacks;
+# maximum is automatically kept at or above minimum, range 0-60000.
+# burst_min_ms / burst_max_ms: random firing-burst duration; maximum is
+# automatically kept at or above minimum, range 0-60000.
+vision_range = 223.6068
+reaction_time_ms = 100
+stuck_time_ms = 3000
+waypoint_tolerance = 31.6228
+path_tolerance = 22.3607
+rotation_speed = 0.003
+movement_speed = 0.08
+fire_delay_min_ms = 250
+fire_delay_max_ms = 750
+burst_min_ms = 500
+burst_max_ms = 1500

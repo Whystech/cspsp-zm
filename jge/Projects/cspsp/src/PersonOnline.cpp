@@ -441,11 +441,11 @@ void PersonOnline::ReceiveInput(Input input, float time) {
 
 	int aX = input.x;
 	int aY = input.y;
-	if (aX >= 20 || aX <= -20 || aY >= 20 || aY <= -20) {
+	if (aX >= gCameraConfig.analogDeadzone || aX <= -gCameraConfig.analogDeadzone || aY >= gCameraConfig.analogDeadzone || aY <= -gCameraConfig.analogDeadzone) {
 		float angle = atan2f(aX,-aY);
-		float speed = (sqrtf(aX*aX + aY*aY)/127.5f)*0.1f;
-		if (speed > 0.1f) {
-			speed = 0.1f;
+		float speed = (sqrtf(aX*aX + aY*aY)/127.5f)*gCameraConfig.analogMaxSpeed;
+		if (speed > gCameraConfig.analogMaxSpeed) {
+			speed = gCameraConfig.analogMaxSpeed;
 		}
 		SetMoveState(MOVING);
 		mMaxSpeed = speed*mGuns[mGunIndex]->mGun->mSpeed;
@@ -463,13 +463,13 @@ void PersonOnline::ReceiveInput(Input input, float time) {
 
 	if (mIsActive) {
 		if (mMoveState == NOTMOVING) {
-			mSpeed -= .0005f*dt;
+			mSpeed -= gPlayerConfig.deceleration*dt;
 			if (mSpeed < 0) {
 				mSpeed = 0.0f;
 			}
 		}
 		else if (mMoveState == MOVING) {
-			mSpeed += .0005f*dt;
+			mSpeed += gPlayerConfig.acceleration*dt;
 			if (mSpeed > mMaxSpeed) {
 				mSpeed = mMaxSpeed;
 			}

@@ -46,7 +46,7 @@ void AI::Update(float dt)
 	if (fabs(dx) >= EPSILON || fabs(dy) >= EPSILON) {
 		if (dx*dx + dy*dy < 0.0016f) {
 			mStuckTimer += dt;
-			if (mStuckTimer > 3000.0f) {
+			if (mStuckTimer > gBotConfig.stuckTime) {
 				mPath.clear();
 				mTargetNode = mNode;
 			}
@@ -57,7 +57,7 @@ void AI::Update(float dt)
 	}
 	else {
 		mStuckTimer += dt;
-		if (mStuckTimer > 3000.0f) {
+		if (mStuckTimer > gBotConfig.stuckTime) {
 			mPath.clear();
 			mTargetNode = mNode;
 		}
@@ -75,7 +75,7 @@ void AI::Update(float dt)
 			mMoveTargetX = mX;
 			mMoveTargetY = mY;
 
-			if (mAIStateTime > 100.0f) {
+			if (mAIStateTime > gBotConfig.reactionTime) {
 				mTarget = GetClosestPerson();
 
 				if (mTarget != NULL) {
@@ -83,7 +83,7 @@ void AI::Update(float dt)
 					float dy = mTarget->mY-mY;
 					float distance = dx*dx + dy*dy;
 
-					if (distance < 50000) {
+					if (distance < gBotConfig.visionRange*gBotConfig.visionRange) {
 						mPath.clear();
 						SetAIState(AI_ATTACKING);
 						break;
@@ -102,7 +102,7 @@ void AI::Update(float dt)
 			float dx = mTargetNode->mX-mX;
 			float dy = mTargetNode->mY-mY;
 			float distance = dx*dx + dy*dy;
-			if (distance < 1000) {
+			if (distance < gBotConfig.waypointTolerance*gBotConfig.waypointTolerance) {
 				Node* mTempNode;
 				for (int i=0;i<50;i++) {
 					mTempNode = mTargetNode->mConnections[rand()%mTargetNode->mConnections.size()];
@@ -113,7 +113,7 @@ void AI::Update(float dt)
 				mTargetNode = mTempNode;
 			}
 
-			if (mAIStateTime > 100.0f) {
+			if (mAIStateTime > gBotConfig.reactionTime) {
 				mTarget = GetClosestPerson();
 
 				if (mTarget != NULL) {
@@ -121,7 +121,7 @@ void AI::Update(float dt)
 					float dy = mTarget->mY-mY;
 					float distance = dx*dx + dy*dy;
 
-					if (distance < 50000) {
+					if (distance < gBotConfig.visionRange*gBotConfig.visionRange) {
 						mPath.clear();
 						SetAIState(AI_ATTACKING);
 						break;
@@ -177,12 +177,12 @@ void AI::Update(float dt)
 				mPath.pop_back();
 			}
 
-			if (mAIStateTime > 100.0f) {
+			if (mAIStateTime > gBotConfig.reactionTime) {
 				if (mTargetNode != NULL) {
 					float dx = mTargetNode->mX-mX;
 					float dy = mTargetNode->mY-mY;
 					float distance = dx*dx + dy*dy;
-					if (distance < 1000) {
+					if (distance < gBotConfig.waypointTolerance*gBotConfig.waypointTolerance) {
 						mNode = mTargetNode;
 						if (mPath.size() > 0) {
 							mTargetNode = mPath.back();
@@ -220,7 +220,7 @@ void AI::Update(float dt)
 					float dy = mTarget->mY-mY;
 					float distance = dx*dx + dy*dy;
 
-					if (distance < 50000) {
+					if (distance < gBotConfig.visionRange*gBotConfig.visionRange) {
 						mPath.clear();
 						SetAIState(AI_ATTACKING);
 						break;
@@ -244,7 +244,7 @@ void AI::Update(float dt)
 				float dx = mTargetNode->mX-mX;
 				float dy = mTargetNode->mY-mY;
 				float distance = dx*dx + dy*dy;
-				if (distance < 500) {
+				if (distance < gBotConfig.pathTolerance*gBotConfig.pathTolerance) {
 					mNode = mTargetNode;
 					if (mPath.size() > 0) {
 						mTargetNode = mPath.back();
@@ -281,7 +281,7 @@ void AI::Update(float dt)
 				mFaceTargetX = mTarget->mX+mTarget->mSpeed*cosf(mTarget->mAngle)*(sqrtf(distance)/0.25f);
 				mFaceTargetY = mTarget->mY+mTarget->mSpeed*sinf(mTarget->mAngle)*(sqrtf(distance)/0.25f);
 			}
-			if (distance > 50000) {
+			if (distance > gBotConfig.visionRange*gBotConfig.visionRange) {
 				SetAIState(AI_SEARCHING);
 				break;
 			}
@@ -290,7 +290,7 @@ void AI::Update(float dt)
 				mTarget = NULL;
 				break;
 			}
-			if (mAIStateTime > 100.0f) {
+			if (mAIStateTime > gBotConfig.reactionTime) {
 				if (GetClosestPerson() != mTarget) {
 					mTarget = GetClosestPerson();
 				}
@@ -357,7 +357,7 @@ void AI::Update(float dt)
 		else if (diffangle > M_PI) {
 			diffangle -= M_PI*2;
 		}
-		RotateFacing(diffangle*(0.003f*dt));
+		RotateFacing(diffangle*(gBotConfig.rotationSpeed*dt));
 	}
 
 
@@ -374,17 +374,21 @@ void AI::Update(float dt)
 		mAngle += diffangle*(0.005f*dt);
 		//SetAngle(GetAngle()+(((float)rand()/RAND_MAX)-0.5f)/50*dt);
 		//SetRotation(GetRotation()+(((float)rand()/RAND_MAX)-0.5f)/50*dt);
-		Move(.08f,mAngle+M_PI_2);
+		Move(gBotConfig.movementSpeed,mAngle+M_PI_2);
 		//SetSpeed((float)rand()/RAND_MAX/10);
 	}
 
 	if (mAIState == AI_ATTACKING && mCanSeeEnemy) {
 		mFireTime += dt;
-		if (mFireTime >= 500+rand()%500-250) {
+		int fireDelay = gBotConfig.fireDelayMin;
+		if (gBotConfig.fireDelayMax > gBotConfig.fireDelayMin) fireDelay += rand()%(gBotConfig.fireDelayMax-gBotConfig.fireDelayMin+1);
+		if (mFireTime >= fireDelay) {
 			if (mState != ATTACKING) {
 				Fire();
 			}
-			if (mFireTime >= 1000+rand()%1000-500) {
+			int burstTime = gBotConfig.burstMin;
+			if (gBotConfig.burstMax > gBotConfig.burstMin) burstTime += rand()%(gBotConfig.burstMax-gBotConfig.burstMin+1);
+			if (mFireTime >= burstTime) {
 				mFireTime = 0.0f;
 			}
 		}

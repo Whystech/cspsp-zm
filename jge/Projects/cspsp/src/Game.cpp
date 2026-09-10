@@ -668,7 +668,7 @@ void Game::CheckCollisions()
 
 			if (intersected == 1) {					
 				if (bullet->mType == TYPE_BULLET) {
-					gParticleEngine->GenerateParticles(BULLETIMPACT,d.x,d.y,2);
+					gParticleEngine->GenerateParticles(BULLETIMPACT,d.x,d.y,gEffectsConfig.impactParticleCount);
 					gSfxManager->PlaySample(gRicochetSounds[rand()%4],d.x,d.y);
 					bullet->mEndX = d.x;
 					bullet->mEndY = d.y;
@@ -696,14 +696,14 @@ void Game::CheckCollisions()
 					bullet->pX = d.x+cosf(bullet->mAngle);
 					bullet->pY = d.y+sinf(bullet->mAngle);
 
-					gParticleEngine->GenerateParticles(BULLETIMPACT,d.x,d.y,2);
+					gParticleEngine->GenerateParticles(BULLETIMPACT,d.x,d.y,gEffectsConfig.impactParticleCount);
 					gSfxManager->PlaySample(gGrenadeBounceSound,d.x,d.y);
 					//mBullets[k]->dead = true;		
 				}
 				break;
 			}
 			else if (intersected == 2) {
-				gParticleEngine->GenerateParticles(BLOOD,d.x,d.y,5);
+				gParticleEngine->GenerateParticles(BLOOD,d.x,d.y,gEffectsConfig.bloodParticleCount);
 				mMap->AddDecal(d.x+20*vX,d.y+20*vY,DECAL_BLOOD);
 				gSfxManager->PlaySample(gHitSounds[rand()%3],bullet->mX,bullet->mY);
 				bullet->mEndX = d.x;
@@ -833,7 +833,7 @@ void Game::CheckCollisions()
 								float anglediff = fabs(fabs(angle+M_PI-person1->mFacingAngle)-M_PI);
 								if (anglediff <= 0.6f) {
 									person1->mState = DRYFIRING;
-									gParticleEngine->GenerateParticles(BLOOD,x2,y2,5);
+									gParticleEngine->GenerateParticles(BLOOD,x2,y2,gEffectsConfig.bloodParticleCount);
 									mMap->AddDecal(x2,y2,DECAL_BLOOD);
 									gSfxManager->PlaySample(gKnifeHitSound,x,y);
 
@@ -862,7 +862,7 @@ void Game::CheckCollisions()
 								float anglediff = fabs(fabs(angle+M_PI-person2->mFacingAngle)-M_PI);
 								if (anglediff <= 0.6f) {
 									person2->mState = DRYFIRING;
-									gParticleEngine->GenerateParticles(BLOOD,x,y,5);
+									gParticleEngine->GenerateParticles(BLOOD,x,y,gEffectsConfig.bloodParticleCount);
 									mMap->AddDecal(x,y,DECAL_BLOOD);
 									gSfxManager->PlaySample(gKnifeHitSound,x2,y2);
 									if (!mIsOnline) {
@@ -1281,7 +1281,7 @@ void Game::Update(float dt)
 			mInfectionRespawnTimers.erase(mInfectionRespawnTimers.begin()+i);
 			victim->mTeam = T;
 			victim->SetTeamAppearance(T);
-			victim->mHealth = 150;
+			victim->mHealth = gPlayerConfig.tMaxHealth;
 			victim->mSpeed = 0.0f;
 			victim->SetState(NORMAL);
 			victim->SetKnifeForTeam(T);
@@ -1761,16 +1761,16 @@ void Game::Render()
 		float y = mPlayer->mY-(dy-SCREEN_HEIGHT_2); //-cosf(mPlayer->mFacingAngle)*1.5f
 
 		float angle = mPlayer->mFacingAngle-mPlayer->mRecoilAngle*0.5f;
-		mRenderer->DrawLine(x+cosf(angle)*30,y+sinf(angle)*30,x+cosf(angle)*40,y+sinf(angle)*40,ARGB(200,0,255,0));
+		mRenderer->DrawLine(x+cosf(angle)*gHudConfig.crosshairInner,y+sinf(angle)*gHudConfig.crosshairInner,x+cosf(angle)*gHudConfig.crosshairOuter,y+sinf(angle)*gHudConfig.crosshairOuter,gThemeConfig.crosshairColor);
 		angle = mPlayer->mFacingAngle+mPlayer->mRecoilAngle*0.5f;
-		mRenderer->DrawLine(x+cosf(angle)*30,y+sinf(angle)*30,x+cosf(angle)*40,y+sinf(angle)*40,ARGB(200,0,255,0));
+		mRenderer->DrawLine(x+cosf(angle)*gHudConfig.crosshairInner,y+sinf(angle)*gHudConfig.crosshairInner,x+cosf(angle)*gHudConfig.crosshairOuter,y+sinf(angle)*gHudConfig.crosshairOuter,gThemeConfig.crosshairColor);
 
 		int t = (mHitTime-750)/250*255;
 		if (t > 0) {
 			angle = mPlayer->mFacingAngle-mPlayer->mRecoilAngle*0.5f-.1f;
-			mRenderer->DrawLine(x+cosf(angle)*30,y+sinf(angle)*30,x+cosf(angle)*45,y+sinf(angle)*45,ARGB(t,255,0,0));
+			mRenderer->DrawLine(x+cosf(angle)*gHudConfig.crosshairInner,y+sinf(angle)*gHudConfig.crosshairInner,x+cosf(angle)*(gHudConfig.crosshairOuter+5),y+sinf(angle)*(gHudConfig.crosshairOuter+5),(gThemeConfig.crosshairHitColor & 0x00ffffff) | ((u32)t << 24));
 			angle = mPlayer->mFacingAngle+mPlayer->mRecoilAngle*0.5f+.1f;
-			mRenderer->DrawLine(x+cosf(angle)*30,y+sinf(angle)*30,x+cosf(angle)*45,y+sinf(angle)*45,ARGB(t,255,0,0));
+			mRenderer->DrawLine(x+cosf(angle)*gHudConfig.crosshairInner,y+sinf(angle)*gHudConfig.crosshairInner,x+cosf(angle)*(gHudConfig.crosshairOuter+5),y+sinf(angle)*(gHudConfig.crosshairOuter+5),(gThemeConfig.crosshairHitColor & 0x00ffffff) | ((u32)t << 24));
 		}
 	}
 	// draw some text
@@ -1789,13 +1789,13 @@ void Game::Render()
 		//gHudFont->DrawString(buffer, 10.0f, SCREEN_HEIGHT_F-40.0f, JGETEXT_LEFT);
 		
 		//health display
-		int maxHealth = (mPlayer->mTeam == T) ? 150 : 100;
+		int maxHealth = (mPlayer->mTeam == T) ? gPlayerConfig.tMaxHealth : gPlayerConfig.ctMaxHealth;
 		int height = 44*(mPlayer->mHealth/(float)maxHealth);
 		if (height < 1) height = 1;
 		if (height > 44) height = 44;
 		gHealthFillQuad->SetTextureRect(48,44-height+2,48,height);
-		mRenderer->RenderQuad(gHealthBorderQuad,0,SCREEN_HEIGHT-58);
-		mRenderer->RenderQuad(gHealthFillQuad,0,SCREEN_HEIGHT-58+44-height+2);
+		mRenderer->RenderQuad(gHealthBorderQuad,gHudConfig.healthX,SCREEN_HEIGHT-gHudConfig.barsBottomOffset);
+		mRenderer->RenderQuad(gHealthFillQuad,gHudConfig.healthX,SCREEN_HEIGHT-gHudConfig.barsBottomOffset+44-height+2);
 
 		gFont->SetColor(ARGB(255,255,255,255));
 		gFont->SetScale(0.5f);
@@ -1804,13 +1804,14 @@ void Game::Render()
 		
 		// armor display 
 		if (mPlayer->mTeam == CT) {
-			int armorHeight = 44*(mPlayer->mArmor/(float)MAX_ARMOR);
+			int maxArmor = mPlayer->mTeam == T ? gPlayerConfig.tMaxArmor : gPlayerConfig.ctMaxArmor;
+			int armorHeight = maxArmor == 0 ? 0 : 44*(mPlayer->mArmor/(float)maxArmor);
 			if (armorHeight < 0) armorHeight = 0;
 			if (armorHeight > 44) armorHeight = 44;
-			mRenderer->RenderQuad(gArmorBorderQuad,26,SCREEN_HEIGHT-58);
+			mRenderer->RenderQuad(gArmorBorderQuad,gHudConfig.armorX,SCREEN_HEIGHT-gHudConfig.barsBottomOffset);
 			if (armorHeight > 0) {
 				gArmorFillQuad->SetTextureRect(48,44-armorHeight+2,48,armorHeight);
-				mRenderer->RenderQuad(gArmorFillQuad,26,SCREEN_HEIGHT-58+44-armorHeight+2);
+				mRenderer->RenderQuad(gArmorFillQuad,gHudConfig.armorX,SCREEN_HEIGHT-gHudConfig.barsBottomOffset+44-armorHeight+2);
 			}
 			sprintf(buffer,"%i",mPlayer->mArmor);
 			//armor text
@@ -1831,7 +1832,7 @@ void Game::Render()
 			//gHudFont->SetColor(ARGB(230,255,64,64));
 			//gHudFont->DrawString(buffer, SCREEN_WIDTH_2, SCREEN_HEIGHT-30, JGETEXT_CENTER);
 
-			gFont->DrawShadowedString(buffer, SCREEN_WIDTH_2, SCREEN_HEIGHT-25, JGETEXT_CENTER);
+			gFont->DrawShadowedString(buffer, SCREEN_WIDTH_2, SCREEN_HEIGHT-gHudConfig.timerBottomOffset, JGETEXT_CENTER);
 		}
 
 		/*if (mPlayer->GetCurrentGun() != NULL) {
@@ -1993,7 +1994,7 @@ void Game::Render()
 		//mRenderer->DrawLine(5,40,75,40,ARGB(175,153,153,153));
 		//mRenderer->DrawLine(40,5,40,75,ARGB(175,153,153,153));
 
-		float factor = 32/480.0f;
+		float factor = gHudConfig.radarScale;
 
 		if (mMap->mOverviewQuad != NULL) {
 			float x = dx*factor-31;
@@ -2011,9 +2012,9 @@ void Game::Render()
 			mMap->mOverviewQuad->SetTextureRect((x<0)?0:x,(y<0)?0:y,w,h);
 			if (x > 0) x = 0;
 			if (y > 0) y = 0;
-			mRenderer->RenderQuad(mMap->mOverviewQuad,10-x+1,10-y+1);
+			mRenderer->RenderQuad(mMap->mOverviewQuad,gHudConfig.radarX-x+1,gHudConfig.radarY-y+1);
 		}
-		mRenderer->RenderQuad(gRadarQuad,10,10);
+		mRenderer->RenderQuad(gRadarQuad,gHudConfig.radarX,gHudConfig.radarY);
 		//mRenderer->FillRect(10,10,64,64,ARGB(128,0,100,0));
 		//mRenderer->DrawRect(10+16,10+23,32,18,ARGB(255,255,255,255));
 
@@ -2052,14 +2053,14 @@ void Game::Render()
 				mRenderer->FillPolygon(10+32+x,10+32+y,5,3,mPlayer->mFacingAngle,ARGB(255,255,255,255));
 			}
 			else if (mGameType != FFA && mPeople[i]->mTeam == mPlayer->mTeam) {
-				mRenderer->FillPolygon(10+32+x,10+32+y,5,3,mPeople[i]->mFacingAngle,ARGB(255,0,255,0));
+				mRenderer->FillPolygon(gHudConfig.radarX+32+x,gHudConfig.radarY+32+y,5,3,mPeople[i]->mFacingAngle,gThemeConfig.radarFriendlyColor);
 			}
 			else {
 				int alpha = mPeople[i]->mRadarTime/1000.0f*255; 
 				if (alpha > 255) alpha = 255;
 				//mRenderer->FillCircle(10+32+x,10+32+y,1.5f,ARGB(alpha,255,0,0));
 				//mRenderer->FillPolygon(10+32+x,10+32+y,5,3,mPeople[i]->mFacingAngle,ARGB(alpha,255,0,0));
-				mRenderer->FillRect(10+32+x-1,10+32+y-1,3,3,ARGB(alpha,255,0,0));
+				mRenderer->FillRect(gHudConfig.radarX+32+x-1,gHudConfig.radarY+32+y-1,3,3,(gThemeConfig.radarEnemyColor & 0x00ffffff) | ((u32)alpha << 24));
 			}
 			/*if (mPlayer->mTeam == CT) {
 				mRenderer->FillRect(40.5f+cosf(theta)*dist,40.5f+sinf(theta)*dist,3,3,ARGB(255,153,204,255));
@@ -3088,7 +3089,8 @@ void Game::Buy(int index) {
 		return;
 	}
 	if (index == BUY_ITEM_ARMOR) {
-		if (mPlayer->mArmor >= MAX_ARMOR) {
+		int maxArmor = mPlayer->mTeam == T ? gPlayerConfig.tMaxArmor : gPlayerConfig.ctMaxArmor;
+		if (mPlayer->mArmor >= maxArmor) {
 			mHud->SetMessage("Armor is already full");
 			return;
 		}
@@ -3097,7 +3099,7 @@ void Game::Buy(int index) {
 			return;
 		}
 		mPlayer->mMoney -= ARMOR_COST;
-		mPlayer->mArmor = MAX_ARMOR;
+		mPlayer->mArmor = maxArmor;
 		gSfxManager->PlaySample(gPickUpSound, mPlayer->mX, mPlayer->mY);
 		return;
 	}

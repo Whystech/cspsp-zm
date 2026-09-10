@@ -25,6 +25,7 @@
 #include <math.h>
 
 #include "ParticleEngine.h"
+#include "Globals.h"
 
 
 ParticleEngine::ParticleEngine(int maxParticles): mMaxParticles(maxParticles)
@@ -116,7 +117,7 @@ void ParticleEngine::GenerateParticles(int type, float x, float y, int amount) {
 				//temp->ResetVelocity();
 				temp->mCircularAcceleration = -0.004f;
 							
-				float lifetime = 250.0f;
+				float lifetime = gEffectsConfig.impactParticleLifetime;
 				temp->mLifetime = lifetime;
 				temp->mScale = 0.3;
 				temp->mScaleEnd = 0.1f;
@@ -147,7 +148,7 @@ void ParticleEngine::GenerateParticles(int type, float x, float y, int amount) {
 				//temp->ResetVelocity();
 				temp->mCircularAcceleration = -0.004f;
 							
-				float lifetime = 200.0f;
+				float lifetime = gEffectsConfig.bloodParticleLifetime;
 				temp->mLifetime = lifetime;
 				temp->mScale = 0.5f;
 				temp->mScaleEnd = 0.3f;
@@ -178,7 +179,7 @@ void ParticleEngine::GenerateParticles(int type, float x, float y, int amount) {
 				//temp->ResetVelocity();
 				temp->mCircularAcceleration = -0.004f;
 							
-				float lifetime = 500.0f;
+				float lifetime = gEffectsConfig.shellParticleLifetime;
 				temp->mLifetime = lifetime;
 				temp->mScale = 0.1f;
 				temp->mScaleEnd = 0.1f;

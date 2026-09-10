@@ -33,7 +33,6 @@
 #define BUY_ITEM_HEALTH -4
 #define ARMOR_COST 650
 #define HEALTH_COST 500
-#define MAX_ARMOR 100
 
 #define BODY 0
 #define RIGHTARM 1

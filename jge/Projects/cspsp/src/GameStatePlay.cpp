@@ -128,6 +128,7 @@ void GameStatePlay::Start()
 
 	mFriendlyFire = ON;
 	char* ff = GetConfig("data/config.txt","ff");
+	if (ff == NULL) ff = GetConfig("data/modes.txt","friendly_fire");
 	if (ff != NULL) {
 		if (strcmp(ff,"on") == 0) {
 			mFriendlyFire = ON;
@@ -153,6 +154,7 @@ void GameStatePlay::Start()
 	mRespawnStyle = RESPAWN_BASE;
 	// These settings affect local Infection mode; multiplayer respawn remains server-controlled.
 	char* respawn = GetConfig("data/config.txt","respawn");
+	if (respawn == NULL) respawn = GetConfig("data/modes.txt","respawn");
 	if (respawn != NULL) {
 		if (strcmp(respawn,"inplace") == 0) {
 			mRespawnStyle = RESPAWN_INPLACE;
@@ -164,6 +166,7 @@ void GameStatePlay::Start()
 	}
 	mInfectionRespawnDelay = 1;
 	char* infectionDelay = GetConfig("data/config.txt","infection_respawn_delay");
+	if (infectionDelay == NULL) infectionDelay = GetConfig("data/modes.txt","infection_respawn_delay");
 	if (infectionDelay != NULL) {
 		mInfectionRespawnDelay = atoi(infectionDelay);
 		if (mInfectionRespawnDelay < 0 || mInfectionRespawnDelay > 4) {
@@ -331,11 +334,11 @@ void GameStatePlay::CheckInput(float dt)
 
 	if (mEngine->GetButtonState(PSP_CTRL_LTRIGGER))
 	{
-		mPlayer->RotateFacing(-0.005f*dt);
+		mPlayer->RotateFacing(-gCameraConfig.rotationSpeed*dt);
 	}
 	if (mEngine->GetButtonState(PSP_CTRL_RTRIGGER))
 	{
-		mPlayer->RotateFacing(0.005f*dt);
+		mPlayer->RotateFacing(gCameraConfig.rotationSpeed*dt);
 	}
 
 	/*if (mPlayer->mGunIndex == PRIMARY || mPlayer->mGunIndex == KNIFE) {
@@ -398,6 +401,44 @@ void GameStatePlay::CheckInput(float dt)
 	}
 }
 
+void GameStatePlay::CheckMapPickups(Person* person)
+{
+	for (unsigned int i=0; i<mMap->mPickups.size(); i++) {
+		MapPickup& pickup = mMap->mPickups[i];
+		if (!pickup.active) continue;
+		float dx = person->mX-pickup.x;
+		float dy = person->mY-pickup.y;
+		if (dx*dx+dy*dy >= gPlayerConfig.pickupRadius*gPlayerConfig.pickupRadius) continue;
+		if (pickup.type == PICKUP_AMMO) {
+			bool collected = false;
+			for (int slot=PRIMARY; slot<=SECONDARY; slot++) {
+				GunObject* weapon = person->mGuns[slot];
+				if (weapon == NULL || weapon->mGun == NULL) continue;
+				int maximum = (weapon->mGun->mNumClips-1)*weapon->mGun->mClip;
+				if (weapon->mRemainingAmmo >= maximum) continue;
+				weapon->mRemainingAmmo += pickup.amount;
+				if (weapon->mRemainingAmmo > maximum) weapon->mRemainingAmmo = maximum;
+				collected = true;
+			}
+			if (!collected) continue;
+			pickup.active = false;
+			pickup.respawnTimer = pickup.respawnTime;
+			gSfxManager->PlaySample(gAmmoSound,person->mX,person->mY);
+			continue;
+		}
+		int maximum = (pickup.type == PICKUP_HEALTH) ? ((person->mTeam == T) ? gPlayerConfig.tMaxHealth : gPlayerConfig.ctMaxHealth) : ((person->mTeam == T) ? gPlayerConfig.tMaxArmor : gPlayerConfig.ctMaxArmor);
+		int current = (pickup.type == PICKUP_HEALTH) ? person->mHealth : person->mArmor;
+		if (current >= maximum) continue;
+		current += pickup.amount;
+		if (current > maximum) current = maximum;
+		if (pickup.type == PICKUP_HEALTH) person->mHealth = current;
+		else person->mArmor = current;
+		pickup.active = false;
+		pickup.respawnTimer = pickup.respawnTime;
+		gSfxManager->PlaySample(gPickUpSound,person->mX,person->mY);
+	}
+}
+
 void GameStatePlay::CheckCollisions()
 {
 	std::vector<Person*> mPeopleTemp = mPeople;
@@ -421,7 +462,7 @@ void GameStatePlay::CheckCollisions()
 							float angle = atan2f((y2-y),x2-x)+M_PI;
 							float anglediff = fabs(fabs(angle-mPeople[i]->mFacingAngle)-M_PI);
 							if (anglediff <= 0.5f) {
-								gParticleEngine->GenerateParticles(BLOOD,x2,y2,5);
+								gParticleEngine->GenerateParticles(BLOOD,x2,y2,gEffectsConfig.bloodParticleCount);
 								mMap->AddDecal(x2,y2,DECAL_BLOOD);
 								gSfxManager->PlaySample(gKnifeHitSound,x,y);
 								mPeopleTemp[j]->TakeDamage(mPeople[i]->mGuns[KNIFE]->mGun->mDamage);
@@ -440,7 +481,7 @@ void GameStatePlay::CheckCollisions()
 							float angle = atan2f((y-y2),x-x2)+M_PI;
 							float anglediff = fabs(fabs(angle-mPeopleTemp[j]->mFacingAngle)-M_PI);
 							if (anglediff <= 0.5f) {
-								gParticleEngine->GenerateParticles(BLOOD,x,y,5);
+								gParticleEngine->GenerateParticles(BLOOD,x,y,gEffectsConfig.bloodParticleCount);
 								mMap->AddDecal(x,y,DECAL_BLOOD);
 								gSfxManager->PlaySample(gKnifeHitSound,x2,y2);
 								mPeople[i]->TakeDamage(mPeopleTemp[j]->mGuns[KNIFE]->mGun->mDamage);
@@ -476,6 +517,7 @@ void GameStatePlay::CheckCollisions()
 				}
 			}
 		}
+		CheckMapPickups(mPeople[i]);
 	}
 	for(unsigned int i=0; i<mBullets.size(); i++) {
 		if (mBullets[i]->mType == TYPE_GRENADE) continue;
@@ -498,7 +540,7 @@ void GameStatePlay::CheckCollisions()
 				Vector2D d;
 				float l;
 				if (LineCircleIntersect(l1,circle,d,l,false)) {
-					gParticleEngine->GenerateParticles(BLOOD,mBullets[i]->mX,mBullets[i]->mY,5);
+					gParticleEngine->GenerateParticles(BLOOD,mBullets[i]->mX,mBullets[i]->mY,gEffectsConfig.bloodParticleCount);
 					mMap->AddDecal(mBullets[i]->mX,mBullets[i]->mY,DECAL_BLOOD);
 					gSfxManager->PlaySample(gHitSounds[rand()%3],mBullets[i]->mX,mBullets[i]->mY);
 					mPeople[j]->TakeDamage(mBullets[i]->mDamage);
@@ -737,6 +779,15 @@ void GameStatePlay::Update(float dt)
 	//float dt = mEngine->GetDelta();	// get number of milliseconds passed since last frame
 
 	Game::Update(dt);
+	for (unsigned int i=0; i<mMap->mPickups.size(); i++) {
+		MapPickup& pickup = mMap->mPickups[i];
+		if (pickup.active || pickup.respawnTime <= 0.0f) continue;
+		pickup.respawnTimer -= dt;
+		if (pickup.respawnTimer <= 0.0f) {
+			pickup.respawnTimer = 0.0f;
+			pickup.active = true;
+		}
+	}
 	Game::CheckCollisions();
 	
 	Game::UpdateCamera(dt);
@@ -814,8 +865,8 @@ void GameStatePlay::Update(float dt)
 	}
 
 	if (mPlayer->mState != DEAD) {
-		mCamera->mTX = mPlayer->GetX() + ((mPlayer->GetX()-mPlayer->mOldX)*0.5f + cosf(mPlayer->mFacingAngle))*500/dt;
-		mCamera->mTY = mPlayer->GetY() + ((mPlayer->GetY()-mPlayer->mOldY)*0.5f + sinf(mPlayer->mFacingAngle))*500/dt;
+		mCamera->mTX = mPlayer->GetX() + ((mPlayer->GetX()-mPlayer->mOldX)*gCameraConfig.lookAheadVelocity + cosf(mPlayer->mFacingAngle))*gCameraConfig.lookAheadDistance/dt;
+		mCamera->mTY = mPlayer->GetY() + ((mPlayer->GetY()-mPlayer->mOldY)*gCameraConfig.lookAheadVelocity + sinf(mPlayer->mFacingAngle))*gCameraConfig.lookAheadDistance/dt;
 	}
 	else {
 		if (mSpecState == FREELOOK) {
@@ -902,6 +953,7 @@ void GameStatePlay::NewGame() {
 
 	mRoundFreezeTime = 3;
 	char* freezeTime = GetConfig("data/config.txt","round_freeze_time");
+	if (freezeTime == NULL) freezeTime = GetConfig("data/modes.txt","round_freeze_time");
 	if (freezeTime != NULL) {
 		mRoundFreezeTime = atoi(freezeTime);
 		if (mRoundFreezeTime < 0 || mRoundFreezeTime > 5) {
@@ -911,12 +963,14 @@ void GameStatePlay::NewGame() {
 	}
 	mHordeRegroupStyle = RESPAWN_BASE;
 	char* hordeRegroup = GetConfig("data/config.txt","horde_regroup");
+	if (hordeRegroup == NULL) hordeRegroup = GetConfig("data/modes.txt","horde_regroup");
 	if (hordeRegroup != NULL) {
 		if (strcmp(hordeRegroup,"inplace") == 0) mHordeRegroupStyle = RESPAWN_INPLACE;
 		delete hordeRegroup;
 	}
 	mHordeWaveDelay = 3;
 	char* hordeWaveDelay = GetConfig("data/config.txt","horde_wave_delay");
+	if (hordeWaveDelay == NULL) hordeWaveDelay = GetConfig("data/modes.txt","horde_wave_delay");
 	if (hordeWaveDelay != NULL) {
 		int seconds = atoi(hordeWaveDelay);
 		if (seconds == 3 || seconds == 5 || seconds == 10 || seconds == 15) mHordeWaveDelay = seconds;
@@ -1153,7 +1207,7 @@ void GameStatePlay::ResetHordeWave() {
 		Person* person = mPeople[i];
 		if (person->mTeam == CT) {
 			if (person->mState == DEAD) continue;
-			person->mHealth = 100;
+			person->mHealth = gPlayerConfig.ctMaxHealth;
 			person->mMoney += 3250;
 			if (person->mMoney > 16000) person->mMoney = 16000;
 			person->mIsActive = (mHordeRegroupStyle == RESPAWN_INPLACE);
@@ -1225,17 +1279,17 @@ void GameStatePlay::Explode(Grenade* grenade) {
 
 				if (!mGrid->LineOfSight(grenade->mX,grenade->mY,mPeople[i]->mX,mPeople[i]->mY)) continue;
 
-				int a = 500;
+				int a = gCameraConfig.scopeNone;
 				if (mPeople[i]->mGunIndex == PRIMARY) {
 					int scope = mPeople[i]->GetCurrentGun()->mGun->mScope;
 					if (scope == SCOPE_LOW) {
-						a = 800;
+						a = gCameraConfig.scopeLow;
 					}
 					else if (scope == SCOPE_HIGH) {
-						a = 1400;
+						a = gCameraConfig.scopeHigh;
 					}
 					else if (scope == SCOPE_MEDIUM) {
-						a = 1100;
+						a = gCameraConfig.scopeMedium;
 					}
 				}
 				float cameraX = mPeople[i]->mX + (cosf(mPeople[i]->mFacingAngle))*a/16.6f;//dt
@@ -1248,8 +1302,8 @@ void GameStatePlay::Explode(Grenade* grenade) {
 					if (fabs(dx) >= EPSILON || fabs(dy) >= EPSILON) {
 						 distance = sqrtf(dx*dx+dy*dy);
 					}
-					if (distance < 20.0f) {
-						distance = 20.0f;
+					if (distance < gGrenadeConfig.flashMinDistance) {
+						distance = gGrenadeConfig.flashMinDistance;
 					}
 
 					Vector2D facingdir(cosf(mPeople[i]->mFacingAngle),sinf(mPeople[i]->mFacingAngle));
@@ -1264,7 +1318,7 @@ void GameStatePlay::Explode(Grenade* grenade) {
 					dot /= 4.0f; // 0-0.5
 					dot += 0.5f; // 0.5-1
 
-					float intensity = 20.0f/distance;
+					float intensity = gGrenadeConfig.flashFalloff/distance;
 					mPeople[i]->ReceiveFlash(intensity*dot);
 				}
 			}
@@ -1280,17 +1334,17 @@ void GameStatePlay::Explode(Grenade* grenade) {
 				if (fabs(dx) >= EPSILON || fabs(dy) >= EPSILON) {
 					 distance = sqrtf(dx*dx+dy*dy);
 				}
-				if (distance < 40.0f) {
-					distance = 40.0f;
+				if (distance < gGrenadeConfig.heMinDistance) {
+					distance = gGrenadeConfig.heMinDistance;
 				}
-				else if (distance > 200.0f) {
+				else if (distance > gGrenadeConfig.heMaxDistance) {
 					continue;
 				}
 
-				int damage = (int)((40.0f/distance)*grenade->mParentGun->mDamage);
+				int damage = (int)((gGrenadeConfig.heFalloff/distance)*grenade->mParentGun->mDamage);
 				mPeople[i]->TakeDamage(damage);
 
-				gParticleEngine->GenerateParticles(BLOOD,mPeople[i]->mX,mPeople[i]->mY,5);
+				gParticleEngine->GenerateParticles(BLOOD,mPeople[i]->mX,mPeople[i]->mY,gEffectsConfig.bloodParticleCount);
 				mMap->AddDecal(mPeople[i]->mX,mPeople[i]->mY,DECAL_BLOOD);
 				gSfxManager->PlaySample(gHitSounds[rand()%3],mPeople[i]->mX,mPeople[i]->mY);
 

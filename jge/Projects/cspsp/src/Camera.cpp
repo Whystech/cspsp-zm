@@ -1,4 +1,5 @@
 #include "Camera.h"
+#include "Globals.h"
 
 Camera::Camera(float x, float y, float minx, float miny, float maxx, float maxy)
 {
@@ -8,7 +9,7 @@ Camera::Camera(float x, float y, float minx, float miny, float maxx, float maxy)
 	mY = y;
 	SetBounds(minx,miny,maxx,maxy);
 
-	mA = 0.005f;
+	mA = gCameraConfig.smoothing;
 
 	mShakeX = 0.0f;
 	mShakeY = 0.0f;

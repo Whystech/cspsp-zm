@@ -36,6 +36,122 @@ extern int gSinglePlayerMode;
 extern bool gShowKillFeed;
 extern bool gShowRoundTimer;
 
+struct PlayerConfig {
+	int ctMaxHealth;
+	int tMaxHealth;
+	int ctMaxArmor;
+	int tMaxArmor;
+	int ctSpawnHealth;
+	int tSpawnHealth;
+	int ctSpawnArmor;
+	int tSpawnArmor;
+	int armorDamageReduction;
+	float pickupRadius;
+	int startingMoney;
+	float damageSpeedMultiplier;
+	float acceleration;
+	float deceleration;
+};
+
+struct GrenadeConfig {
+	float fuseTime;
+	float flashDuration;
+	float flashMinDistance;
+	float flashFalloff;
+	float heMinDistance;
+	float heMaxDistance;
+	float heFalloff;
+};
+
+struct CameraConfig {
+	float smoothing;
+	float lookAheadVelocity;
+	float lookAheadDistance;
+	int scopeNone;
+	int scopeLow;
+	int scopeMedium;
+	int scopeHigh;
+	int analogDeadzone;
+	float analogMaxSpeed;
+	float rotationSpeed;
+};
+
+struct HudConfig {
+	float killFeedLifetime;
+	float messageLifetime;
+	float centerMessageLifetime;
+	float popupLifetime;
+	float damageIndicatorLifetime;
+	float killFeedX;
+	float lineSpacing;
+	float healthX;
+	float armorX;
+	float barsBottomOffset;
+	float timerBottomOffset;
+	float radarX;
+	float radarY;
+	float radarScale;
+	float crosshairInner;
+	float crosshairOuter;
+};
+
+struct EffectsConfig {
+	int maxDecals;
+	int particlePoolSize;
+	int bloodParticleCount;
+	int impactParticleCount;
+	int shellParticleCount;
+	float bloodParticleLifetime;
+	float impactParticleLifetime;
+	float shellParticleLifetime;
+	float muzzleFlashLifetime;
+};
+
+struct AudioConfig {
+	int globalVolume;
+	float positionalDistance;
+	float panningDeadzone;
+};
+
+struct ThemeConfig {
+	u32 ctColor;
+	u32 tColor;
+	u32 crosshairColor;
+	u32 crosshairHitColor;
+	u32 radarFriendlyColor;
+	u32 radarEnemyColor;
+};
+
+struct BotConfig {
+	float visionRange;
+	float reactionTime;
+	float stuckTime;
+	float waypointTolerance;
+	float pathTolerance;
+	float rotationSpeed;
+	float movementSpeed;
+	int fireDelayMin;
+	int fireDelayMax;
+	int burstMin;
+	int burstMax;
+};
+
+struct LimitsConfig {
+	int killFeedEvents;
+	int messageEvents;
+	int activeMessageEvents;
+};
+
+extern PlayerConfig gPlayerConfig;
+extern GrenadeConfig gGrenadeConfig;
+extern CameraConfig gCameraConfig;
+extern HudConfig gHudConfig;
+extern EffectsConfig gEffectsConfig;
+extern AudioConfig gAudioConfig;
+extern ThemeConfig gThemeConfig;
+extern BotConfig gBotConfig;
+extern LimitsConfig gLimitsConfig;
+
 #define SINGLEPLAYER_INFECTION 0
 #define SINGLEPLAYER_ELIMINATION 1
 #define SINGLEPLAYER_HORDE 2
@@ -75,6 +191,10 @@ extern JQuad* gArmorBorderQuad;
 extern JQuad* gArmorFillQuad;
 extern JQuad* gArmorGroundQuad;
 extern JQuad* gHealthGroundQuad;
+extern JQuad* gAmmoGroundQuad;
+extern JQuad* gHealthPickupQuad;
+extern JQuad* gArmorPickupQuad;
+extern JQuad* gAmmoPickupQuad;
 extern JQuad* gAmmoBarQuad;
 extern JQuad* gIconQuad;
 extern JTexture* gIconTexture;
@@ -115,6 +235,7 @@ extern Socket* gSocket;
 extern HttpManager* gHttpManager;
 
 extern char* GetConfig(const char *location, char searchstr[]);
+extern void LoadClientDataConfigs();
 extern void LoadHudDisplayOptions();
 extern int GetArmorDamageReduction();
 

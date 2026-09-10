@@ -1,0 +1,42 @@
+# CLIENT SOUND PLAYBACK
+# Loaded when CSPSP starts. Paths are relative to the game directory.
+# Audio customization is client-only and does not affect online gameplay.
+#
+# global_volume: master sample volume, 0 (silent) to 256 (full volume).
+# positional_distance: world-unit distance used for volume falloff, 1-100000.
+# panning_deadzone: centered area before left/right panning begins, 0-10000.
+global_volume = 256
+positional_distance = 500
+panning_deadzone = 5
+
+# Core WAV sample paths. Per-weapon sounds remain defined in guns.txt.
+dryfire_rifle = sfx/dryfire_rifle.wav
+dryfire_pistol = sfx/dryfire_pistol.wav
+deploy = sfx/deploy.wav
+pickup = sfx/pickup.wav
+ammo = sfx/ammo.wav
+pin_pull = sfx/pinpull.wav
+walk_1 = sfx/walk1.wav
+walk_2 = sfx/walk2.wav
+ricochet_1 = sfx/ricochet1.wav
+ricochet_2 = sfx/ricochet2.wav
+ricochet_3 = sfx/ricochet3.wav
+ricochet_4 = sfx/ricochet4.wav
+hit_1 = sfx/hit1.wav
+hit_2 = sfx/hit2.wav
+hit_3 = sfx/hit3.wav
+knife_hit = sfx/knifehit.wav
+die_1 = sfx/die1.wav
+die_2 = sfx/die2.wav
+die_3 = sfx/die3.wav
+t_win = sfx/twin.wav
+ct_win = sfx/ctwin.wav
+round_draw = sfx/rounddraw.wav
+he_grenade_1 = sfx/hegrenade1.wav
+he_grenade_2 = sfx/hegrenade2.wav
+he_grenade_3 = sfx/hegrenade3.wav
+flashbang = sfx/flashbang.wav
+smoke_grenade = sfx/smokegrenade.wav
+fire_in_the_hole = sfx/fireinthehole.wav
+grenade_bounce = sfx/grenadebounce.wav
+hit_indicator = sfx/hitindicator.wav
