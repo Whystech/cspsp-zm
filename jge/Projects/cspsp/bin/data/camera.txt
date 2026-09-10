@@ -1,0 +1,21 @@
+# CLIENT CAMERA AND AIM RESPONSE
+# Loaded when CSPSP starts and safe to customize for offline or online play.
+# These values change local presentation/input only, never server authority.
+#
+# smoothing: camera interpolation rate, 0.0001-1.0; larger follows faster.
+# look_ahead_velocity: influence of player velocity, 0.0-10.0.
+# look_ahead_distance: maximum look-ahead distance in world units, 0-10000.
+# scope_*: camera view/range for each zoom level, 0-10000 world units.
+# analog_deadzone: ignored analog-stick center area, 0-127.
+# analog_max_speed: maximum analog movement contribution, 0.0-1.0.
+# rotation_speed: aim rotation per millisecond, 0.0-1.0.
+smoothing = 0.005
+look_ahead_velocity = 0.5
+look_ahead_distance = 500
+scope_none = 500
+scope_low = 800
+scope_medium = 1100
+scope_high = 1400
+analog_deadzone = 20
+analog_max_speed = 0.1
+rotation_speed = 0.005

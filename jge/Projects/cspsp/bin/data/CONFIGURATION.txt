@@ -1,0 +1,55 @@
+CSPSP CLIENT CONFIGURATION GUIDE
+================================
+
+FILE FORMAT
+-----------
+Most files use one setting per line: key = value
+Lines beginning with # are comments. Keep key names unchanged. Numeric values
+outside their supported range are clamped; missing settings use built-in
+defaults. Restart CSPSP after manually editing these files: client data and
+resources are loaded during startup, not continuously while the game runs.
+
+WHICH FILE IS WRITTEN BY THE OPTIONS MENU?
+------------------------------------------
+data/config.txt stores user choices made in the Options screen. Selecting Save
+rewrites config.txt. For example, choosing Infection Respawn = In-Place writes:
+  respawn = inplace
+
+This does NOT modify modes.txt or any other data file. For settings available
+in both files, config.txt has priority and modes.txt is only the fallback when
+that key is missing from config.txt. Delete the relevant key from config.txt to
+use the modes.txt default again. Do not add comments to config.txt because the
+Options screen rewrites that file and discards comments.
+
+OFFLINE GAMEPLAY DATA
+---------------------
+  player.txt     Team health/armor, pickups, money, movement and hit slowdown
+  grenades.txt   Grenade fuse, flash and HE behavior
+  modes.txt      Fallbacks for local mode options such as respawn behavior
+  bots.txt       Offline bot perception, movement and firing behavior
+
+CLIENT PRESENTATION DATA
+------------------------
+These can affect how both offline and online games look or sound, but they do
+not override server-owned gameplay results.
+  camera.txt     Camera following, scope ranges and local input response
+  hud.txt        HUD positions, radar scale, crosshair size and event timing
+  effects.txt    Particles, decals and visual performance limits
+  audio.txt      Sound paths, volume and positional sound falloff
+  theme.txt      Team, crosshair and radar-marker colors
+  resources.txt  Texture paths, including gfx/radar.png
+  limits.txt     HUD event queue capacities
+  tracers.txt    Per-weapon client-only tracer styles
+
+OTHER FILES
+-----------
+  guns.txt       Weapon definitions; it uses its own row-based format
+  animations.txt Animation definitions; it uses its own row-based format
+  favorites.txt  Saved server favorites
+
+ONLINE AUTHORITY
+----------------
+The dedicated server controls online health, armor, damage, pickups, money,
+movement, respawn rules and server bots. Client gameplay values cannot override
+it. Server owners edit CSPSPServer/data/gameplay_config.txt and restart the
+server. The client then receives authoritative results through network packets.

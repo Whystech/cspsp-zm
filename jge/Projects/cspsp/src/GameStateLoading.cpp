@@ -1,5 +1,21 @@
 #include "GameStateLoading.h"
 
+static JTexture* LoadConfiguredTexture(JRenderer* renderer, char* key, char* fallback, bool mipmap)
+{
+	char* configured = GetConfig("data/resources.txt",key);
+	JTexture* texture = renderer->LoadTexture(configured == NULL ? fallback : configured,mipmap);
+	delete[] configured;
+	return texture;
+}
+
+static JSample* LoadConfiguredSample(JSoundSystem* soundSystem, char* key, char* fallback)
+{
+	char* configured = GetConfig("data/audio.txt",key);
+	JSample* sample = soundSystem->LoadSample(configured == NULL ? fallback : configured);
+	delete[] configured;
+	return sample;
+}
+
 GameStateLoading::GameStateLoading(GameApp* parent): GameState(parent) {}
 
 GameStateLoading::~GameStateLoading() {
@@ -9,14 +25,15 @@ GameStateLoading::~GameStateLoading() {
 void GameStateLoading::Start()
 {
 	mStage = 0;
+	LoadClientDataConfigs();
 	LoadHudDisplayOptions();
 	mRenderer->ResetPrivateVRAM();
 
 	mRenderer->EnableVSync(true);
 
-	JTexture* bgTexture = mRenderer->LoadTexture("gfx/bg.png");					// load bg
+	JTexture* bgTexture = LoadConfiguredTexture(mRenderer,"background","gfx/bg.png",false);					// load bg
 	gBgQuad = new JQuad(bgTexture, 0.0f, 0.0f, 480.0f, 272.0f);
-	JTexture* logoTexture = mRenderer->LoadTexture("gfx/logo.png");				// load logo
+	JTexture* logoTexture = LoadConfiguredTexture(mRenderer,"logo","gfx/logo.png",false);				// load logo
 	gLogoQuad = new JQuad(logoTexture, 0.0f, 0.0f, 334.0f, 128.0f);
 }
 
@@ -79,8 +96,8 @@ int GameStateLoading::Load(int stage) {
 				gPlayersDeadQuads[i] = new JQuad(mParent->mPlayersDeadTexture,i*32,0,29,47);
 				gPlayersDeadQuads[i]->SetHotSpot(14,23);
 			}*/
-			JTexture* playersTexture = mRenderer->LoadTexture("gfx/players.png", true);
-			JTexture* playersDeadTexture = mRenderer->LoadTexture("gfx/playersdead.png", true);
+			JTexture* playersTexture = LoadConfiguredTexture(mRenderer,"players","gfx/players.png",true);
+			JTexture* playersDeadTexture = LoadConfiguredTexture(mRenderer,"players_dead","gfx/playersdead.png",true);
 			
 			for (int i=0; i<2; i++) {
 				for (int j=0; j<4; j++) {
@@ -117,15 +134,15 @@ int GameStateLoading::Load(int stage) {
 				}
 			}
 
-			JTexture* radarTexture = mRenderer->LoadTexture("gfx/radar.png", true);
+			JTexture* radarTexture = LoadConfiguredTexture(mRenderer,"radar","gfx/radar.png",true);
 			gRadarQuad = new JQuad(radarTexture,0,0,64,64);
 			//gRadarQuad->SetColor(ARGB(175,255,255,255));
 
-			JTexture* buyzoneTexture = mRenderer->LoadTexture("gfx/buyzone.png", true);
+			JTexture* buyzoneTexture = LoadConfiguredTexture(mRenderer,"buyzone","gfx/buyzone.png",true);
 			gBuyZoneQuad = new JQuad(buyzoneTexture,0,0,16,16);
 			gBuyZoneQuad->SetColor(ARGB(175,255,255,255));
 
-			JTexture* decalTexture = mRenderer->LoadTexture("gfx/decals.png",true);
+			JTexture* decalTexture = LoadConfiguredTexture(mRenderer,"decals","gfx/decals.png",true);
 			for (int i=0; i<5; i++) {
 				gDecalQuads[i] = new JQuad(decalTexture,i*32.0f,0.0f,32.0f,32.0f);
 				gDecalQuads[i]->SetHotSpot(16.0f,16.0f);
@@ -144,10 +161,10 @@ int GameStateLoading::Load(int stage) {
 		case 1: {
 			JTexture* gunsTextures[2];
 			JTexture* gunsGroundTextures[2];
-			gunsTextures[0] = mRenderer->LoadTexture("gfx/guns.png", true);
-			gunsTextures[1] = mRenderer->LoadTexture("gfx/guns2.png", true);
-			gunsGroundTextures[0] = mRenderer->LoadTexture("gfx/gunsground.png", true);
-			gunsGroundTextures[1] = mRenderer->LoadTexture("gfx/gunsground2.png", true);
+			gunsTextures[0] = LoadConfiguredTexture(mRenderer,"guns_page_1","gfx/guns.png",true);
+			gunsTextures[1] = LoadConfiguredTexture(mRenderer,"guns_page_2","gfx/guns2.png",true);
+			gunsGroundTextures[0] = LoadConfiguredTexture(mRenderer,"guns_ground_page_1","gfx/gunsground.png",true);
+			gunsGroundTextures[1] = LoadConfiguredTexture(mRenderer,"guns_ground_page_2","gfx/gunsground2.png",true);
 
 			gGunHandQuads = new JQuad*[MAX_GUNS];
 			gGunGroundQuads = new JQuad*[MAX_GUNS];
@@ -170,42 +187,51 @@ int GameStateLoading::Load(int stage) {
 				}
 			}
 
-			JTexture* muzzleFlashTexture = mRenderer->LoadTexture("gfx/muzzleflash.png", true);
+			JTexture* muzzleFlashTexture = LoadConfiguredTexture(mRenderer,"muzzle_flash","gfx/muzzleflash.png",true);
 			for (int i=0; i<3; i++) {
 				gMuzzleFlashQuads[i] = new JQuad(muzzleFlashTexture,i*32,0,32,32);
 				gMuzzleFlashQuads[i]->SetHotSpot(16.0f,-16.0f);
 			}
 
-			JTexture* healthTexture = mRenderer->LoadTexture("gfx/health.png", true);
+			JTexture* healthTexture = LoadConfiguredTexture(mRenderer,"health_hud","gfx/health.png",true);
 			gHealthBorderQuad = new JQuad(healthTexture,0,0,48,48);
 			gHealthFillQuad = new JQuad(healthTexture,48,0,48,48);
+			gHealthPickupQuad = new JQuad(healthTexture,0,0,128,64);
+			gHealthPickupQuad->SetHotSpot(64,32);
 
-			JTexture* armorTexture = mRenderer->LoadTexture("gfx/armor.png", true);
+			JTexture* armorTexture = LoadConfiguredTexture(mRenderer,"armor_hud","gfx/armor.png",true);
 			gArmorBorderQuad = new JQuad(armorTexture,0,0,48,48);
 			gArmorFillQuad = new JQuad(armorTexture,48,0,48,48);
-			JTexture* armorGroundTexture = mRenderer->LoadTexture("gfx/armorground.png", true);
+			gArmorPickupQuad = new JQuad(armorTexture,0,0,128,64);
+			gArmorPickupQuad->SetHotSpot(64,32);
+			JTexture* armorGroundTexture = LoadConfiguredTexture(mRenderer,"armor_ground","gfx/armorground.png",true);
 			gArmorGroundQuad = new JQuad(armorGroundTexture,0,0,32,32);
 			gArmorGroundQuad->SetHotSpot(16,16);
-			JTexture* healthGroundTexture = mRenderer->LoadTexture("gfx/healthground.png", true);
+			JTexture* healthGroundTexture = LoadConfiguredTexture(mRenderer,"health_ground","gfx/healthground.png",true);
 			gHealthGroundQuad = new JQuad(healthGroundTexture,0,0,32,32);
 			gHealthGroundQuad->SetHotSpot(16,16);
+			JTexture* ammoGroundTexture = LoadConfiguredTexture(mRenderer,"ammo_ground","gfx/ammoground.png",true);
+			gAmmoGroundQuad = new JQuad(ammoGroundTexture,0,0,32,32);
+			gAmmoGroundQuad->SetHotSpot(16,16);
 
-			JTexture* ammobarTexture = mRenderer->LoadTexture("gfx/ammo.png", true);
+			JTexture* ammobarTexture = LoadConfiguredTexture(mRenderer,"ammo_hud","gfx/ammo.png",true);
 			gAmmoBarQuad = new JQuad(ammobarTexture,0,0,128,64);
 			gAmmoBarQuad->SetHotSpot(128,64);
+			gAmmoPickupQuad = new JQuad(ammobarTexture,0,0,128,64);
+			gAmmoPickupQuad->SetHotSpot(64,32);
 
-			JTexture* damageIndicatorTexture = mRenderer->LoadTexture("gfx/damageindicator.png", true);
+			JTexture* damageIndicatorTexture = LoadConfiguredTexture(mRenderer,"damage_indicator","gfx/damageindicator.png",true);
 			gDamageIndicator = new JQuad(damageIndicatorTexture,0,0,128,32);
 			gDamageIndicator->SetHotSpot(64,125);
 			gDamageIndicator->SetColor(ARGB(128,255,255,255));
 
-			JTexture* scoreIconsTexture = mRenderer->LoadTexture("gfx/scoreicons.png", true);
+			JTexture* scoreIconsTexture = LoadConfiguredTexture(mRenderer,"score_icons","gfx/scoreicons.png",true);
 			for (int i=0; i<4; i++) {
 				gScoreIconQuads[i] = new JQuad(scoreIconsTexture,16*i+3,2,10,13);
 				gScoreIconQuads[i]->SetHotSpot(5,6);
 			}
 
-			JTexture* ctfTexture = mRenderer->LoadTexture("gfx/ctf.png", true);
+			JTexture* ctfTexture = LoadConfiguredTexture(mRenderer,"ctf","gfx/ctf.png",true);
 			gFlagQuad = new JQuad(ctfTexture,0,0,32,32);
 			gFlagQuad->SetHotSpot(16,16);
 			gFlagHomeQuad = new JQuad(ctfTexture,32,0,32,32);
@@ -219,39 +245,39 @@ int GameStateLoading::Load(int stage) {
 			break;
 		}
 		case 2: {
-			gDryFireRifleSound = mSoundSystem->LoadSample("sfx/dryfire_rifle.wav");
-			gDryFirePistolSound = mSoundSystem->LoadSample("sfx/dryfire_pistol.wav");
-			gDeploySound = mSoundSystem->LoadSample("sfx/deploy.wav");
-			gPickUpSound = mSoundSystem->LoadSample("sfx/pickup.wav");
-			gAmmoSound = mSoundSystem->LoadSample("sfx/ammo.wav");
-			gPinPullSound = mSoundSystem->LoadSample("sfx/pinpull.wav");
-			gWalkSounds[0] = mSoundSystem->LoadSample("sfx/walk1.wav");
-			gWalkSounds[1] = mSoundSystem->LoadSample("sfx/walk2.wav");
-			gRicochetSounds[0] = mSoundSystem->LoadSample("sfx/ricochet1.wav");
-			gRicochetSounds[1] = mSoundSystem->LoadSample("sfx/ricochet2.wav");
-			gRicochetSounds[2] = mSoundSystem->LoadSample("sfx/ricochet3.wav");
-			gRicochetSounds[3] = mSoundSystem->LoadSample("sfx/ricochet4.wav");
-			gHitSounds[0] = mSoundSystem->LoadSample("sfx/hit1.wav");
-			gHitSounds[1] = mSoundSystem->LoadSample("sfx/hit2.wav");
-			gHitSounds[2] = mSoundSystem->LoadSample("sfx/hit3.wav");
+			gDryFireRifleSound = LoadConfiguredSample(mSoundSystem,"dryfire_rifle","sfx/dryfire_rifle.wav");
+			gDryFirePistolSound = LoadConfiguredSample(mSoundSystem,"dryfire_pistol","sfx/dryfire_pistol.wav");
+			gDeploySound = LoadConfiguredSample(mSoundSystem,"deploy","sfx/deploy.wav");
+			gPickUpSound = LoadConfiguredSample(mSoundSystem,"pickup","sfx/pickup.wav");
+			gAmmoSound = LoadConfiguredSample(mSoundSystem,"ammo","sfx/ammo.wav");
+			gPinPullSound = LoadConfiguredSample(mSoundSystem,"pin_pull","sfx/pinpull.wav");
+			gWalkSounds[0] = LoadConfiguredSample(mSoundSystem,"walk_1","sfx/walk1.wav");
+			gWalkSounds[1] = LoadConfiguredSample(mSoundSystem,"walk_2","sfx/walk2.wav");
+			gRicochetSounds[0] = LoadConfiguredSample(mSoundSystem,"ricochet_1","sfx/ricochet1.wav");
+			gRicochetSounds[1] = LoadConfiguredSample(mSoundSystem,"ricochet_2","sfx/ricochet2.wav");
+			gRicochetSounds[2] = LoadConfiguredSample(mSoundSystem,"ricochet_3","sfx/ricochet3.wav");
+			gRicochetSounds[3] = LoadConfiguredSample(mSoundSystem,"ricochet_4","sfx/ricochet4.wav");
+			gHitSounds[0] = LoadConfiguredSample(mSoundSystem,"hit_1","sfx/hit1.wav");
+			gHitSounds[1] = LoadConfiguredSample(mSoundSystem,"hit_2","sfx/hit2.wav");
+			gHitSounds[2] = LoadConfiguredSample(mSoundSystem,"hit_3","sfx/hit3.wav");
 			break;
 		}	
 		case 3: {
-			gKnifeHitSound = mSoundSystem->LoadSample("sfx/knifehit.wav");
-			gDieSounds[0] = mSoundSystem->LoadSample("sfx/die1.wav");
-			gDieSounds[1] = mSoundSystem->LoadSample("sfx/die2.wav");
-			gDieSounds[2] = mSoundSystem->LoadSample("sfx/die3.wav");
-			gRoundEndSounds[T] = mSoundSystem->LoadSample("sfx/twin.wav");
-			gRoundEndSounds[CT] = mSoundSystem->LoadSample("sfx/ctwin.wav");
-			gRoundEndSounds[TIE] = mSoundSystem->LoadSample("sfx/rounddraw.wav");
-			gHEGrenadeSounds[0] = mSoundSystem->LoadSample("sfx/hegrenade1.wav");
-			gHEGrenadeSounds[1] = mSoundSystem->LoadSample("sfx/hegrenade2.wav");
-			gHEGrenadeSounds[2] = mSoundSystem->LoadSample("sfx/hegrenade3.wav");
-			gFlashbangSound = mSoundSystem->LoadSample("sfx/flashbang.wav");
-			gSmokeGrenadeSound = mSoundSystem->LoadSample("sfx/smokegrenade.wav");
-			gFireInTheHoleSound = mSoundSystem->LoadSample("sfx/fireinthehole.wav");
-			gGrenadeBounceSound = mSoundSystem->LoadSample("sfx/grenadebounce.wav");
-			gHitIndicatorSound = mSoundSystem->LoadSample("sfx/hitindicator.wav");
+			gKnifeHitSound = LoadConfiguredSample(mSoundSystem,"knife_hit","sfx/knifehit.wav");
+			gDieSounds[0] = LoadConfiguredSample(mSoundSystem,"die_1","sfx/die1.wav");
+			gDieSounds[1] = LoadConfiguredSample(mSoundSystem,"die_2","sfx/die2.wav");
+			gDieSounds[2] = LoadConfiguredSample(mSoundSystem,"die_3","sfx/die3.wav");
+			gRoundEndSounds[T] = LoadConfiguredSample(mSoundSystem,"t_win","sfx/twin.wav");
+			gRoundEndSounds[CT] = LoadConfiguredSample(mSoundSystem,"ct_win","sfx/ctwin.wav");
+			gRoundEndSounds[TIE] = LoadConfiguredSample(mSoundSystem,"round_draw","sfx/rounddraw.wav");
+			gHEGrenadeSounds[0] = LoadConfiguredSample(mSoundSystem,"he_grenade_1","sfx/hegrenade1.wav");
+			gHEGrenadeSounds[1] = LoadConfiguredSample(mSoundSystem,"he_grenade_2","sfx/hegrenade2.wav");
+			gHEGrenadeSounds[2] = LoadConfiguredSample(mSoundSystem,"he_grenade_3","sfx/hegrenade3.wav");
+			gFlashbangSound = LoadConfiguredSample(mSoundSystem,"flashbang","sfx/flashbang.wav");
+			gSmokeGrenadeSound = LoadConfiguredSample(mSoundSystem,"smoke_grenade","sfx/smokegrenade.wav");
+			gFireInTheHoleSound = LoadConfiguredSample(mSoundSystem,"fire_in_the_hole","sfx/fireinthehole.wav");
+			gGrenadeBounceSound = LoadConfiguredSample(mSoundSystem,"grenade_bounce","sfx/grenadebounce.wav");
+			gHitIndicatorSound = LoadConfiguredSample(mSoundSystem,"hit_indicator","sfx/hitindicator.wav");
 			break;
 		}
 
@@ -429,11 +455,11 @@ int GameStateLoading::Load(int stage) {
 			//gHudFont->SetBase(0);
 			//gHudFont->SetBlendMode(BLEND_COLORADD);
 
-			JTexture* particlesTexture = mRenderer->LoadTexture("gfx/particles.png", true);
+			JTexture* particlesTexture = LoadConfiguredTexture(mRenderer,"particles","gfx/particles.png",true);
 
 			JQuad* quad = new JQuad(particlesTexture,32,0,32,32);
 			quad->SetHotSpot(16.0f, 16.0f);
-			gParticleEngine = new ParticleEngine(100);
+			gParticleEngine = new ParticleEngine(gEffectsConfig.particlePoolSize);
 			gParticleEngine->SetQuad(quad);
 
 			quad = new JQuad(particlesTexture,32,0,32,32);

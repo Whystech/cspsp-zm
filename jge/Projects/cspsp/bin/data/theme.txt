@@ -1,0 +1,17 @@
+# CLIENT INTERFACE COLORS
+# Loaded when CSPSP starts. Use eight hexadecimal digits in AARRGGBB order:
+# AA = opacity, RR = red, GG = green, BB = blue; each pair is 00-FF.
+# Example: FF00FF00 is fully opaque green, while 8000FF00 is half transparent.
+# These colors are client-only and safe to customize for online play.
+#
+# ct_color / t_color: general team UI colors.
+# crosshair_color / crosshair_hit_color: normal and confirmed-hit crosshair.
+# radar_friendly_color / radar_enemy_color: radar marker colors only.
+# The radar frame itself is gfx/radar.png, configured in resources.txt; each
+# map's overview.png supplies the map image beneath that frame.
+ct_color = FF99CCFF
+t_color = FFFF4040
+crosshair_color = C800FF00
+crosshair_hit_color = FFFF0000
+radar_friendly_color = FF00FF00
+radar_enemy_color = FFFF0000

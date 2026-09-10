@@ -1,0 +1,28 @@
+# CLIENT HUD LAYOUT AND TIMING
+# Loaded when CSPSP starts. All positions use the PSP 480x272 screen.
+# This file controls presentation only and is safe to use online.
+#
+# *_lifetime_ms: visibility duration in milliseconds, range 0-60000.
+# kill_feed_x / health_x / armor_x: horizontal screen position, 0-480.
+# line_spacing: vertical spacing between messages, 1-100 pixels.
+# *_bottom_offset: distance upward from the bottom edge, 0-272 pixels.
+# radar_x / radar_y: top-left position of the 64x64 radar frame.
+# radar_scale: map-world-to-radar scale, 0.001-10; larger zooms in.
+# crosshair_inner / crosshair_outer: crosshair radii in pixels, 0-500;
+# outer is automatically kept at or above inner.
+kill_feed_lifetime_ms = 3000
+message_lifetime_ms = 5000
+center_message_lifetime_ms = 3000
+popup_lifetime_ms = 2000
+damage_indicator_lifetime_ms = 1500
+kill_feed_x = 475
+line_spacing = 15
+health_x = 0
+armor_x = 26
+bars_bottom_offset = 58
+timer_bottom_offset = 25
+radar_x = 10
+radar_y = 10
+radar_scale = 0.0666667
+crosshair_inner = 30
+crosshair_outer = 40

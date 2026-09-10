@@ -1,11 +1,12 @@
 #include "Grenade.h"
+#include "Globals.h"
 
 //------------------------------------------------------------------------------------------------
 Grenade::Grenade(float x, float y, float px, float py, float angle, float speed, Person *parent, int type) : Bullet(x,y,px,py,angle,speed,0,parent)
 {
 	mType = TYPE_GRENADE;
 	mGrenadeType = type;
-	mTimer = 1500.0f;
+	mTimer = gGrenadeConfig.fuseTime;
 	mSpinAngle = 0.0f;
 }
 

@@ -391,6 +391,30 @@ bool TileMap::Load(char *mapFile, Gun guns[], int gameType)
 						} 
 					}
 				}
+				else if (strcmp(section,"pickups") == 0) {
+					while (fgets(line,4096,file) != NULL && strncmp(line,"}",1) != 0) {
+						s = line;
+						while (s != NULL) {
+							MapPickup pickup = {};
+							int respawnSeconds;
+							int fields = sscanf(s,"(%d,%d,%f,%f,%d,%d)",&pickup.type,&pickup.id,&pickup.x,&pickup.y,&pickup.amount,&respawnSeconds);
+							if (fields == 6 && (pickup.type == PICKUP_HEALTH || pickup.type == PICKUP_ARMOR || pickup.type == PICKUP_AMMO) && pickup.id >= 0 && pickup.amount > 0 && respawnSeconds >= 0) {
+								bool duplicate = false;
+								for (unsigned int i=0; i<mPickupSpawns.size(); i++) {
+									if (mPickupSpawns[i].id == pickup.id) duplicate = true;
+								}
+								if (!duplicate) {
+									pickup.respawnTime = respawnSeconds*1000.0f;
+									pickup.respawnTimer = 0.0f;
+									pickup.active = true;
+									mPickupSpawns.push_back(pickup);
+								}
+							}
+							s = strchr(s,';');
+							if (s != NULL) s += 1;
+						}
+					}
+				}
 				else {
 					char gunsSection[32] = "guns";
 					if (gameType == FFA) {
@@ -548,6 +572,8 @@ void TileMap::Unload()
 			SAFE_DELETE(mGunObjectsSpawn[i]);
 		}
 		mGunObjectsSpawn.clear();
+		mPickupSpawns.clear();
+		mPickups.clear();
 
 		mDecals.clear();
 
@@ -623,12 +649,22 @@ void TileMap::Render(float x, float y)
 		mRenderer->RenderQuad(mDecals[i].quad,mDecals[i].x-offsetX,mDecals[i].y-offsetY,mDecals[i].angle,mDecals[i].scale,mDecals[i].scale);
 	}
 
+	for (unsigned int i=0; i<mPickups.size(); i++) {
+		if (!mPickups[i].active) continue;
+		if (mPickups[i].x < x-SCREEN_WIDTH_2-32.0f || mPickups[i].x > x+SCREEN_WIDTH_2+32.0f) continue;
+		if (mPickups[i].y < y-SCREEN_HEIGHT_2-32.0f || mPickups[i].y > y+SCREEN_HEIGHT_2+32.0f) continue;
+		JQuad* quad = mPickups[i].type == PICKUP_HEALTH ? gHealthGroundQuad :
+		              (mPickups[i].type == PICKUP_ARMOR ? gArmorGroundQuad : gAmmoGroundQuad);
+		mRenderer->RenderQuad(quad,mPickups[i].x-offsetX,mPickups[i].y-offsetY);
+	}
+
 	
 }
 
 //------------------------------------------------------------------------------------------------
 void TileMap::Reset()
 {
+	mPickups = mPickupSpawns;
 	for(unsigned int i=0;i<mGunObjectsSpawn.size();i++) {
 		GunObject *gunobject = new GunObject(mGunObjectsSpawn[i]->mGun,mGunObjectsSpawn[i]->mClipAmmo,mGunObjectsSpawn[i]->mRemainingAmmo);
 		gunobject->mX = mGunObjectsSpawn[i]->mX;
@@ -661,7 +697,7 @@ void TileMap::AddDecal(float x, float y, int type) {
 
 	mDecals.push_back(decal);
 
-	if (mDecals.size() > MAXDECALS) {
+	if ((int)mDecals.size() > gEffectsConfig.maxDecals) {
 		mDecals.erase(mDecals.begin());
 	}
 }

@@ -33,7 +33,7 @@ void Hud::Update(float dt)
 	if (mKillEvents.size() > 0) {
 		mKillEventTimer += dt;
 
-		if (mKillEventTimer > 3000) {
+		if (mKillEventTimer > gHudConfig.killFeedLifetime) {
 			//delete mKillEvents[0];
 			mKillEvents.erase(mKillEvents.begin());
 			mKillEventTimer = 0;
@@ -48,7 +48,7 @@ void Hud::Update(float dt)
 	if (mMessageEventCounter > 0) {
 		mMessageEventTimer += dt;
 
-		if (mMessageEventTimer > 5000) {
+		if (mMessageEventTimer > gHudConfig.messageLifetime) {
 			//delete mChatEvents[0];
 
 			mMessageEventCounter--;
@@ -62,9 +62,9 @@ void Hud::Update(float dt)
 		}*/
 	}
 
-	if (mMessageTimer < 3000) {
+	if (mMessageTimer < gHudConfig.centerMessageLifetime) {
 		mMessageTimer += dt;
-		if (mMessageTimer >= 3000) {
+		if (mMessageTimer >= gHudConfig.centerMessageLifetime) {
 			strcpy(mMessage,"");
 		}
 	}
@@ -95,8 +95,8 @@ void Hud::Render()
 		ystart = 37;
 	}
 	for(unsigned int i=0; gShowKillFeed && i<mKillEvents.size(); i++) {
-		float x = 475.0f;
-		float y = ystart+i*15.0f;
+		float x = gHudConfig.killFeedX;
+		float y = ystart+i*gHudConfig.lineSpacing;
 
 		/*if (strcmp(mKillEvents[i].victimname,"nataku92") == 0) {
 			gFont->SetColor(ARGB(255,0,128,0));
@@ -104,10 +104,10 @@ void Hud::Render()
 			x -= gFont->GetStringWidth(" [CSPSP dev]");
 		}*/
 		if (mKillEvents[i].victimteam == CT) {
-			gFont->SetColor(ARGB(255,153,204,255));
+			gFont->SetColor(gThemeConfig.ctColor);
 		}
 		else if (mKillEvents[i].victimteam == T) {
-			gFont->SetColor(ARGB(255,255,64,64));
+			gFont->SetColor(gThemeConfig.tColor);
 		}
 		gFont->DrawShadowedString(mKillEvents[i].victimname,x,y,JGETEXT_RIGHT);
 		x -= gFont->GetStringWidth(mKillEvents[i].victimname);
@@ -349,7 +349,7 @@ void Hud::AddKillEvent(Person* attacker, JQuad* weapon, Person* victim) {
 	if (attacker == mPlayer) {
 		mEventPerson = victim;
 		mEventType = 0;
-		mEventTime = 2000;
+		mEventTime = gHudConfig.popupLifetime;
 		strcpy(mEventText,"You killed ");
 		if (attacker == victim) {
 			mEventType = 2;
@@ -359,10 +359,10 @@ void Hud::AddKillEvent(Person* attacker, JQuad* weapon, Person* victim) {
 	else if (victim == mPlayer) {
 		mEventPerson = attacker;
 		mEventType = 1;
-		mEventTime = 2000;
+		mEventTime = gHudConfig.popupLifetime;
 		strcpy(mEventText," killed you");
 	}
-	if (mKillEvents.size() > 5) {
+	if ((int)mKillEvents.size() > gLimitsConfig.killFeedEvents) {
 		mKillEvents.erase(mKillEvents.begin());
 	}
 }
@@ -372,7 +372,7 @@ void Hud::AddFlagEvent(Person* person, int action) {
 
 	// 0 - pickup, 1 - drop, 2 - return, 3 - capture
 	mEventPerson = person;
-	mEventTime = 2000;
+	mEventTime = gHudConfig.popupLifetime;
 	if (person == mPlayer) {
 		mEventType = 2;
 
@@ -426,10 +426,10 @@ void Hud::AddMessageEvent(char* string) {
 	message.type = MESSAGEEVENT;
 	strcpy(message.string,string);
 	mMessageEvents.push_back(message);
-	if (mMessageEvents.size() > 9) {
+	if ((int)mMessageEvents.size() > gLimitsConfig.messageEvents) {
 		mMessageEvents.erase(mMessageEvents.begin());
 	}
-	if (mMessageEventCounter < 3) {
+	if (mMessageEventCounter < gLimitsConfig.activeMessageEvents) {
 		mMessageEventCounter++;
 		mMessageEventTimer = 0;
 	}
@@ -444,10 +444,10 @@ void Hud::AddChatEvent(char* name, char* string, int team, bool isdead, bool ist
 	message.chatevent.isDead = isdead;
 	message.chatevent.isTeamOnly = isteamonly;
 	mMessageEvents.push_back(message);
-	if (mMessageEvents.size() > 9) {
+	if ((int)mMessageEvents.size() > gLimitsConfig.messageEvents) {
 		mMessageEvents.erase(mMessageEvents.begin());
 	}
-	if (mMessageEventCounter < 3) {
+	if (mMessageEventCounter < gLimitsConfig.activeMessageEvents) {
 		mMessageEventCounter++;
 		mMessageEventTimer = 0;
 	}
@@ -461,7 +461,7 @@ void Hud::SetMessage(char* message) {
 }
 
 void Hud::AddDamageIndicator(float angle) {
-	DamageIndicator damageIndicator = {angle-M_PI_2,1500};
+	DamageIndicator damageIndicator = {angle-M_PI_2,gHudConfig.damageIndicatorLifetime};
 	mDamageIndicators.push_back(damageIndicator);
 }
 
