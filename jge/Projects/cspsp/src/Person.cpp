@@ -625,7 +625,7 @@ std::vector<Bullet*> Person::Fire()
 					int randomSteps = pelletCount == 4 ? 10 : 11;
 					for (int i=0; i<pelletCount; i++) {
 						theta += (rand()%randomSteps)/100.0f-0.05f;
-						bullet = new Bullet(mX+w,mY+h,mX,mY,theta,speed,abs(mGuns[mGunIndex]->mGun->mDamage+rand()%17-8),this);
+						bullet = new Bullet(mX+w,mY+h,mX+w,mY+h,theta,speed,abs(mGuns[mGunIndex]->mGun->mDamage+rand()%17-8),this);
 						bullets.push_back(bullet);
 						mBullets->push_back(bullet);
 						theta += step;
@@ -636,7 +636,7 @@ std::vector<Bullet*> Person::Fire()
 						theta += (rand()%(int)ceilf(mRecoilAngle*1000.0f))/1000.0f-(mRecoilAngle*0.5f);
 						//theta = mFacingAngle + (rand()%100)/400.0f-0.125f;
 					}
-					bullet = new Bullet(mX+w,mY+h,mX,mY,theta,speed,abs(mGuns[mGunIndex]->mGun->mDamage+rand()%17-8),this);
+					bullet = new Bullet(mX+w,mY+h,mX+w,mY+h,theta,speed,abs(mGuns[mGunIndex]->mGun->mDamage+rand()%17-8),this);
 					bullets.push_back(bullet);
 					mBullets->push_back(bullet);
 				}
