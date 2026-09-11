@@ -184,7 +184,7 @@ extern JQuad* gPlayersDeadQuads[2][4];
 extern JQuad* gRadarQuad;
 extern JQuad* gBuyZoneQuad;
 extern JQuad* gDecalQuads[5];
-extern JQuad* gMuzzleFlashQuads[3];
+extern JQuad* gMuzzleFlashQuads[MAX_MUZZLE_FLASH_TYPES*MUZZLE_FLASH_FRAMES];
 extern JQuad* gHealthBorderQuad;
 extern JQuad* gHealthFillQuad;
 extern JQuad* gArmorBorderQuad;

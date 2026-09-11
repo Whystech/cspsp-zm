@@ -19,6 +19,11 @@ guns_page_2 = gfx/guns2.png
 guns_ground_page_1 = gfx/gunsground.png
 guns_ground_page_2 = gfx/gunsground2.png
 muzzle_flash = gfx/muzzleflash.png
+muzzle_flash_1 = gfx/muzzleflash1.png
+muzzle_flash_2 = gfx/muzzleflash2.png
+muzzle_flash_3 = gfx/muzzleflash3.png
+# Additional styles need no source edit. Add muzzle_flash_N for IDs 4 through
+# 15 and provide a matching 128x32 image. Missing IDs use muzzle_flash style 0.
 health_hud = gfx/health.png
 armor_hud = gfx/armor.png
 health_ground = gfx/healthground.png

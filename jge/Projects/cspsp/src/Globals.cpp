@@ -46,7 +46,7 @@ JQuad* gPlayersDeadQuads[2][4];
 JQuad* gRadarQuad;
 JQuad* gBuyZoneQuad;
 JQuad* gDecalQuads[5];
-JQuad* gMuzzleFlashQuads[3];
+JQuad* gMuzzleFlashQuads[MAX_MUZZLE_FLASH_TYPES*MUZZLE_FLASH_FRAMES];
 JQuad* gHealthBorderQuad;
 JQuad* gHealthFillQuad;
 JQuad* gArmorBorderQuad;
