@@ -188,9 +188,26 @@ int GameStateLoading::Load(int stage) {
 			}
 
 			JTexture* muzzleFlashTexture = LoadConfiguredTexture(mRenderer,"muzzle_flash","gfx/muzzleflash.png",true);
-			for (int i=0; i<3; i++) {
-				gMuzzleFlashQuads[i] = new JQuad(muzzleFlashTexture,i*32,0,32,32);
-				gMuzzleFlashQuads[i]->SetHotSpot(16.0f,-16.0f);
+			for (int frame=0; frame<MUZZLE_FLASH_FRAMES; frame++) {
+				gMuzzleFlashQuads[frame] = new JQuad(muzzleFlashTexture,frame*32,0,32,32);
+				gMuzzleFlashQuads[frame]->SetHotSpot(16.0f,-16.0f);
+			}
+			for (int type=1; type<MAX_MUZZLE_FLASH_TYPES; type++) {
+				char key[32];
+				sprintf(key,"muzzle_flash_%d",type);
+				char* configured = GetConfig("data/resources.txt",key);
+				JTexture* texture = configured == NULL ? NULL : mRenderer->LoadTexture(configured,true);
+				delete[] configured;
+				for (int frame=0; frame<MUZZLE_FLASH_FRAMES; frame++) {
+					int index = type*MUZZLE_FLASH_FRAMES+frame;
+					if (texture == NULL) {
+						gMuzzleFlashQuads[index] = gMuzzleFlashQuads[frame];
+					}
+					else {
+						gMuzzleFlashQuads[index] = new JQuad(texture,frame*32,0,32,32);
+						gMuzzleFlashQuads[index]->SetHotSpot(16.0f,-16.0f);
+					}
+				}
 			}
 
 			JTexture* healthTexture = LoadConfiguredTexture(mRenderer,"health_hud","gfx/health.png",true);
@@ -312,9 +329,14 @@ int GameStateLoading::Load(int stage) {
 				if (!fgets(line,1024,file)) break; // read error, you should handle this properly 
 				s = line; // This was what the problem was! 
 				Gun gun = {};
-				int fields = sscanf(s,"%d %d %d %f %d %d %d %f %f %f %d %d %d %d %d %d %d %14s",&gun.mId,&gun.mDamage,&gun.mDelay,&gun.mSpread,&gun.mClip,&gun.mNumClips,&gun.mReloadDelay,&gun.mSpeed,&gun.mBulletSpeed,&gun.mViewAngle,&gun.mCost,&gun.mType,&gun.mFireMode,&gun.mPellets,&gun.mScope,&gun.mBuyCategory,&gun.mBuyTeams,gun.mName);
-				if (fields != 18) continue;
+				int fields = sscanf(s,"%d %d %d %f %d %d %d %f %f %f %d %d %d %d %d %d %d %d %14s",&gun.mId,&gun.mDamage,&gun.mDelay,&gun.mSpread,&gun.mClip,&gun.mNumClips,&gun.mReloadDelay,&gun.mSpeed,&gun.mBulletSpeed,&gun.mViewAngle,&gun.mCost,&gun.mType,&gun.mFireMode,&gun.mPellets,&gun.mScope,&gun.mBuyCategory,&gun.mBuyTeams,&gun.mMuzzleFlashType,gun.mName);
+				if (fields != 19) {
+					gun.mMuzzleFlashType = 0;
+					fields = sscanf(s,"%d %d %d %f %d %d %d %f %f %f %d %d %d %d %d %d %d %14s",&gun.mId,&gun.mDamage,&gun.mDelay,&gun.mSpread,&gun.mClip,&gun.mNumClips,&gun.mReloadDelay,&gun.mSpeed,&gun.mBulletSpeed,&gun.mViewAngle,&gun.mCost,&gun.mType,&gun.mFireMode,&gun.mPellets,&gun.mScope,&gun.mBuyCategory,&gun.mBuyTeams,gun.mName);
+					if (fields != 18) continue;
+				}
 				if (gun.mId < 0 || gun.mId >= MAX_GUNS) continue;
+				if (gun.mMuzzleFlashType < 0 || gun.mMuzzleFlashType >= MAX_MUZZLE_FLASH_TYPES) gun.mMuzzleFlashType = 0;
 				if (gun.mPellets < 1) gun.mPellets = 1;
 				if (gun.mPellets > MAX_PELLETS) gun.mPellets = MAX_PELLETS;
 				if (gun.mScope < SCOPE_NONE || gun.mScope > SCOPE_HIGH) gun.mScope = SCOPE_NONE;

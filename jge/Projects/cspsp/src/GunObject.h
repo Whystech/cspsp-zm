@@ -24,6 +24,8 @@
 #define BUY_CATEGORY_EQUIPMENT 6
 #define BUY_TEAM_T 1
 #define BUY_TEAM_CT 2
+#define MAX_MUZZLE_FLASH_TYPES 16
+#define MUZZLE_FLASH_FRAMES 3
 
 struct Gun {
 	JQuad* mHandQuad;
@@ -46,6 +48,7 @@ struct Gun {
 	int mBuyCategory;
 	int mBuyTeams;
 	char mName[15];
+	int mMuzzleFlashType;
 	JSample* mFireSound;
 	JSample* mReloadSound;
 	JSample* mDryFireSound;

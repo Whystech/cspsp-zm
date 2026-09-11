@@ -1652,6 +1652,7 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 				int buyteams = packet.ReadInt8();
 				char name[15];
 				packet.ReadChar(name,15);
+				int muzzleflashtype = packet.ReadInt8();
 				int ackid = packet.ReadInt16();
 				if (sendack) {
 					mUdpManager->SendAck(ackid,true);
@@ -1668,6 +1669,7 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 				mGuns[id] = gun;
 
 				strcpy(mGuns[id].mName,name);
+				mGuns[id].mMuzzleFlashType = muzzleflashtype >= 0 && muzzleflashtype < MAX_MUZZLE_FLASH_TYPES ? muzzleflashtype : 0;
 				mGuns[id].mFireSound = gGuns[id].mFireSound;
 				mGuns[id].mReloadSound = gGuns[id].mReloadSound;
 				mGuns[id].mDryFireSound = gGuns[id].mDryFireSound;

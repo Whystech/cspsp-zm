@@ -47,6 +47,21 @@ OTHER FILES
   animations.txt Animation definitions; it uses its own row-based format
   favorites.txt  Saved server favorites
 
+WEAPON MUZZLE FLASHES
+---------------------
+Weapon rows in guns.txt may add an optional muzzle-flash ID immediately before
+the weapon name. Existing 18-field rows omit it and use style 0:
+  ... buyCategory buyTeams [muzzleFlashId] name
+
+Accepted values are 0 through 15. Style 0 uses the muzzle_flash resource key.
+Style N uses muzzle_flash_N, so adding a future style only requires that entry
+in resources.txt, its image, and the ID before a weapon name in guns.txt.
+Missing resource keys safely use style 0. Each image must be a 128x32 sheet.
+The first three 32x32 cells contain randomized frames and the fourth cell is
+transparent/reserved, matching the original muzzleflash.png layout. Online
+servers send this setting to clients, so client and server binaries must use
+the same network version.
+
 ONLINE AUTHORITY
 ----------------
 The dedicated server controls online health, armor, damage, pickups, money,

@@ -537,11 +537,8 @@ void Person::Render(float x, float y)
 			y = y2;*/
 			//int alpha = mMuzzleFlashTime/100.0f*255;
 			//gMuzzleFlashQuads[mMuzzleFlashIndex]->SetColor(ARGB(alpha,255,255,255));
-			float scale = 1.0f;
-			if (mMuzzleFlashIndex >= 3) {
-				scale = 0.5f;
-			}
-			mRenderer->RenderQuad(gMuzzleFlashQuads[mMuzzleFlashIndex%3],x,y,mMuzzleFlashAngle-M_PI_2,1.0f,scale);
+			if (mMuzzleFlashIndex < 0 || mMuzzleFlashIndex >= MAX_MUZZLE_FLASH_TYPES*MUZZLE_FLASH_FRAMES) mMuzzleFlashIndex = 0;
+			mRenderer->RenderQuad(gMuzzleFlashQuads[mMuzzleFlashIndex],x,y,mMuzzleFlashAngle-M_PI_2);
 		}
 
 		mRenderer->RenderQuad(mQuads[5],centerx,centery,mRotation);
@@ -651,7 +648,7 @@ std::vector<Bullet*> Person::Fire()
 
 				mMuzzleFlashTime = gEffectsConfig.muzzleFlashLifetime;
 				mMuzzleFlashAngle = mFacingAngle;
-				mMuzzleFlashIndex = mGuns[mGunIndex]->mGun->mType*3 + rand()%3;
+				mMuzzleFlashIndex = mGuns[mGunIndex]->mGun->mMuzzleFlashType*MUZZLE_FLASH_FRAMES + rand()%MUZZLE_FLASH_FRAMES;
 
 				mRadarTime = 2000.0f;
 				mRadarX = mX;

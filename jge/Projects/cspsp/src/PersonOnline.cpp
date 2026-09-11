@@ -257,7 +257,7 @@ std::vector<Bullet*> PersonOnline::Fire()
 
 				mMuzzleFlashTime = 50.0f;
 				mMuzzleFlashAngle = mFacingAngle;
-				mMuzzleFlashIndex = mGuns[mGunIndex]->mGun->mType*3 + rand()%3;
+				mMuzzleFlashIndex = mGuns[mGunIndex]->mGun->mMuzzleFlashType*MUZZLE_FLASH_FRAMES + rand()%MUZZLE_FLASH_FRAMES;
 				
 				mRadarTime = 2000.0f;
 				mRadarX = mX;
