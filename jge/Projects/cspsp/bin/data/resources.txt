@@ -22,6 +22,7 @@ muzzle_flash = gfx/muzzleflash.png
 muzzle_flash_1 = gfx/muzzleflash1.png
 muzzle_flash_2 = gfx/muzzleflash2.png
 muzzle_flash_3 = gfx/muzzleflash3.png
+muzzle_flash_4 = gfx/muzzleflash4.png
 # Additional styles need no source edit. Add muzzle_flash_N for IDs 4 through
 # 15 and provide a matching 128x32 image. Missing IDs use muzzle_flash style 0.
 health_hud = gfx/health.png
