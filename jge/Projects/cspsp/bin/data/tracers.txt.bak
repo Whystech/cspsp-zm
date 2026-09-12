@@ -37,6 +37,7 @@
 34 laser 100 255 140 225 48.0 0.8
 35 bolt 220 200 150 245 34.0 1.0
 64 zigzag 0 162 232 255 50.0 1.0
+65 laser 255 158 34 225 10.0 1.0
 
 # Client-only tracer overrides keyed by gun ID.
 # Missing IDs use the original orange line tracer.

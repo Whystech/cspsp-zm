@@ -1,4 +1,4 @@
-65
+66
 0 75 300 0.0 0 0 0 1.6 0.0 0.0 0 2 1 1 0 0 0 0 KNIFE
 1 10 100 0.3 20 4 2100 1.15 1.0 0.0 400 1 0 1 0 1 3 1 GLOCK
 2 15 100 0.2 12 6 1900 1.15 1.0 0.0 500 1 0 1 0 1 3 1 USP
@@ -64,6 +64,7 @@
 62 48 500 0.35 6 6 2400 1.1 1.2 0.0 1200 1 0 1 0 1 3 3 REVOLVER
 63 14 130 0.22 7 7 1800 1.15 1.0 0.0 500 1 0 1 0 1 3 1 PPK
 64 75 100 0.3 10 5 2000 1.0 3.0 0.0 1000 1 0 1 0 1 3 4 RAYGUN
+65 150 1000 1.0 1 11 1500 1.0 2.0 0.0 1000 0 0 1 0 6 3 5 CROSSBOW
 
 # id damage delay spread clip numclips reloaddelay walkingspeed bulletspeed viewangle cost type firemode pellets scope category teams [muzzleflash] name
 # 0.0 viewangle disables scope
