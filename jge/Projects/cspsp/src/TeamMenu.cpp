@@ -39,7 +39,7 @@ TeamMenu::TeamMenu()
 	mCT = new Person(gPlayersQuads[CT][0],gPlayersDeadQuads[0][0],NULL,NULL,CT,"test",0);
 	mT = new Person(gPlayersQuads[T][0],gPlayersDeadQuads[0][0],NULL,NULL,CT,"test",0);
 	mCT->mGuns[KNIFE] = new GunObject(&gGuns[0],0,0);
-	mT->mGuns[KNIFE] = new GunObject(&gGuns[0],0,0);
+	mT->mGuns[KNIFE] = new GunObject(&gGuns[ZOMBIECLAWS],0,0);
 	mCT->PickUp(new GunObject(&gGuns[17],0,0));
 	mT->PickUp(new GunObject(&gGuns[18],0,0));
 	mCT->mX = -SCREEN_WIDTH_2+330;

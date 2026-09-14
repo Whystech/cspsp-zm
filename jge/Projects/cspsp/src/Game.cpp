@@ -21,6 +21,7 @@ Game::Game(GameApp* parent): GameState(parent)
 	mRoundTimer = 0.0f;
 	mRoundEndTimer = 0.0f;
 	mBuyTimer = 0.0f;
+	mHordeSurvivalTime = 0.0f;
 	mTimer = 0.0f;
 	mSwitchTimer = 0;
 	//mMusic = NULL;
@@ -835,7 +836,7 @@ void Game::CheckCollisions()
 									person1->mState = DRYFIRING;
 									gParticleEngine->GenerateParticles(BLOOD,x2,y2,gEffectsConfig.bloodParticleCount);
 									mMap->AddDecal(x2,y2,DECAL_BLOOD);
-									gSfxManager->PlaySample(gKnifeHitSound,x,y);
+									gSfxManager->PlaySample((person1->mGuns[KNIFE]->mGun->mId == ZOMBIECLAWS) ? gZombieClawsHitSound : gKnifeHitSound,x,y);
 
 									if (!mIsOnline) {
 										if (person1 == mPlayer) {
@@ -864,7 +865,7 @@ void Game::CheckCollisions()
 									person2->mState = DRYFIRING;
 									gParticleEngine->GenerateParticles(BLOOD,x,y,gEffectsConfig.bloodParticleCount);
 									mMap->AddDecal(x,y,DECAL_BLOOD);
-									gSfxManager->PlaySample(gKnifeHitSound,x2,y2);
+									gSfxManager->PlaySample((person2->mGuns[KNIFE]->mGun->mId == ZOMBIECLAWS) ? gZombieClawsHitSound : gKnifeHitSound,x2,y2);
 									if (!mIsOnline) {
 										if (person2 == mPlayer) {
 											mHitTime = 1000;
@@ -1326,6 +1327,9 @@ void Game::Update(float dt)
 		}
 	}
 
+	if (mIsHordeMode && mRoundState == STARTED && mWinner == NONE) {
+		mHordeSurvivalTime += dt*0.001f*mTimeMultiplier;
+	}
 	mRoundTimer -= dt*0.001f*mTimeMultiplier;
 	if (mRoundState == FREEZETIME) {
 
@@ -1823,10 +1827,11 @@ void Game::Render()
 		gFont->SetScale(1.0f);
 		gFont->SetColor(ARGB(230,255,64,64));
 
-		if (gShowRoundTimer) {
-			int seconds = (int)floorf(mRoundTimer);
+		if (mIsHordeMode ? gShowHordeTimer : gShowRoundTimer) {
+			float displayedTimer = mIsHordeMode ? mHordeSurvivalTime : mRoundTimer;
+			int seconds = (int)floorf(displayedTimer);
 			int minutes = (int)floorf(seconds/60.0f);
-			int centiseconds = (int)floorf((mRoundTimer-seconds)*100);
+			int centiseconds = (int)floorf((displayedTimer-seconds)*100);
 			sprintf(buffer,"%02d:%02d.%02d",minutes,seconds%60,centiseconds);
 
 			//gHudFont->SetColor(ARGB(230,255,64,64));
@@ -2192,13 +2197,16 @@ void Game::Render()
 			//mRenderer->DrawLine(0,35,SCREEN_WIDTH,35,ARGB(255,255,255,255));
 			//mRenderer->DrawLine(0,SCREEN_HEIGHT-35,SCREEN_WIDTH,SCREEN_HEIGHT-35,ARGB(255,255,255,255));
 				
-			int seconds = (int)floorf(mRoundTimer);
-			int minutes = (int)floorf(seconds/60.0f);
-			int centiseconds = (int)floorf((mRoundTimer-seconds)*100);
-			sprintf(buffer,"%02d:%02d.%02d",minutes,seconds%60,centiseconds);
+			if (mIsHordeMode ? gShowHordeTimer : gShowRoundTimer) {
+				float displayedTimer = mIsHordeMode ? mHordeSurvivalTime : mRoundTimer;
+				int seconds = (int)floorf(displayedTimer);
+				int minutes = (int)floorf(seconds/60.0f);
+				int centiseconds = (int)floorf((displayedTimer-seconds)*100);
+				sprintf(buffer,"%02d:%02d.%02d",minutes,seconds%60,centiseconds);
 
-			gFont->SetColor(ARGB(255,255,255,255));
-			gFont->DrawString(buffer, SCREEN_WIDTH_F-20.0f, 10.0f, JGETEXT_RIGHT);
+				gFont->SetColor(ARGB(255,255,255,255));
+				gFont->DrawString(buffer, SCREEN_WIDTH_F-20.0f, 10.0f, JGETEXT_RIGHT);
+			}
 
 			if ((mGameType == FFA || mGameType == CTF) && mPlayer->mTeam != NONE) {
 				int seconds = (int)floorf(mRespawnTimer/1000.0f);

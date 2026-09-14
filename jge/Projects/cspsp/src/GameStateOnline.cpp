@@ -549,7 +549,7 @@ void GameStateOnline::CheckCollisions()
 							if (anglediff <= 0.5f) {
 								gParticleEngine->GenerateParticles(BLOOD,x2,y2,gEffectsConfig.bloodParticleCount);
 								mMap->AddDecal(x2,y2,DECAL_BLOOD);
-								gSfxManager->PlaySample(gKnifeHitSound,x,y);
+								gSfxManager->PlaySample((mPeople[i]->mGuns[KNIFE]->mGun->mId == ZOMBIECLAWS) ? gZombieClawsHitSound : gKnifeHitSound,x,y);
 								//mPeopleTemp[j]->TakeDamage(mPeople[i]->mGuns[KNIFE]->mGun->mDamage);
 								if (mPeopleTemp[j]->mState == DEAD) {
 									//UpdateScores(mPeople[i],mPeopleTemp[j],mPeople[i]->mGuns[KNIFE]->mGun);
@@ -564,7 +564,7 @@ void GameStateOnline::CheckCollisions()
 							if (anglediff <= 0.5f) {
 								gParticleEngine->GenerateParticles(BLOOD,x,y,gEffectsConfig.bloodParticleCount);
 								mMap->AddDecal(x,y,DECAL_BLOOD);
-								gSfxManager->PlaySample(gKnifeHitSound,x2,y2);
+								gSfxManager->PlaySample((mPeopleTemp[j]->mGuns[KNIFE]->mGun->mId == ZOMBIECLAWS) ? gZombieClawsHitSound : gKnifeHitSound,x2,y2);
 								//mPeople[i]->TakeDamage(mPeopleTemp[j]->mGuns[KNIFE]->mGun->mDamage);
 								if (mPeople[i]->mState == DEAD) {
 									//UpdateScores(mPeopleTemp[j],mPeople[i],mPeople[i]->mGuns[KNIFE]->mGun);
@@ -1371,6 +1371,7 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 				float timeMultiplier = packet.ReadFloat();
 				int hordeWave = packet.ReadInt16();
 				int hordeWaveDelay = packet.ReadInt16();
+				float hordeSurvivalTime = packet.ReadFloat();
 
 				int ackid = packet.ReadInt16();
 				if (sendack) {
@@ -1389,6 +1390,7 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 				mIsHordeMode = (mGameType == HORDE);
 				mHordeWave = hordeWave;
 				mHordeWaveDelay = hordeWaveDelay;
+				mHordeSurvivalTime = hordeSurvivalTime;
 
 				mFriendlyFire = ff;
 				//mNumCTs = numCTs;
@@ -1652,7 +1654,7 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 				int buyteams = packet.ReadInt8();
 				char name[15];
 				packet.ReadChar(name,15);
-				int muzzleflashtype = packet.ReadInt8();
+				int muzzleflashtype = packet.ReadInt32();
 				int ackid = packet.ReadInt16();
 				if (sendack) {
 					mUdpManager->SendAck(ackid,true);
@@ -1669,7 +1671,7 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 				mGuns[id] = gun;
 
 				strcpy(mGuns[id].mName,name);
-				mGuns[id].mMuzzleFlashType = muzzleflashtype >= 0 && muzzleflashtype < MAX_MUZZLE_FLASH_TYPES ? muzzleflashtype : 0;
+				mGuns[id].mMuzzleFlashType = muzzleflashtype >= 0 ? muzzleflashtype : 0;
 				mGuns[id].mFireSound = gGuns[id].mFireSound;
 				mGuns[id].mReloadSound = gGuns[id].mReloadSound;
 				mGuns[id].mDryFireSound = gGuns[id].mDryFireSound;
@@ -1784,8 +1786,7 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 
 				PersonOnline* player = new PersonOnline(gPlayersQuads[teamtemp][type], gPlayersDeadQuads[teamtemp][type], &mBullets, &mGunObjects, team, name, RELATIVE1);
 
-				player->mGuns[KNIFE] = new GunObject(&mGuns[0],0,0);
-				player->mGunIndex = KNIFE;
+				player->SetKnifeForTeam(team);
 				player->SetState(state);
 				player->mTeam = team;
 				player->mNumKills = numkills;
@@ -1837,7 +1838,7 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 			case PLAYERICON: {//new player; join game
 				int id = packet.ReadInt8();
 				char icon[300];
-				int datalength = packet.ReadData(icon);
+				int datalength = packet.ReadData(icon, sizeof(icon));
 				int ackid = packet.ReadInt16();
 				if (sendack) {
 					mUdpManager->SendAck(ackid);
@@ -1990,6 +1991,7 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 				}
 
 				player->mTeam = team;
+				if (team == CT || team == T) player->SetKnifeForTeam(team);
 
 				if (team < 2 && type < 4) {
 					player->SetQuads(gPlayersQuads[team][type],gPlayersDeadQuads[team][type]);
@@ -3221,7 +3223,7 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 				int datalength;
 				if (fileid == 0 || fileid == 1 || fileid == 2){
 					pos = packet.ReadInt32();
-					datalength = packet.ReadData(data);
+					datalength = packet.ReadData(data, sizeof(data));
 				}
 				int ackid = packet.ReadInt16();
 				if (sendack) {
@@ -3398,6 +3400,7 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 				int wave = packet.ReadInt16();
 				int roundstate = packet.ReadInt8();
 				float roundtimer = packet.ReadFloat();
+				float hordeSurvivalTime = packet.ReadFloat();
 				int remainingCTs = packet.ReadInt8();
 				int remainingTs = packet.ReadInt8();
 				int ackid = packet.ReadInt16();
@@ -3408,6 +3411,7 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 				mHordeWave = wave;
 				mRoundState = roundstate;
 				mRoundTimer = roundtimer;
+				mHordeSurvivalTime = hordeSurvivalTime;
 				mNumRemainingCTs = remainingCTs;
 				mNumRemainingTs = remainingTs;
 				mWinner = NONE;
@@ -3464,6 +3468,7 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 void GameStateOnline::ResetRound() {
 	//mNumRounds++;
 	mTimeMultiplier = 1.0f;
+	if (mIsHordeMode) mHordeSurvivalTime = 0.0f;
 
 	mRoundState = FREEZETIME;
 	mRoundTimer = mRoundFreezeTime;

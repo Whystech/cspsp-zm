@@ -99,7 +99,8 @@ Person::Person(JQuad* quads[], JQuad* deadquad, std::vector<Bullet*>* bullets, s
 	mWalkTime = 0.0f;
 	mWalkAngle = 0.0f;
 
-	mMuzzleFlashIndex = 0;
+	mMuzzleFlashType = 0;
+	mMuzzleFlashFrame = 0;
 	mMuzzleFlashAngle = 0.0f;
 	mMuzzleFlashTime = 0.0f;
 
@@ -526,7 +527,7 @@ void Person::Render(float x, float y)
 		y = y2;
 		//x2 = x+11*cosf(mRotation+mKeyFrame.angles[GUN]);
 		//y2 = y+11*sinf(mRotation+mKeyFrame.angles[GUN]);
-		if (!(mTeam == T && mGunIndex == KNIFE)) {
+		if (mTeam != T || mGunIndex != KNIFE || mGuns[mGunIndex]->mGun->mId == ZOMBIECLAWS) {
 			mRenderer->RenderQuad(mGuns[mGunIndex]->mGun->mHandQuad,x,y,mLastFireAngle+mKeyFrame.angles[GUN]);
 		}
 
@@ -536,9 +537,8 @@ void Person::Render(float x, float y)
 			x = x2;
 			y = y2;*/
 			//int alpha = mMuzzleFlashTime/100.0f*255;
-			//gMuzzleFlashQuads[mMuzzleFlashIndex]->SetColor(ARGB(alpha,255,255,255));
-			if (mMuzzleFlashIndex < 0 || mMuzzleFlashIndex >= MAX_MUZZLE_FLASH_TYPES*MUZZLE_FLASH_FRAMES) mMuzzleFlashIndex = 0;
-			mRenderer->RenderQuad(gMuzzleFlashQuads[mMuzzleFlashIndex],x,y,mMuzzleFlashAngle-M_PI_2);
+			JQuad* muzzleFlash = GetMuzzleFlashQuad(mMuzzleFlashType,mMuzzleFlashFrame);
+			if (muzzleFlash != NULL) mRenderer->RenderQuad(muzzleFlash,x,y,mMuzzleFlashAngle-M_PI_2);
 		}
 
 		mRenderer->RenderQuad(mQuads[5],centerx,centery,mRotation);
@@ -648,7 +648,8 @@ std::vector<Bullet*> Person::Fire()
 
 				mMuzzleFlashTime = gEffectsConfig.muzzleFlashLifetime;
 				mMuzzleFlashAngle = mFacingAngle;
-				mMuzzleFlashIndex = mGuns[mGunIndex]->mGun->mMuzzleFlashType*MUZZLE_FLASH_FRAMES + rand()%MUZZLE_FLASH_FRAMES;
+				mMuzzleFlashType = mGuns[mGunIndex]->mGun->mMuzzleFlashType;
+				mMuzzleFlashFrame = rand()%MUZZLE_FLASH_FRAMES;
 
 				mRadarTime = 2000.0f;
 				mRadarX = mX;
@@ -814,6 +815,8 @@ void Person::SwitchNext()
 //------------------------------------------------------------------------------------------------
 void Person::SetKnifeForTeam(int team)
 {
+	int meleeWeaponId = (team == T) ? ZOMBIECLAWS : 0;
+
 	if (mGuns[KNIFE] != NULL) {
 		delete mGuns[KNIFE];
 		mGuns[KNIFE] = NULL;
@@ -823,11 +826,7 @@ void Person::SetKnifeForTeam(int team)
 		mKnifeGun = NULL;
 	}
 
-	mKnifeGun = new Gun(gGuns[0]);
-	mKnifeGun->mType = KNIFE;
-	mKnifeGun->mDamage = (team == T) ? 75 : 40;
-	// Terrorist knife speed is 2 times the one of ct knife speed
-	mKnifeGun->mSpeed = (team == T) ? 2.0f : gGuns[0].mSpeed;
+	mKnifeGun = new Gun(gGuns[meleeWeaponId]);
 	mGuns[KNIFE] = new GunObject(mKnifeGun, 0, 0);
 	mGunIndex = KNIFE;
 }
@@ -1099,7 +1098,7 @@ void Person::Die()
 
 	mNumDryFire = 0;
 
-	gSfxManager->PlaySample(gDieSounds[rand()%3],mX,mY);
+	gSfxManager->PlaySample(gDieSounds[(mTeam == T) ? T : CT][rand()%3],mX,mY);
 	SetState(DEAD);
 	mFadeTime = 1000.0f;
 	SetMoveState(NOTMOVING);

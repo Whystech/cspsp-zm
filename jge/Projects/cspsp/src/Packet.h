@@ -47,7 +47,7 @@ public:
 	int ReadChar(char *buffer, int buffersize);
 
 	void WriteData(char* value, int length);
-	int ReadData(char* buffer);
+	int ReadData(char* buffer, int buffersize);
 
 	void WritePacketData(Packet &packet);
 

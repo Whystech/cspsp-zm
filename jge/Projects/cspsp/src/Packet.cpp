@@ -45,12 +45,12 @@ int Packet::Length() {
 
 char Packet::ReadInt8() {
 	char value = 0;
-	if (index >= data.size()) {
+	if (index < 0 || index + (int)sizeof(char) > (int)data.size()) {
 		printf("Invalid ReadInt8");
 		return 0;
 	}
     memcpy(&value, &data[index], sizeof(char));
-    index += sizeof(char);	
+    index += sizeof(char);
 	return value;
 }
 
@@ -61,12 +61,12 @@ void Packet::WriteInt8(char value) {
 
 short int Packet::ReadInt16() {
 	short int value = 0;
-	if (index >= data.size()) {
+	if (index < 0 || index + (int)sizeof(short int) > (int)data.size()) {
 		printf("Invalid ReadInt16");
 		return 0;
 	}
     memcpy(&value, &data[index], sizeof(short int));
-    index += sizeof(short int);	
+    index += sizeof(short int);
 	return value;
 }
 
@@ -77,12 +77,12 @@ void Packet::WriteInt16(short int value) {
 
 int Packet::ReadInt32() {
 	int value = 0;
-	if (index >= data.size()) {
+	if (index < 0 || index + (int)sizeof(int) > (int)data.size()) {
 		printf("Invalid ReadInt32");
 		return 0;
 	}
     memcpy(&value, &data[index], sizeof(int));
-    index += sizeof(int);	
+    index += sizeof(int);
 	return value;
 }
 
@@ -93,12 +93,12 @@ void Packet::WriteInt32(int value) {
 
 float Packet::ReadFloat() {
 	float value = 0.0f;
-	if (index >= data.size()) {
+	if (index < 0 || index + (int)sizeof(float) > (int)data.size()) {
 		printf("Invalid ReadFloat");
 		return 0.0f;
 	}
     memcpy(&value, &data[index], sizeof(float));
-    index += sizeof(float);	
+    index += sizeof(float);
 	return value;
 }
 
@@ -114,7 +114,7 @@ int Packet::ReadChar(char* buffer, int buffersize) {
 		return length;
 	}
 
-	if (index+length > data.size()) { //uhoh
+	if (index + length > (int)data.size()) { //uhoh
 		strcpy(buffer, "error");
 		return length;
 	}
@@ -155,25 +155,22 @@ void Packet::WriteChar(char* value) {
 	}
 }
 
-int Packet::ReadData(char* buffer) {
+int Packet::ReadData(char* buffer, int buffersize) {
 	int length = ReadInt16();
 
-	if (index+length > data.size()) { //uhoh
+	if (length < 0 || length > buffersize) { //bad length; refuse
 		return 0;
 	}
-	//char buffer[1024];
+
+	if (index + length > (int)data.size()) { //uhoh
+		return 0;
+	}
 
 	for (int i=0; i<length; i++) {
 		buffer[i] = data[index+i];
 	}
-    //memcpy(&buffer, &data[index], length);
-	//buffer[length] = 0; //terminate string
-    index += length;	
+    index += length;
 
-	//char* value = new char[length];
-	//strcpy(value, (char*)buffer);
-
-	//return value;
 	return length;
 }
 

@@ -40,6 +40,8 @@ private:
 
 	void SetAIState(int state);
 	Person* GetClosestPerson();
+	int GetUsableRangedWeapon();
+	GunObject* GetClosestUsableDroppedWeapon();
 protected:
 
 public:

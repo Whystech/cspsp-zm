@@ -8,6 +8,7 @@ int gTeam;
 int gSinglePlayerMode = SINGLEPLAYER_INFECTION;
 bool gShowKillFeed = true;
 bool gShowRoundTimer = true;
+bool gShowHordeTimer = false;
 PlayerConfig gPlayerConfig;
 GrenadeConfig gGrenadeConfig;
 CameraConfig gCameraConfig;
@@ -46,7 +47,7 @@ JQuad* gPlayersDeadQuads[2][4];
 JQuad* gRadarQuad;
 JQuad* gBuyZoneQuad;
 JQuad* gDecalQuads[5];
-JQuad* gMuzzleFlashQuads[MAX_MUZZLE_FLASH_TYPES*MUZZLE_FLASH_FRAMES];
+std::map<int, std::vector<JQuad*> > gMuzzleFlashQuads;
 JQuad* gHealthBorderQuad;
 JQuad* gHealthFillQuad;
 JQuad* gArmorBorderQuad;
@@ -80,7 +81,8 @@ JSample* gWalkSounds[2];
 JSample* gRicochetSounds[4];
 JSample* gHitSounds[3];
 JSample* gKnifeHitSound;
-JSample* gDieSounds[3];
+JSample* gZombieClawsHitSound;
+JSample* gDieSounds[2][3];
 JSample* gRoundEndSounds[3];
 JSample* gHEGrenadeSounds[3];
 JSample* gFlashbangSound;
@@ -118,6 +120,52 @@ char* GetConfig(const char *location, char searchstr[]) {
 	}
 	fclose(file);
 	return NULL;
+}
+
+JQuad* GetMuzzleFlashQuad(int type, int frame)
+{
+	if (frame < 0 || frame >= MUZZLE_FLASH_FRAMES) frame = 0;
+	std::map<int, std::vector<JQuad*> >::iterator found = gMuzzleFlashQuads.find(type);
+	if (found != gMuzzleFlashQuads.end() && frame < (int)found->second.size() && found->second[frame] != NULL) return found->second[frame];
+	found = gMuzzleFlashQuads.find(0);
+	return found != gMuzzleFlashQuads.end() && frame < (int)found->second.size() ? found->second[frame] : NULL;
+}
+
+bool SetConfigValue(const char* location, const char* key, const char* value)
+{
+	FILE* file = fopen(location,"r");
+	std::vector<std::string> lines;
+	char line[1024];
+	bool found = false;
+	while (file != NULL && fgets(line,sizeof(line),file) != NULL) {
+		char currentKey[64];
+		if (sscanf(line,"%63s",currentKey) == 1 && strcmp(currentKey,key) == 0) {
+			std::string replacement = key;
+			replacement += " = ";
+			replacement += value;
+			replacement += "\r\n";
+			lines.push_back(replacement);
+			found = true;
+		}
+		else {
+			lines.push_back(line);
+		}
+	}
+	if (file != NULL) fclose(file);
+
+	if (!found) {
+		std::string replacement = key;
+		replacement += " = ";
+		replacement += value;
+		replacement += "\r\n";
+		lines.push_back(replacement);
+	}
+
+	file = fopen(location,"w");
+	if (file == NULL) return false;
+	for (unsigned int i=0; i<lines.size(); i++) fputs(lines[i].c_str(),file);
+	fclose(file);
+	return true;
 }
 
 static int LoadConfigInt(const char* file, char* key, int defaultValue, int minimum, int maximum)
@@ -252,6 +300,7 @@ void LoadHudDisplayOptions()
 {
 	gShowKillFeed = true;
 	gShowRoundTimer = true;
+	gShowHordeTimer = false;
 	char* killFeed = GetConfig("data/config.txt","show_kill_feed");
 	if (killFeed != NULL) {
 		gShowKillFeed = strcmp(killFeed,"off") != 0;
@@ -261,6 +310,11 @@ void LoadHudDisplayOptions()
 	if (roundTimer != NULL) {
 		gShowRoundTimer = strcmp(roundTimer,"off") != 0;
 		delete[] roundTimer;
+	}
+	char* hordeTimer = GetConfig("data/config.txt","show_horde_timer");
+	if (hordeTimer != NULL) {
+		gShowHordeTimer = strcmp(hordeTimer,"off") != 0;
+		delete[] hordeTimer;
 	}
 }
 

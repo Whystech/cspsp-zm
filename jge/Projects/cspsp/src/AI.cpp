@@ -348,6 +348,42 @@ void AI::Update(float dt)
 		}
 	}
 
+	int rangedWeapon = GetUsableRangedWeapon();
+	if (mTeam == CT && rangedWeapon != -1 && mGunIndex == KNIFE) {
+		Switch(rangedWeapon);
+	}
+
+	GunObject* droppedWeapon = NULL;
+	if (mTeam == CT && rangedWeapon == -1) {
+		for (int slot=PRIMARY; slot<=SECONDARY; slot++) {
+			if (mGuns[slot] != NULL && mGuns[slot]->mClipAmmo <= 0 && mGuns[slot]->mRemainingAmmo <= 0) {
+				Drop(slot);
+			}
+		}
+		droppedWeapon = GetClosestUsableDroppedWeapon();
+	}
+	bool seekingWeapon = droppedWeapon != NULL;
+	if (seekingWeapon) {
+		mMoveTargetX = droppedWeapon->mX;
+		mMoveTargetY = droppedWeapon->mY;
+		mFaceTargetX = droppedWeapon->mX;
+		mFaceTargetY = droppedWeapon->mY;
+	}
+
+	bool retreating = mTeam == CT && rangedWeapon == -1 && !seekingWeapon &&
+		mAIState == AI_ATTACKING && mTarget != NULL && mTarget->mState != DEAD;
+	if (retreating) {
+		float dx = mTarget->mX-mX;
+		float dy = mTarget->mY-mY;
+		float distance = sqrtf(dx*dx+dy*dy);
+		if (distance > EPSILON) {
+			mMoveTargetX = mX-dx/distance*1000.0f;
+			mMoveTargetY = mY-dy/distance*1000.0f;
+		}
+		mFaceTargetX = mTarget->mX;
+		mFaceTargetY = mTarget->mY;
+	}
+
 	if (fabs(mFaceTargetX-mX) >= EPSILON || fabs(mFaceTargetY-mY) >= EPSILON) {
 		float e = atan2f(mFaceTargetY-mY,mFaceTargetX-mX);//+((double)rand()/((double)RAND_MAX*2))-0.25;
 		float diffangle = e-mFacingAngle;
@@ -378,7 +414,7 @@ void AI::Update(float dt)
 		//SetSpeed((float)rand()/RAND_MAX/10);
 	}
 
-	if (mAIState == AI_ATTACKING && mCanSeeEnemy) {
+	if (mAIState == AI_ATTACKING && mCanSeeEnemy && !retreating) {
 		mFireTime += dt;
 		int fireDelay = gBotConfig.fireDelayMin;
 		if (gBotConfig.fireDelayMax > gBotConfig.fireDelayMin) fireDelay += rand()%(gBotConfig.fireDelayMax-gBotConfig.fireDelayMin+1);
@@ -400,7 +436,13 @@ void AI::Update(float dt)
 	if (mState != RELOADING) {
 		if (mGuns[mGunIndex]->mClipAmmo == 0) {
 			if (!Reload()) {
-				Drop(mGunIndex);
+				int nextWeapon = GetUsableRangedWeapon();
+				if (nextWeapon != -1 && nextWeapon != mGunIndex) {
+					Switch(nextWeapon);
+				}
+				else {
+					Drop(mGunIndex);
+				}
 			}
 		}
 	}
@@ -492,4 +534,45 @@ Person* AI::GetClosestPerson()
 		}
 	}
 	return person;
+}
+
+
+//------------------------------------------------------------------------------------------------
+int AI::GetUsableRangedWeapon()
+{
+	if (mGunIndex >= PRIMARY && mGunIndex <= SECONDARY && mGuns[mGunIndex] != NULL &&
+		(mGuns[mGunIndex]->mClipAmmo > 0 || mGuns[mGunIndex]->mRemainingAmmo > 0)) {
+		return mGunIndex;
+	}
+	for (int slot=PRIMARY; slot<=SECONDARY; slot++) {
+		if (mGuns[slot] != NULL &&
+			(mGuns[slot]->mClipAmmo > 0 || mGuns[slot]->mRemainingAmmo > 0)) {
+			return slot;
+		}
+	}
+	return -1;
+}
+
+
+//------------------------------------------------------------------------------------------------
+GunObject* AI::GetClosestUsableDroppedWeapon()
+{
+	GunObject* closest = NULL;
+	float closestDistance = gBotConfig.visionRange*gBotConfig.visionRange;
+	for (unsigned int i=0; i<mGunObjects->size(); i++) {
+		GunObject* weapon = (*mGunObjects)[i];
+		if (weapon == NULL || weapon->mGun == NULL || !weapon->mOnGround) continue;
+		int slot = weapon->mGun->mType;
+		if (slot < PRIMARY || slot > SECONDARY || mGuns[slot] != NULL) continue;
+		if (weapon->mClipAmmo <= 0 && weapon->mRemainingAmmo <= 0) continue;
+
+		float dx = weapon->mX-mX;
+		float dy = weapon->mY-mY;
+		float distance = dx*dx+dy*dy;
+		if (distance >= closestDistance) continue;
+		if (distance > EPSILON && !mGrid->LineOfSight(mX,mY,weapon->mX,weapon->mY)) continue;
+		closest = weapon;
+		closestDistance = distance;
+	}
+	return closest;
 }

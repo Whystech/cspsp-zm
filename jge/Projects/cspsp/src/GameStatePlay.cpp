@@ -464,7 +464,7 @@ void GameStatePlay::CheckCollisions()
 							if (anglediff <= 0.5f) {
 								gParticleEngine->GenerateParticles(BLOOD,x2,y2,gEffectsConfig.bloodParticleCount);
 								mMap->AddDecal(x2,y2,DECAL_BLOOD);
-								gSfxManager->PlaySample(gKnifeHitSound,x,y);
+								gSfxManager->PlaySample((mPeople[i]->mGuns[KNIFE]->mGun->mId == ZOMBIECLAWS) ? gZombieClawsHitSound : gKnifeHitSound,x,y);
 								mPeopleTemp[j]->TakeDamage(mPeople[i]->mGuns[KNIFE]->mGun->mDamage);
 								if (mPeopleTemp[j]->mState == DEAD) {
 									UpdateScores(mPeople[i],mPeopleTemp[j],mPeople[i]->mGuns[KNIFE]->mGun);
@@ -483,7 +483,7 @@ void GameStatePlay::CheckCollisions()
 							if (anglediff <= 0.5f) {
 								gParticleEngine->GenerateParticles(BLOOD,x,y,gEffectsConfig.bloodParticleCount);
 								mMap->AddDecal(x,y,DECAL_BLOOD);
-								gSfxManager->PlaySample(gKnifeHitSound,x2,y2);
+								gSfxManager->PlaySample((mPeopleTemp[j]->mGuns[KNIFE]->mGun->mId == ZOMBIECLAWS) ? gZombieClawsHitSound : gKnifeHitSound,x2,y2);
 								mPeople[i]->TakeDamage(mPeopleTemp[j]->mGuns[KNIFE]->mGun->mDamage);
 								if (mPeople[i]->mState == DEAD) {
 									UpdateScores(mPeopleTemp[j],mPeople[i],mPeople[j]->mGuns[KNIFE]->mGun);
@@ -976,6 +976,13 @@ void GameStatePlay::NewGame() {
 		if (seconds == 3 || seconds == 5 || seconds == 10 || seconds == 15) mHordeWaveDelay = seconds;
 		delete hordeWaveDelay;
 	}
+	mHordeReviveSurvivors = false;
+	char* hordeReviveSurvivors = GetConfig("data/config.txt","horde_revive_survivors");
+	if (hordeReviveSurvivors == NULL) hordeReviveSurvivors = GetConfig("data/modes.txt","horde_revive_survivors");
+	if (hordeReviveSurvivors != NULL) {
+		mHordeReviveSurvivors = strcmp(hordeReviveSurvivors,"on") == 0;
+		delete hordeReviveSurvivors;
+	}
 	mRoundTime = 120;
 	mRoundEndTime = 3;
 	mBuyTime = 60;
@@ -1011,7 +1018,7 @@ void GameStatePlay::NewGame() {
 		//t->mSpawn = mMap->mTSpawns[i];
 		//t->SetPosition(mMap->mTSpawns[i]->x,mMap->mTSpawns[i]->y);
 		//t->SetTotalRotation(M_PI_2);
-		t->mGuns[KNIFE] = new GunObject(&mGuns[0],0,0);
+		t->mGuns[KNIFE] = new GunObject(&mGuns[ZOMBIECLAWS],0,0);
 		//t->mCollisionPoints = &mMap->mCollisionPoints;
 		t->mGrid = mGrid;
 		t->mPeople = &mPeople;
@@ -1057,6 +1064,7 @@ void GameStatePlay::NewGame() {
 void GameStatePlay::ResetRound() {
 	mTimeMultiplier = 1.0f;
 	mNumRounds++;
+	if (mIsHordeMode) mHordeSurvivalTime = 0.0f;
 
 	mRoundState = FREEZETIME;
 	mRoundTimer = mRoundFreezeTime;
@@ -1206,7 +1214,8 @@ void GameStatePlay::ResetHordeWave() {
 	for (unsigned int i=0; i<mPeople.size(); i++) {
 		Person* person = mPeople[i];
 		if (person->mTeam == CT) {
-			if (person->mState == DEAD) continue;
+			if (person->mState == DEAD && !mHordeReviveSurvivors) continue;
+			if (person->mState == DEAD) person->Reset();
 			person->mHealth = gPlayerConfig.ctMaxHealth;
 			person->mMoney += 3250;
 			if (person->mMoney > 16000) person->mMoney = 16000;

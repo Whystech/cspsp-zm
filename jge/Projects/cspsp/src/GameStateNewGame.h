@@ -42,11 +42,21 @@ public:
 };
 
 
-class GameStateNewGame:	public GameState
+class GameStateNewGame:	public GameState,
+						public JGuiListener
 
 {
 private:
 	ListBox *mMapsListBox;
+	JGuiController* mModeControllers[5];
+	int mStage;
+	int mSetupIndex;
+	bool mSetupMain;
+	int mRespawnStyle;
+	int mInfectionDelay;
+	int mHordeRegroup;
+	int mHordeWaveDelay;
+	int mHordeReviveSurvivors;
 
 	char mSearchString[256];
 	bool mMatch;
@@ -62,6 +72,10 @@ public:
 	void End();
 	void Update(float dt);
 	void Render();
+	void ButtonPressed(int controllerId, int controlId);
+	void LoadModeSettings();
+	void SaveModeSettings();
+	void RenderModeSetup();
 
 };
 

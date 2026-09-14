@@ -17,10 +17,7 @@ void GameStateOptions::Create()
 	music = OFF;
 	friendlyfire = ON;
 	menustyle = ANALOG;
-	respawnstyle = RESPAWN_BASE;
 	freezetime = FREEZE_TIME_3;
-	horderegroup = HORDE_REGROUP_BASE;
-	hordewavedelay = HORDE_DELAY_3;
 	showkillfeed = ON;
 	showroundtimer = ON;
 
@@ -140,67 +137,32 @@ void GameStateOptions::Create()
 	strcpy(mConfigInfo[3],"Change the style of the in-game team select and buy menu");
 
 	mGuiControllers[4] = new JGuiController(4, this, JGUI_STYLE_LEFTRIGHT);
-	// Respawn selects the location used only when Infection converts a CT into a Zombie.
-	mGuiControllers[4]->Add(new MenuItem(RESPAWN_INPLACE, gFont, "In-Place", x, 94, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[4]->Add(new MenuItem(RESPAWN_BASE, gFont, "Base", x+100, 94, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[4]->Add(new MenuItem(FREEZE_TIME_0, gFont, "0", x, 94, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[4]->Add(new MenuItem(FREEZE_TIME_1, gFont, "1", x+35, 94, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[4]->Add(new MenuItem(FREEZE_TIME_2, gFont, "2", x+70, 94, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[4]->Add(new MenuItem(FREEZE_TIME_3, gFont, "3", x+105, 94, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[4]->Add(new MenuItem(FREEZE_TIME_4, gFont, "4", x+140, 94, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[4]->Add(new MenuItem(FREEZE_TIME_5, gFont, "5", x+175, 94, TYPE_OPTION, JGETEXT_LEFT));
 	mGuiControllers[4]->SetActive(false);
-	strcpy(mConfigs[4],"Infection Respawn");
-	strcpy(mConfigInfo[4],"Choose where infected players respawn");
+	strcpy(mConfigs[4],"Freeze Time");
+	strcpy(mConfigInfo[4],"Choose the delay before each local round starts.");
 
 	mGuiControllers[5] = new JGuiController(5, this, JGUI_STYLE_LEFTRIGHT);
-	// Keep the delay as a numeric menu value so it can be saved and loaded directly.
-	mGuiControllers[5]->Add(new MenuItem(INFECTION_DELAY_0, gFont, "0", x, 108, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[5]->Add(new MenuItem(INFECTION_DELAY_1, gFont, "1", x+35, 108, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[5]->Add(new MenuItem(INFECTION_DELAY_2, gFont, "2", x+70, 108, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[5]->Add(new MenuItem(INFECTION_DELAY_3, gFont, "3", x+105, 108, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[5]->Add(new MenuItem(INFECTION_DELAY_4, gFont, "4", x+140, 108, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[5]->Add(new MenuItem(ON, gFont, "on", x, 108, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[5]->Add(new MenuItem(OFF, gFont, "off", x+50, 108, TYPE_OPTION, JGETEXT_LEFT));
 	mGuiControllers[5]->SetActive(false);
-	strcpy(mConfigs[5],"Infection Delay");
-	strcpy(mConfigInfo[5],"Choose the infection respawn delay.");
+	strcpy(mConfigs[5],"Kill Feed");
+	strcpy(mConfigInfo[5],"Show or hide who killed whom in the top-right corner");
 
 	mGuiControllers[6] = new JGuiController(6, this, JGUI_STYLE_LEFTRIGHT);
-	mGuiControllers[6]->Add(new MenuItem(FREEZE_TIME_0, gFont, "0", x, 122, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[6]->Add(new MenuItem(FREEZE_TIME_1, gFont, "1", x+35, 122, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[6]->Add(new MenuItem(FREEZE_TIME_2, gFont, "2", x+70, 122, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[6]->Add(new MenuItem(FREEZE_TIME_3, gFont, "3", x+105, 122, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[6]->Add(new MenuItem(FREEZE_TIME_4, gFont, "4", x+140, 122, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[6]->Add(new MenuItem(FREEZE_TIME_5, gFont, "5", x+175, 122, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[6]->Add(new MenuItem(ON, gFont, "on", x, 122, TYPE_OPTION, JGETEXT_LEFT));
+	mGuiControllers[6]->Add(new MenuItem(OFF, gFont, "off", x+50, 122, TYPE_OPTION, JGETEXT_LEFT));
 	mGuiControllers[6]->SetActive(false);
-	strcpy(mConfigs[6],"Freeze Time");
-	strcpy(mConfigInfo[6],"Choose the delay before each local round starts.");
+	strcpy(mConfigs[6],"Round Timer");
+	strcpy(mConfigInfo[6],"Show or hide the round timer during play");
 
-	mGuiControllers[7] = new JGuiController(7, this, JGUI_STYLE_LEFTRIGHT);
-	mGuiControllers[7]->Add(new MenuItem(HORDE_REGROUP_INPLACE, gFont, "In-Place", x, 136, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[7]->Add(new MenuItem(HORDE_REGROUP_BASE, gFont, "CT Base", x+100, 136, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[7]->SetActive(false);
-	strcpy(mConfigs[7],"Horde Regroup");
-	strcpy(mConfigInfo[7],"Keep survivors in place or return them to CT base.");
-
-	mGuiControllers[8] = new JGuiController(8, this, JGUI_STYLE_LEFTRIGHT);
-	mGuiControllers[8]->Add(new MenuItem(HORDE_DELAY_3, gFont, "3", x, 150, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[8]->Add(new MenuItem(HORDE_DELAY_5, gFont, "5", x+35, 150, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[8]->Add(new MenuItem(HORDE_DELAY_10, gFont, "10", x+70, 150, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[8]->Add(new MenuItem(HORDE_DELAY_15, gFont, "15", x+115, 150, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[8]->SetActive(false);
-	strcpy(mConfigs[8],"Wave Delay");
-	strcpy(mConfigInfo[8],"Choose the freeze time between Horde waves.");
-
-	mGuiControllers[9] = new JGuiController(9, this, JGUI_STYLE_LEFTRIGHT);
-	mGuiControllers[9]->Add(new MenuItem(ON, gFont, "on", x, 164, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[9]->Add(new MenuItem(OFF, gFont, "off", x+50, 164, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[9]->SetActive(false);
-	strcpy(mConfigs[9],"Kill Feed");
-	strcpy(mConfigInfo[9],"Show or hide who killed whom in the top-right corner");
-
-	mGuiControllers[10] = new JGuiController(10, this, JGUI_STYLE_LEFTRIGHT);
-	mGuiControllers[10]->Add(new MenuItem(ON, gFont, "on", x, 178, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[10]->Add(new MenuItem(OFF, gFont, "off", x+50, 178, TYPE_OPTION, JGETEXT_LEFT));
-	mGuiControllers[10]->SetActive(false);
-	strcpy(mConfigs[10],"Round Timer");
-	strcpy(mConfigInfo[10],"Show or hide the round timer during play");
-
-	strcpy(mConfigs[11],"Nickname");
-	strcpy(mConfigInfo[11],"Choose a name (15 characters max)");
+	strcpy(mConfigs[7],"Nickname");
+	strcpy(mConfigInfo[7],"Choose a name (15 characters max)");
 
 	strcpy(mConfigs[NUMCONFIGS-1],"Save");
 	strcpy(mConfigInfo[NUMCONFIGS-1],"Save any changes and return to the main menu");
@@ -280,30 +242,6 @@ void GameStateOptions::Start()
 	}
 	mGuiControllers[3]->SetCurr(menustyle);
 
-	respawnstyle = RESPAWN_BASE;
-	char* respawn = GetConfig("data/config.txt","respawn");
-	if (respawn != NULL) {
-		if (strcmp(respawn,"inplace") == 0) {
-			respawnstyle = RESPAWN_INPLACE;
-		}
-		else if (strcmp(respawn,"base") == 0) {
-			respawnstyle = RESPAWN_BASE;
-		}
-		delete respawn;
-	}
-	mGuiControllers[4]->SetCurr(respawnstyle);
-
-	infectiondelay = INFECTION_DELAY_1;
-	char* infectionDelay = GetConfig("data/config.txt","infection_respawn_delay");
-	if (infectionDelay != NULL) {
-		infectiondelay = atoi(infectionDelay);
-		if (infectiondelay < INFECTION_DELAY_0 || infectiondelay > INFECTION_DELAY_4) {
-			infectiondelay = INFECTION_DELAY_1;
-		}
-		delete infectionDelay;
-	}
-	mGuiControllers[5]->SetCurr(infectiondelay);
-
 	freezetime = FREEZE_TIME_3;
 	char* freezeTime = GetConfig("data/config.txt","round_freeze_time");
 	if (freezeTime != NULL) {
@@ -313,33 +251,13 @@ void GameStateOptions::Start()
 		}
 		delete freezeTime;
 	}
-	mGuiControllers[6]->SetCurr(freezetime);
-
-	horderegroup = HORDE_REGROUP_BASE;
-	char* hordeRegroup = GetConfig("data/config.txt","horde_regroup");
-	if (hordeRegroup != NULL) {
-		if (strcmp(hordeRegroup,"inplace") == 0) horderegroup = HORDE_REGROUP_INPLACE;
-		else if (strcmp(hordeRegroup,"base") == 0) horderegroup = HORDE_REGROUP_BASE;
-		delete hordeRegroup;
-	}
-	mGuiControllers[7]->SetCurr(horderegroup);
-
-	hordewavedelay = HORDE_DELAY_3;
-	char* hordeWaveDelay = GetConfig("data/config.txt","horde_wave_delay");
-	if (hordeWaveDelay != NULL) {
-		int seconds = atoi(hordeWaveDelay);
-		if (seconds == 5) hordewavedelay = HORDE_DELAY_5;
-		else if (seconds == 10) hordewavedelay = HORDE_DELAY_10;
-		else if (seconds == 15) hordewavedelay = HORDE_DELAY_15;
-		delete hordeWaveDelay;
-	}
-	mGuiControllers[8]->SetCurr(hordewavedelay);
+	mGuiControllers[4]->SetCurr(freezetime);
 
 	LoadHudDisplayOptions();
 	showkillfeed = gShowKillFeed ? ON : OFF;
 	showroundtimer = gShowRoundTimer ? ON : OFF;
-	mGuiControllers[9]->SetCurr(showkillfeed);
-	mGuiControllers[10]->SetCurr(showroundtimer);
+	mGuiControllers[5]->SetCurr(showkillfeed);
+	mGuiControllers[6]->SetCurr(showroundtimer);
 
 	char* nameconfig = GetConfig("data/config.txt","name");
 	if (nameconfig != NULL) {
@@ -390,13 +308,9 @@ void GameStateOptions::Update(float dt)
 			mGuiControllers[1]->SetCurr(music);
 			mGuiControllers[2]->SetCurr(friendlyfire);
 			mGuiControllers[3]->SetCurr(menustyle);
-			mGuiControllers[5]->SetCurr(infectiondelay);
-			mGuiControllers[4]->SetCurr(respawnstyle);
-			mGuiControllers[6]->SetCurr(freezetime);
-			mGuiControllers[7]->SetCurr(horderegroup);
-			mGuiControllers[8]->SetCurr(hordewavedelay);
-			mGuiControllers[9]->SetCurr(showkillfeed);
-			mGuiControllers[10]->SetCurr(showroundtimer);
+			mGuiControllers[4]->SetCurr(freezetime);
+			mGuiControllers[5]->SetCurr(showkillfeed);
+			mGuiControllers[6]->SetCurr(showroundtimer);
 
 			main = true;
 			mInfoX = -400.0f;
@@ -439,7 +353,7 @@ void GameStateOptions::Update(float dt)
 				}
 
 				if (mEngine->GetButtonClick(PSP_CTRL_CROSS)) {
-					if (index == 11) {
+					if (index == 7) {
 						main = false;
 						gDanzeff->Enable();
 						gDanzeff->mString = name;
@@ -473,13 +387,9 @@ void GameStateOptions::Update(float dt)
 					mGuiControllers[1]->SetCurr(music);
 					mGuiControllers[2]->SetCurr(friendlyfire);
 					mGuiControllers[3]->SetCurr(menustyle);
-					mGuiControllers[4]->SetCurr(respawnstyle);
-					mGuiControllers[5]->SetCurr(infectiondelay);
-					mGuiControllers[6]->SetCurr(freezetime);
-					mGuiControllers[7]->SetCurr(horderegroup);
-					mGuiControllers[8]->SetCurr(hordewavedelay);
-					mGuiControllers[9]->SetCurr(showkillfeed);
-					mGuiControllers[10]->SetCurr(showroundtimer);
+					mGuiControllers[4]->SetCurr(freezetime);
+					mGuiControllers[5]->SetCurr(showkillfeed);
+					mGuiControllers[6]->SetCurr(showroundtimer);
 
 					main = true;
 				}
@@ -634,11 +544,11 @@ void GameStateOptions::Render()
 		gFont->SetColor(ARGB(255,255,255,255));
 		gFont->SetScale(0.75f);
 		if (!gDanzeff->mIsActive) {
-			gFont->DrawShadowedString(name,160+10,192);
+			gFont->DrawShadowedString(name,160+10,136);
 		}
 		else if (gDanzeff->mIsActive) {
-			gFont->DrawShadowedString(tempname,160+10,192);
-			gFont->DrawShadowedString("|",160+10+gFont->GetStringWidth(tempname),192);
+			gFont->DrawShadowedString(tempname,160+10,136);
+			gFont->DrawShadowedString("|",160+10+gFont->GetStringWidth(tempname),136);
 			gDanzeff->Render(SCREEN_WIDTH-175,SCREEN_HEIGHT-175);
 		}
 	} 
@@ -672,72 +582,18 @@ void GameStateOptions::Render()
 
 void GameStateOptions::Save()
 {
-	FILE *file;
-	file = fopen("data/config.txt", "w"); 
-	if (file == NULL) return;
-	
-	if (movementstyle == RELATIVE1) {
-		fputs("movement = relative\r\n",file);
-	}
-	else if (movementstyle == ABSOLUTE1) {
-		fputs("movement = absolute\r\n",file);	
-	}
-
-	if (music == ON) {
-		fputs("music = on\r\n",file);
-	}
-	else if (music == OFF) {
-		fputs("music = off\r\n",file);	
-	}
-
-	if (friendlyfire == ON) {
-		fputs("ff = on\r\n",file);
-	}
-	else if (friendlyfire == OFF) {
-		fputs("ff = off\r\n",file);	
-	}
-
-	if (menustyle == ANALOG) {
-		fputs("menu = analog\r\n",file);
-	}
-	else if (menustyle == DIRPAD) {
-		fputs("menu = dirpad\r\n",file);	
-	}
-
-	if (respawnstyle == RESPAWN_INPLACE) {
-		fputs("respawn = inplace\r\n",file);
-	}
-	else if (respawnstyle == RESPAWN_BASE) {
-		fputs("respawn = base\r\n",file);
-	}
-
-	fputs("infection_respawn_delay = ",file);
-	fprintf(file,"%d",infectiondelay);
-	fputs("\r\n",file);
-
-	fputs("round_freeze_time = ",file);
-	fprintf(file,"%d",freezetime);
-	fputs("\r\n",file);
-
-	if (horderegroup == HORDE_REGROUP_INPLACE) fputs("horde_regroup = inplace\r\n",file);
-	else fputs("horde_regroup = base\r\n",file);
-
-	const int hordeWaveDelays[] = {3,5,10,15};
-	fputs("horde_wave_delay = ",file);
-	fprintf(file,"%d",hordeWaveDelays[hordewavedelay]);
-	fputs("\r\n",file);
-
-	fputs(showkillfeed == ON ? "show_kill_feed = on\r\n" : "show_kill_feed = off\r\n",file);
-	fputs(showroundtimer == ON ? "show_round_timer = on\r\n" : "show_round_timer = off\r\n",file);
+	char value[16];
+	SetConfigValue("data/config.txt","movement",movementstyle == RELATIVE1 ? "relative" : "absolute");
+	SetConfigValue("data/config.txt","music",music == ON ? "on" : "off");
+	SetConfigValue("data/config.txt","ff",friendlyfire == ON ? "on" : "off");
+	SetConfigValue("data/config.txt","menu",menustyle == ANALOG ? "analog" : "dirpad");
+	sprintf(value,"%d",freezetime);
+	SetConfigValue("data/config.txt","round_freeze_time",value);
+	SetConfigValue("data/config.txt","show_kill_feed",showkillfeed == ON ? "on" : "off");
+	SetConfigValue("data/config.txt","show_round_timer",showroundtimer == ON ? "on" : "off");
 	gShowKillFeed = showkillfeed == ON;
 	gShowRoundTimer = showroundtimer == ON;
-
-	fputs("name = ",file);
-	fputs(name,file);
-	fputs("\r\n",file);
-
-	fputs("map = gunstest\r\n",file);	
-	fclose(file);
+	SetConfigValue("data/config.txt","name",name);
 }
 
 void GameStateOptions::ButtonPressed(int controllerId, int controlId)
@@ -766,27 +622,13 @@ void GameStateOptions::ButtonPressed(int controllerId, int controlId)
 		//mEngine->End();
 		break;
 	case 4:
-		respawnstyle = controlId;
-		break;
-	case 5:
-		infectiondelay = controlId;
-		// Persist the delay immediately so changing this selector cannot be lost.
-		Save();
-		break;
-	case 6:
 		freezetime = controlId;
 		break;
-	case 7:
-		horderegroup = controlId;
-		break;
-	case 8:
-		hordewavedelay = controlId;
-		break;
-	case 9:
+	case 5:
 		showkillfeed = controlId;
 		gShowKillFeed = showkillfeed == ON;
 		break;
-	case 10:
+	case 6:
 		showroundtimer = controlId;
 		gShowRoundTimer = showroundtimer == ON;
 		break;
