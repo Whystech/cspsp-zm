@@ -16,6 +16,15 @@ static JSample* LoadConfiguredSample(JSoundSystem* soundSystem, char* key, char*
 	return sample;
 }
 
+static JSample* LoadConfiguredSampleWithLegacyKey(JSoundSystem* soundSystem, char* key, char* legacyKey, char* fallback)
+{
+	char* configured = GetConfig("data/audio.txt",key);
+	if (configured == NULL) configured = GetConfig("data/audio.txt",legacyKey);
+	JSample* sample = soundSystem->LoadSample(configured == NULL ? fallback : configured);
+	delete[] configured;
+	return sample;
+}
+
 GameStateLoading::GameStateLoading(GameApp* parent): GameState(parent) {}
 
 GameStateLoading::~GameStateLoading() {
@@ -188,24 +197,35 @@ int GameStateLoading::Load(int stage) {
 			}
 
 			JTexture* muzzleFlashTexture = LoadConfiguredTexture(mRenderer,"muzzle_flash","gfx/muzzleflash.png",true);
+			gMuzzleFlashQuads.clear();
+			gMuzzleFlashQuads[0].resize(MUZZLE_FLASH_FRAMES,NULL);
 			for (int frame=0; frame<MUZZLE_FLASH_FRAMES; frame++) {
-				gMuzzleFlashQuads[frame] = new JQuad(muzzleFlashTexture,frame*32,0,32,32);
-				gMuzzleFlashQuads[frame]->SetHotSpot(16.0f,-16.0f);
+				JQuad* quad = new JQuad(muzzleFlashTexture,frame*32,0,32,32);
+				quad->SetHotSpot(16.0f,-16.0f);
+				gMuzzleFlashQuads[0][frame] = quad;
 			}
-			for (int type=1; type<MAX_MUZZLE_FLASH_TYPES; type++) {
+			FILE* resourceFile = fopen("data/resources.txt","r");
+			std::vector<int> muzzleFlashTypes;
+			char resourceLine[1024];
+			while (resourceFile != NULL && fgets(resourceLine,sizeof(resourceLine),resourceFile) != NULL) {
+				int type = 0;
+				if (sscanf(resourceLine,"muzzle_flash_%d",&type) == 1 && type > 0) muzzleFlashTypes.push_back(type);
+			}
+			if (resourceFile != NULL) fclose(resourceFile);
+			std::sort(muzzleFlashTypes.begin(),muzzleFlashTypes.end());
+			muzzleFlashTypes.erase(std::unique(muzzleFlashTypes.begin(),muzzleFlashTypes.end()),muzzleFlashTypes.end());
+			for (unsigned int typeIndex=0; typeIndex<muzzleFlashTypes.size(); typeIndex++) {
+				int type = muzzleFlashTypes[typeIndex];
 				char key[32];
 				sprintf(key,"muzzle_flash_%d",type);
 				char* configured = GetConfig("data/resources.txt",key);
 				JTexture* texture = configured == NULL ? NULL : mRenderer->LoadTexture(configured,true);
 				delete[] configured;
+				gMuzzleFlashQuads[type].resize(MUZZLE_FLASH_FRAMES,NULL);
 				for (int frame=0; frame<MUZZLE_FLASH_FRAMES; frame++) {
-					int index = type*MUZZLE_FLASH_FRAMES+frame;
-					if (texture == NULL) {
-						gMuzzleFlashQuads[index] = gMuzzleFlashQuads[frame];
-					}
-					else {
-						gMuzzleFlashQuads[index] = new JQuad(texture,frame*32,0,32,32);
-						gMuzzleFlashQuads[index]->SetHotSpot(16.0f,-16.0f);
+					if (texture != NULL) {
+						gMuzzleFlashQuads[type][frame] = new JQuad(texture,frame*32,0,32,32);
+						gMuzzleFlashQuads[type][frame]->SetHotSpot(16.0f,-16.0f);
 					}
 				}
 			}
@@ -281,9 +301,13 @@ int GameStateLoading::Load(int stage) {
 		}	
 		case 3: {
 			gKnifeHitSound = LoadConfiguredSample(mSoundSystem,"knife_hit","sfx/knifehit.wav");
-			gDieSounds[0] = LoadConfiguredSample(mSoundSystem,"die_1","sfx/die1.wav");
-			gDieSounds[1] = LoadConfiguredSample(mSoundSystem,"die_2","sfx/die2.wav");
-			gDieSounds[2] = LoadConfiguredSample(mSoundSystem,"die_3","sfx/die3.wav");
+			gZombieClawsHitSound = LoadConfiguredSampleWithLegacyKey(mSoundSystem,"zombie_claws_hit","knife_hit","sfx/knifehit.wav");
+			gDieSounds[CT][0] = LoadConfiguredSampleWithLegacyKey(mSoundSystem,"ct_die_1","die_1","sfx/die1.wav");
+			gDieSounds[CT][1] = LoadConfiguredSampleWithLegacyKey(mSoundSystem,"ct_die_2","die_2","sfx/die2.wav");
+			gDieSounds[CT][2] = LoadConfiguredSampleWithLegacyKey(mSoundSystem,"ct_die_3","die_3","sfx/die3.wav");
+			gDieSounds[T][0] = LoadConfiguredSampleWithLegacyKey(mSoundSystem,"t_die_1","die_1","sfx/die1.wav");
+			gDieSounds[T][1] = LoadConfiguredSampleWithLegacyKey(mSoundSystem,"t_die_2","die_2","sfx/die2.wav");
+			gDieSounds[T][2] = LoadConfiguredSampleWithLegacyKey(mSoundSystem,"t_die_3","die_3","sfx/die3.wav");
 			gRoundEndSounds[T] = LoadConfiguredSample(mSoundSystem,"t_win","sfx/twin.wav");
 			gRoundEndSounds[CT] = LoadConfiguredSample(mSoundSystem,"ct_win","sfx/ctwin.wav");
 			gRoundEndSounds[TIE] = LoadConfiguredSample(mSoundSystem,"round_draw","sfx/rounddraw.wav");
@@ -336,7 +360,7 @@ int GameStateLoading::Load(int stage) {
 					if (fields != 18) continue;
 				}
 				if (gun.mId < 0 || gun.mId >= MAX_GUNS) continue;
-				if (gun.mMuzzleFlashType < 0 || gun.mMuzzleFlashType >= MAX_MUZZLE_FLASH_TYPES) gun.mMuzzleFlashType = 0;
+				if (gun.mMuzzleFlashType < 0) gun.mMuzzleFlashType = 0;
 				if (gun.mPellets < 1) gun.mPellets = 1;
 				if (gun.mPellets > MAX_PELLETS) gun.mPellets = MAX_PELLETS;
 				if (gun.mScope < SCOPE_NONE || gun.mScope > SCOPE_HIGH) gun.mScope = SCOPE_NONE;

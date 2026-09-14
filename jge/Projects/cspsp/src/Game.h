@@ -77,6 +77,7 @@ public:
 	float mRoundTimer;
 	float mRoundEndTimer;
 	float mBuyTimer;
+	float mHordeSurvivalTime;
 	int mRoundState;
 
 	int mNumRounds;
@@ -115,6 +116,7 @@ public:
 	int mHordeWave;
 	int mHordeRegroupStyle;
 	int mHordeWaveDelay;
+	bool mHordeReviveSurvivors;
 
 	Person* mPlayer;
 	std::vector<Person*> mPeople;

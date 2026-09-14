@@ -84,7 +84,8 @@ protected:
 	Animation* mAnimations[11];
 	Animation* mCurrentAnimation;
 
-	int mMuzzleFlashIndex;
+	int mMuzzleFlashType;
+	int mMuzzleFlashFrame;
 	float mMuzzleFlashAngle;
 	float mMuzzleFlashTime;
 

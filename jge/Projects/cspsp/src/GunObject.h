@@ -8,6 +8,7 @@
 
 #define MAX_GUNS 128
 #define GUNS_PER_ATLAS 64
+#define ZOMBIECLAWS 66
 #define FIREMODE_SEMI 0
 #define FIREMODE_AUTO 1
 #define MAX_PELLETS 16
@@ -24,7 +25,6 @@
 #define BUY_CATEGORY_EQUIPMENT 6
 #define BUY_TEAM_T 1
 #define BUY_TEAM_CT 2
-#define MAX_MUZZLE_FLASH_TYPES 16
 #define MUZZLE_FLASH_FRAMES 3
 
 struct Gun {

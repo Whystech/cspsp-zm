@@ -31,7 +31,7 @@
 class GameState;
 
 #define VERSION 1.92f
-#define NETVERSION 14
+#define NETVERSION 16
 
 #define MAX_STATE			10
 

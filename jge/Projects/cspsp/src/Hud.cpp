@@ -103,12 +103,7 @@ void Hud::Render()
 			gFont->DrawString(" [CSPSP dev]",x,y,JGETEXT_RIGHT);
 			x -= gFont->GetStringWidth(" [CSPSP dev]");
 		}*/
-		if (mKillEvents[i].victimteam == CT) {
-			gFont->SetColor(gThemeConfig.ctColor);
-		}
-		else if (mKillEvents[i].victimteam == T) {
-			gFont->SetColor(gThemeConfig.tColor);
-		}
+		gFont->SetColor(mKillEvents[i].victimteam == CT ? ARGB(255,153,204,255) : ARGB(255,255,64,64));
 		gFont->DrawShadowedString(mKillEvents[i].victimname,x,y,JGETEXT_RIGHT);
 		x -= gFont->GetStringWidth(mKillEvents[i].victimname);
 
@@ -137,12 +132,7 @@ void Hud::Render()
 			gFont->DrawString(" [CSPSP dev]",x,y,JGETEXT_RIGHT);
 			x -= gFont->GetStringWidth(" [CSPSP dev]");
 		}*/
-		if (mKillEvents[i].attackerteam == CT) {
-			gFont->SetColor(ARGB(255,153,204,255));
-		}
-		else if (mKillEvents[i].attackerteam == T) {
-			gFont->SetColor(ARGB(255,255,64,64));
-		}
+		gFont->SetColor(mKillEvents[i].attackerteam == CT ? ARGB(255,153,204,255) : ARGB(255,255,64,64));
 		gFont->DrawShadowedString(mKillEvents[i].attackername,x,y,JGETEXT_RIGHT);
 	}
 

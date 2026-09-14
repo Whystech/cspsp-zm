@@ -257,7 +257,8 @@ std::vector<Bullet*> PersonOnline::Fire()
 
 				mMuzzleFlashTime = 50.0f;
 				mMuzzleFlashAngle = mFacingAngle;
-				mMuzzleFlashIndex = mGuns[mGunIndex]->mGun->mMuzzleFlashType*MUZZLE_FLASH_FRAMES + rand()%MUZZLE_FLASH_FRAMES;
+				mMuzzleFlashType = mGuns[mGunIndex]->mGun->mMuzzleFlashType;
+				mMuzzleFlashFrame = rand()%MUZZLE_FLASH_FRAMES;
 				
 				mRadarTime = 2000.0f;
 				mRadarX = mX;
@@ -383,7 +384,7 @@ bool PersonOnline::Drop(int index, float speed)
 //------------------------------------------------------------------------------------------------
 void PersonOnline::Die()
 {
-	gSfxManager->PlaySample(gDieSounds[rand()%3],mX,mY);
+	gSfxManager->PlaySample(gDieSounds[(mTeam == T) ? T : CT][rand()%3],mX,mY);
 	//Drop(mGunIndex,0);
 	//Drop(GRENADE,0);
 

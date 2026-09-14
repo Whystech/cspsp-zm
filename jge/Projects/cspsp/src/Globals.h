@@ -5,6 +5,7 @@
 #include "JLBFont.h"
 #include <time.h>
 #include <vector>
+#include <map>
 #include "Person.h"
 #include "AI.h"
 #include "TileMap.h"
@@ -35,6 +36,7 @@ extern int gTeam;
 extern int gSinglePlayerMode;
 extern bool gShowKillFeed;
 extern bool gShowRoundTimer;
+extern bool gShowHordeTimer;
 
 struct PlayerConfig {
 	int ctMaxHealth;
@@ -184,7 +186,8 @@ extern JQuad* gPlayersDeadQuads[2][4];
 extern JQuad* gRadarQuad;
 extern JQuad* gBuyZoneQuad;
 extern JQuad* gDecalQuads[5];
-extern JQuad* gMuzzleFlashQuads[MAX_MUZZLE_FLASH_TYPES*MUZZLE_FLASH_FRAMES];
+extern std::map<int, std::vector<JQuad*> > gMuzzleFlashQuads;
+extern JQuad* GetMuzzleFlashQuad(int type, int frame);
 extern JQuad* gHealthBorderQuad;
 extern JQuad* gHealthFillQuad;
 extern JQuad* gArmorBorderQuad;
@@ -217,7 +220,8 @@ extern JSample* gWalkSounds[2];
 extern JSample* gRicochetSounds[4];
 extern JSample* gHitSounds[3];
 extern JSample* gKnifeHitSound;
-extern JSample* gDieSounds[3];
+extern JSample* gZombieClawsHitSound;
+extern JSample* gDieSounds[2][3];
 extern JSample* gRoundEndSounds[3];
 extern JSample* gHEGrenadeSounds[3];
 extern JSample* gFlashbangSound;
@@ -235,6 +239,7 @@ extern Socket* gSocket;
 extern HttpManager* gHttpManager;
 
 extern char* GetConfig(const char *location, char searchstr[]);
+extern bool SetConfigValue(const char* location, const char* key, const char* value);
 extern void LoadClientDataConfigs();
 extern void LoadHudDisplayOptions();
 extern int GetArmorDamageReduction();

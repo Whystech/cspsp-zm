@@ -9,23 +9,30 @@ outside their supported range are clamped; missing settings use built-in
 defaults. Restart CSPSP after manually editing these files: client data and
 resources are loaded during startup, not continuously while the game runs.
 
-WHICH FILE IS WRITTEN BY THE OPTIONS MENU?
-------------------------------------------
-data/config.txt stores user choices made in the Options screen. Selecting Save
-rewrites config.txt. For example, choosing Infection Respawn = In-Place writes:
+HUD TIMER OPTIONS
+-----------------
+  show_round_timer = on/off   Show the timer in non-Horde modes.
+  show_horde_timer = on/off   Show total time survived across the Horde run;
+                              defaults to off and resets after a squad wipe.
+
+WHICH FILE IS WRITTEN BY THE MENUS?
+-----------------------------------
+data/config.txt stores user choices made in the Options and local mode setup
+screens. Each screen updates only the keys it owns and preserves other keys
+and comments. For example, choosing Infection Respawn = In-Place writes:
   respawn = inplace
 
 This does NOT modify modes.txt or any other data file. For settings available
 in both files, config.txt has priority and modes.txt is only the fallback when
 that key is missing from config.txt. Delete the relevant key from config.txt to
-use the modes.txt default again. Do not add comments to config.txt because the
-Options screen rewrites that file and discards comments.
+use the modes.txt default again.
 
 OFFLINE GAMEPLAY DATA
 ---------------------
   player.txt     Team health/armor, pickups, money, movement and hit slowdown
   grenades.txt   Grenade fuse, flash and HE behavior
-  modes.txt      Fallbacks for local mode options such as respawn behavior
+  modes.txt      Fallbacks for local mode options. Horde supports regroup,
+                 wave delay and horde_revive_survivors (on/off).
   bots.txt       Offline bot perception, movement and firing behavior
 
 CLIENT PRESENTATION DATA
@@ -53,9 +60,9 @@ Weapon rows in guns.txt may add an optional muzzle-flash ID immediately before
 the weapon name. Existing 18-field rows omit it and use style 0:
   ... buyCategory buyTeams [muzzleFlashId] name
 
-Accepted values are 0 through 15. Style 0 uses the muzzle_flash resource key.
-Style N uses muzzle_flash_N, so adding a future style only requires that entry
-in resources.txt, its image, and the ID before a weapon name in guns.txt.
+Accepted values are any nonnegative integer. Style 0 uses the muzzle_flash
+resource key. Style N uses muzzle_flash_N, so adding a future style only
+requires that entry in resources.txt, its image, and the ID before a weapon name in guns.txt.
 Missing resource keys safely use style 0. Each image must be a 128x32 sheet.
 The first three 32x32 cells contain randomized frames and the fourth cell is
 transparent/reserved, matching the original muzzleflash.png layout. Online
