@@ -288,12 +288,14 @@ void BuyMenu::Render()
 				gFont->SetScale(1.0f);
 				mRenderer->FillRect(x-30,y-30,60,60,ARGB(220,0,0,0));
 				mRenderer->DrawRect(x-30,y-30,60,60,ARGB(255,255,128,0));
+				mRenderer->RenderQuad(gAmmoGroundQuad,x,y-5,0,1.4f,1.4f);
 				gFont->DrawShadowedString("Ammo",x,y,JGETEXT_CENTER);
 			}
 			else {
 				gFont->SetScale(0.75f);
 				mRenderer->FillRect(x-20,y-20,40,40,ARGB(220,0,0,0));
 				mRenderer->DrawRect(x-20,y-20,40,40,ARGB(255,255,128,0));
+				mRenderer->RenderQuad(gAmmoGroundQuad,x,y-5);
 				gFont->DrawShadowedString("Ammo",x,y+3,JGETEXT_CENTER);
 			}
 		}
@@ -302,12 +304,14 @@ void BuyMenu::Render()
 				gFont->SetScale(1.0f);
 				mRenderer->FillRect(x,y,200,25,ARGB(220,0,0,0));
 				mRenderer->DrawRect(x,y,200,25,ARGB(255,255,128,0));
+				mRenderer->RenderQuad(gAmmoGroundQuad,x+25,y+12,0,0.65f,0.65f);
 				gFont->DrawShadowedString("Ammo",x+50,y+3);
 			}
 			else {
 				gFont->SetScale(0.75f);
 				mRenderer->FillRect(x,y,200,25,ARGB(220,0,0,0));
 				mRenderer->DrawRect(x,y,200,25,ARGB(255,255,128,0));
+				mRenderer->RenderQuad(gAmmoGroundQuad,x+25,y+12,0,0.65f,0.65f);
 				gFont->DrawShadowedString("Ammo",x+50,y+6);
 			}
 		}

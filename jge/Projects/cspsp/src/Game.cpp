@@ -1840,6 +1840,12 @@ void Game::Render()
 			gFont->DrawShadowedString(buffer, SCREEN_WIDTH_2, SCREEN_HEIGHT-gHudConfig.timerBottomOffset, JGETEXT_CENTER);
 		}
 
+		if (mPlayer->mTeam == CT && mNumRemainingCTs == 1 && mRoundState == STARTED && mWinner == NONE) {
+			gFont->SetScale(0.9f);
+			gFont->SetColor(ARGB(255,255,200,0));
+			gFont->DrawShadowedString("Last survivor standing", SCREEN_WIDTH_2, 100.0f, JGETEXT_CENTER);
+		}
+
 		/*if (mPlayer->GetCurrentGun() != NULL) {
 			gHudFont->SetColor(ARGB(230,255,200,0));
 			if (mPlayer->mGunIndex == KNIFE) {

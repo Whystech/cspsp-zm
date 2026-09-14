@@ -1,6 +1,6 @@
 # CSPSP:ZM
 
-![screenshot1]
+![screenshot1](screenshots/ss1.png)
 ![screenshot2]
 
 CSPSP:ZM is a homebrew game mod for the Sony PSP's CSPSP, created in 2026.

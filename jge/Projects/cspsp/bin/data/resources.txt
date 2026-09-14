@@ -30,6 +30,7 @@ health_hud = gfx/health.png
 armor_hud = gfx/armor.png
 health_ground = gfx/healthground.png
 armor_ground = gfx/armorground.png
+# Used by map ammo pickups and the buy-menu ammo entry. Expected size: 32x32.
 ammo_ground = gfx/ammoground.png
 ammo_hud = gfx/ammo.png
 damage_indicator = gfx/damageindicator.png

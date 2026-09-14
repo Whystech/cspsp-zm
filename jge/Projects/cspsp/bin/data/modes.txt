@@ -9,6 +9,7 @@
 # round_freeze_time: local round-start freeze in seconds, supported range 0-5.
 # horde_regroup: base/inplace; where survivors regroup between Horde waves.
 # horde_wave_delay: seconds before the next Horde wave; use 3, 5, 10 or 15.
+# horde_wave_reward: cash awarded after clearing a wave, range 0-32767.
 # horde_revive_survivors: on/off; revives eliminated survivors after a cleared wave.
 friendly_fire = on
 respawn = base
@@ -16,4 +17,5 @@ infection_respawn_delay = 1
 round_freeze_time = 3
 horde_regroup = inplace
 horde_wave_delay = 3
+horde_wave_reward = 3250
 horde_revive_survivors = off
