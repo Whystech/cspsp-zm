@@ -35,6 +35,7 @@ private:
 
 	AStar* mAStar;
 	int mHordeWaveReward;
+	bool mHordeSpawnPending;
 	/*float mRoundTimer;
 	float mRoundEndTimer;
 	int mRoundState;
@@ -79,6 +80,7 @@ public:
 	void NewGame();
 	void ResetRound(bool awardMoney = false);
 	void ResetHordeWave();
+	void SpawnHordeWave();
 	void Explode(Grenade* grenade);
 	void StopInput();
 

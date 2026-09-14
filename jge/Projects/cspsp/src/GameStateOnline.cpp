@@ -106,7 +106,8 @@ void GameStateOnline::Start()
 	mFriendlyFire = ON;
 
 	//mMap->Load("iceworld");
-	mPlayer = new PersonOnline(gPlayersQuads[0][0], gPlayersDeadQuads[0][0], &mBullets, &mGunObjects, gTeam, gDisplayName, mMovementStyle);
+	int defaultSkin = GetDefaultPlayerSkin(CT);
+	mPlayer = new PersonOnline(gPlayersQuads[defaultSkin], gPlayersDeadQuads[defaultSkin], &mBullets, &mGunObjects, gTeam, gDisplayName, mMovementStyle);
 	//((PersonOnline*)mPlayer)->mUdpManager = mUdpManager;
 	((PersonOnline*)mPlayer)->mIsPlayerOnline = true;
 	((PersonOnline*)mPlayer)->mId = -1;
@@ -1777,14 +1778,13 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 					mNumTs++;
 				}
 				
-				if (team >= 2 || type >= 4) break;
-
 				int teamtemp = team;
 				if (teamtemp == NONE) {
 					teamtemp = CT;
 				}
+				type = ResolvePlayerSkin(type,teamtemp);
 
-				PersonOnline* player = new PersonOnline(gPlayersQuads[teamtemp][type], gPlayersDeadQuads[teamtemp][type], &mBullets, &mGunObjects, team, name, RELATIVE1);
+				PersonOnline* player = new PersonOnline(gPlayersQuads[type], gPlayersDeadQuads[type], &mBullets, &mGunObjects, team, name, RELATIVE1);
 
 				player->SetKnifeForTeam(team);
 				player->SetState(state);
@@ -1993,8 +1993,9 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 				player->mTeam = team;
 				if (team == CT || team == T) player->SetKnifeForTeam(team);
 
-				if (team < 2 && type < 4) {
-					player->SetQuads(gPlayersQuads[team][type],gPlayersDeadQuads[team][type]);
+				if (team == CT || team == T) {
+					type = ResolvePlayerSkin(type,team);
+					player->SetQuads(gPlayersQuads[type],gPlayersDeadQuads[type]);
 					//player->mQuad = gPlayersQuads[team][type];
 					//player->mDeadQuad = gPlayersDeadQuads[team][type];
 				}

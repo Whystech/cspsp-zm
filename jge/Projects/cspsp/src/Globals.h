@@ -21,6 +21,10 @@
 #include "Wlan.h"
 #include "HttpManager.h"
 
+#define MAX_PLAYER_SKINS 32
+#define PLAYER_SKIN_NAME_LENGTH 64
+#define TEAM_NAME_LENGTH 32
+
 enum {
 	PARTICLE_EXPLOSION = 0,
 	PARTICLE_FLASH,
@@ -144,6 +148,22 @@ struct LimitsConfig {
 	int activeMessageEvents;
 };
 
+struct LaserConfig {
+	bool enabled;
+	bool falloffEnabled;
+	int red;
+	int green;
+	int blue;
+	int alpha;
+	float width;
+	float range;
+	float falloff;
+	bool endDot;
+	float endDotScale;
+	float offsetX;
+	float offsetY;
+};
+
 extern PlayerConfig gPlayerConfig;
 extern GrenadeConfig gGrenadeConfig;
 extern CameraConfig gCameraConfig;
@@ -153,6 +173,8 @@ extern AudioConfig gAudioConfig;
 extern ThemeConfig gThemeConfig;
 extern BotConfig gBotConfig;
 extern LimitsConfig gLimitsConfig;
+extern LaserConfig gLaserConfigs[MAX_GUNS];
+void LoadLaserConfigs(const char* filename);
 
 #define SINGLEPLAYER_INFECTION 0
 #define SINGLEPLAYER_ELIMINATION 1
@@ -181,8 +203,18 @@ extern JQuad* gLogoQuad;
 extern Gun gGuns[MAX_GUNS];
 extern JQuad** gGunHandQuads;
 extern JQuad** gGunGroundQuads;
-extern JQuad* gPlayersQuads[2][4][NUM_QUADS];
-extern JQuad* gPlayersDeadQuads[2][4];
+extern JQuad* gPlayersQuads[MAX_PLAYER_SKINS][NUM_QUADS];
+extern JQuad* gPlayersDeadQuads[MAX_PLAYER_SKINS];
+extern bool gPlayerSkinLoaded[MAX_PLAYER_SKINS];
+extern int gPlayerSkinTeams[MAX_PLAYER_SKINS];
+extern char gPlayerSkinNames[MAX_PLAYER_SKINS][PLAYER_SKIN_NAME_LENGTH];
+extern int gTeamSkinIds[2][MAX_PLAYER_SKINS];
+extern int gTeamSkinCounts[2];
+extern char gTeamNames[2][TEAM_NAME_LENGTH];
+extern bool IsPlayerSkinValid(int id, int team);
+extern int GetDefaultPlayerSkin(int team);
+extern int ResolvePlayerSkin(int id, int team);
+extern int GetRandomPlayerSkin(int team);
 extern JQuad* gRadarQuad;
 extern JQuad* gBuyZoneQuad;
 extern JQuad* gDecalQuads[5];

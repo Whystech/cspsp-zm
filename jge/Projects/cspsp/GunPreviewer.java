@@ -121,6 +121,40 @@ public class GunPreviewer {
 		}
 	}
 
+	private static class LaserConfig {
+		boolean enabled ;
+		boolean falloffEnabled ;
+		int red = 255 ;
+		int green = 32 ;
+		int blue = 24 ;
+		int alpha = 180 ;
+		float width = 1.0f ;
+		float range = 700.0f ;
+		float falloff = 1.0f ;
+		boolean endDot = true ;
+		float endDotScale = 1.0f ;
+		float offsetX = 12.0f ;
+		float offsetY ;
+
+		Color color() {return new Color(red, green, blue, alpha) ;}
+
+		LaserConfig copy() {
+			LaserConfig copy = new LaserConfig() ;
+			copy.enabled = enabled ; copy.falloffEnabled = falloffEnabled ;
+			copy.red = red ; copy.green = green ; copy.blue = blue ; copy.alpha = alpha ;
+			copy.width = width ; copy.range = range ; copy.falloff = falloff ;
+			copy.endDot = endDot ; copy.endDotScale = endDotScale ; copy.offsetX = offsetX ; copy.offsetY = offsetY ;
+			return copy ;
+		}
+
+		String record(int id) {
+			return id + " " + (enabled ? 1 : 0) + " " + (falloffEnabled ? 1 : 0) + " "
+			       + red + " " + green + " " + blue + " " + alpha + " " + Float.toString(width) + " "
+			       + Float.toString(range) + " " + Float.toString(falloff) + " " + (endDot ? 1 : 0) + " "
+			       + Float.toString(endDotScale) + " " + Float.toString(offsetX) + " " + Float.toString(offsetY) ;
+		}
+	}
+
 	private static class TracerShot {
 		final int weaponId ;
 		final long startedAt ;
@@ -138,6 +172,7 @@ public class GunPreviewer {
 		final BufferedImage[] groundPages = new BufferedImage[2] ;
 		final Map<Integer, BufferedImage> flashes = new HashMap<Integer, BufferedImage>() ;
 		final Map<Integer, TracerConfig> tracers = new HashMap<Integer, TracerConfig>() ;
+		final Map<Integer, LaserConfig> lasers = new HashMap<Integer, LaserConfig>() ;
 		BufferedImage players ;
 		File directory ;
 		File graphicsDirectory ;
@@ -145,6 +180,7 @@ public class GunPreviewer {
 		File requestedRoot ;
 		final List<String> trailingLines = new ArrayList<String>() ;
 		final List<String> tracerLines = new ArrayList<String>() ;
+		final List<String> laserLines = new ArrayList<String>() ;
 
 		void load() throws IOException {
 			if (requestedRoot == null) {
@@ -157,8 +193,10 @@ public class GunPreviewer {
 			weapons.clear() ;
 			flashes.clear() ;
 			tracers.clear() ;
+			lasers.clear() ;
 			trailingLines.clear() ;
 			tracerLines.clear() ;
+			laserLines.clear() ;
 			handPages[0] = readRequired("guns.png") ;
 			handPages[1] = readOptional("guns2.png") ;
 			groundPages[0] = readRequired("gunsground.png") ;
@@ -171,6 +209,7 @@ public class GunPreviewer {
 			if (groundPages[1] != null) validateAtlas(groundPages[1], "gunsground2.png") ;
 			loadWeapons() ;
 			loadTracers() ;
+			loadLasers() ;
 		}
 
 		File resolveContentRoot(File root) throws IOException {
@@ -346,16 +385,84 @@ public class GunPreviewer {
 			tracers.put(Integer.valueOf(id), tracer.copy()) ;
 		}
 
+		void loadLasers() throws IOException {
+			File file = new File(dataDirectory, "lasers.txt") ;
+			if (!file.isFile()) return ;
+			BufferedReader reader = new BufferedReader(new FileReader(file)) ;
+			try {
+				String line ;
+				while ((line = reader.readLine()) != null) {
+					laserLines.add(line) ;
+					String trimmed = line.trim() ;
+					if (trimmed.length() == 0 || trimmed.startsWith("#")) continue ;
+					String[] fields = trimmed.split("\\s+") ;
+					if (fields.length != 12 && fields.length != 14) continue ;
+					LaserConfig laser = new LaserConfig() ;
+					int id = Integer.parseInt(fields[0]) ;
+					laser.enabled = Integer.parseInt(fields[1]) != 0 ;
+					laser.falloffEnabled = Integer.parseInt(fields[2]) != 0 ;
+					laser.red = clamp(Integer.parseInt(fields[3]), 0, 255) ; laser.green = clamp(Integer.parseInt(fields[4]), 0, 255) ;
+					laser.blue = clamp(Integer.parseInt(fields[5]), 0, 255) ; laser.alpha = clamp(Integer.parseInt(fields[6]), 0, 255) ;
+					laser.width = clamp(Float.parseFloat(fields[7]), 0.1f, 20.0f) ; laser.range = clamp(Float.parseFloat(fields[8]), 1.0f, 5000.0f) ;
+					laser.falloff = clamp(Float.parseFloat(fields[9]), 0.0f, 10.0f) ; laser.endDot = Integer.parseInt(fields[10]) != 0 ;
+					laser.endDotScale = clamp(Float.parseFloat(fields[11]), 0.1f, 20.0f) ;
+					if (fields.length == 14) {
+						laser.offsetX = clamp(Float.parseFloat(fields[12]), -100.0f, 100.0f) ;
+						laser.offsetY = clamp(Float.parseFloat(fields[13]), -100.0f, 100.0f) ;
+					}
+					if (id >= 0 && id < 128) lasers.put(Integer.valueOf(id), laser) ;
+				}
+			} catch (NumberFormatException exception) {
+				throw new IOException("Invalid number in lasers.txt", exception) ;
+			} finally {reader.close() ;}
+		}
+
+		LaserConfig laser(int id) {
+			LaserConfig laser = lasers.get(Integer.valueOf(id)) ;
+			return laser == null ? new LaserConfig() : laser.copy() ;
+		}
+
+		int clamp(int value, int minimum, int maximum) {return Math.max(minimum, Math.min(maximum, value)) ;}
+		float clamp(float value, float minimum, float maximum) {return Math.max(minimum, Math.min(maximum, value)) ;}
+
+		void saveLaser(int id, LaserConfig laser) throws IOException {
+			String record = laser.record(id) ;
+			boolean replaced = false ;
+			int insertAt = 0 ;
+			for (int index = 0 ; index < laserLines.size() ; index++) {
+				String trimmed = laserLines.get(index).trim() ;
+				if (trimmed.length() == 0 || trimmed.startsWith("#")) continue ;
+				String[] fields = trimmed.split("\\s+") ;
+				try {
+					if (fields.length == 12 || fields.length == 14) {
+						insertAt = index + 1 ;
+						if (Integer.parseInt(fields[0]) == id && !replaced) {
+							laserLines.set(index, record) ;
+							replaced = true ;
+						}
+					}
+				} catch (NumberFormatException ignored) {}
+			}
+			if (!replaced) laserLines.add(insertAt, record) ;
+			if (laserLines.isEmpty()) {
+				laserLines.add("# id enabled falloff_enabled red green blue alpha width range falloff end_dot end_dot_scale offset_x offset_y") ;
+				laserLines.add(record) ;
+			}
+			writeLinesWithBackup(new File(dataDirectory, "lasers.txt"), laserLines) ;
+			lasers.put(Integer.valueOf(id), laser.copy()) ;
+		}
+
 		void writeLinesWithBackup(File target, List<String> lines) throws IOException {
 			File temporary = new File(target.getParentFile(), target.getName() + ".tmp") ;
 			PrintWriter writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(temporary), "UTF-8")) ;
 			try {for (String line : lines) writer.println(line) ;}
 			finally {writer.close() ;}
 			File backup = new File(target.getParentFile(), target.getName() + ".bak") ;
-			if (backup.exists() && !backup.delete()) throw new IOException("Cannot replace " + backup.getAbsolutePath()) ;
-			if (!target.renameTo(backup)) throw new IOException("Cannot back up " + target.getAbsolutePath()) ;
+			boolean hadTarget = target.isFile() ;
+			if (hadTarget && backup.exists() && !backup.delete()) throw new IOException("Cannot replace " + backup.getAbsolutePath()) ;
+			if (hadTarget && !target.renameTo(backup)) throw new IOException("Cannot back up " + target.getAbsolutePath()) ;
 			if (!temporary.renameTo(target)) {
-				backup.renameTo(target) ;
+				if (hadTarget) backup.renameTo(target) ;
 				throw new IOException("Cannot save " + target.getAbsolutePath()) ;
 			}
 		}
@@ -433,6 +540,7 @@ public class GunPreviewer {
 		final WeaponInfo weapon ;
 		final boolean newWeapon ;
 		final TracerConfig tracer ;
+		final LaserConfig laser ;
 		File pendingHandSprite, pendingGroundSprite ;
 		final JTextField name = new JTextField() ;
 		final JSpinner damage = integer(0, 10000), delay = integer(0, 60000), clip = integer(0, 10000) ;
@@ -442,6 +550,12 @@ public class GunPreviewer {
 		final JSpinner spread = decimal(0.0, 100.0, 0.01), walkingSpeed = decimal(0.0, 100.0, 0.05) ;
 		final JSpinner bulletSpeed = decimal(0.0, 100.0, 0.05), viewAngle = decimal(0.0, 10.0, 0.01) ;
 		final JSpinner tracerLength = decimal(0.0, 10000.0, 1.0), tracerWidth = decimal(0.1, 100.0, 0.1) ;
+		final JSpinner laserRed = integer(0, 255), laserGreen = integer(0, 255), laserBlue = integer(0, 255), laserAlpha = integer(0, 255) ;
+		final JSpinner laserWidth = decimal(0.1, 20.0, 0.1), laserRange = decimal(1.0, 5000.0, 10.0) ;
+		final JSpinner laserFalloff = decimal(0.0, 10.0, 0.1), laserEndDotScale = decimal(0.1, 20.0, 0.1) ;
+		final JSpinner laserOffsetX = decimal(-100.0, 100.0, 0.5), laserOffsetY = decimal(-100.0, 100.0, 0.5) ;
+		final JCheckBox laserEnabled = new JCheckBox("Enabled"), laserFalloffEnabled = new JCheckBox("Use intensity falloff") ;
+		final JCheckBox laserEndDot = new JCheckBox("Display endpoint dot") ;
 		final JComboBox<String> type = new JComboBox<String>(new String[] {"Primary", "Secondary", "Knife", "Grenade"}) ;
 		final JComboBox<String> fireMode = new JComboBox<String>(new String[] {"Semi-auto", "Automatic"}) ;
 		final JComboBox<String> scope = new JComboBox<String>(new String[] {"None", "Low", "Medium", "High"}) ;
@@ -450,6 +564,8 @@ public class GunPreviewer {
 		final JComboBox<String> tracerStyle = new JComboBox<String>(TRACER_STYLES) ;
 		final TracerPreviewPanel tracerPreview = new TracerPreviewPanel() ;
 		final ColorSwatch tracerColorSwatch = new ColorSwatch() ;
+		final LaserPreviewPanel laserPreview = new LaserPreviewPanel() ;
+		final LaserColorSwatch laserColorSwatch = new LaserColorSwatch() ;
 
 		WeaponEditorDialog(PreviewFrame frame, WeaponInfo weapon) {this(frame, weapon, false) ;}
 
@@ -459,6 +575,7 @@ public class GunPreviewer {
 			this.weapon = weapon ;
 			this.newWeapon = newWeapon ;
 			this.tracer = frame.model.tracer(weapon.id) ;
+			this.laser = frame.model.laser(weapon.id) ;
 			setDefaultCloseOperation(DISPOSE_ON_CLOSE) ;
 			JPanel content = new JPanel(new BorderLayout(12, 12)) ;
 			content.setBorder(new EmptyBorder(16, 16, 16, 16)) ;
@@ -520,9 +637,38 @@ public class GunPreviewer {
 			tracerPage.add(tracerPreviewArea, BorderLayout.NORTH) ;
 			tracerPage.add(scrollable(tracerFields), BorderLayout.CENTER) ;
 
+			JPanel laserFields = formPanel() ;
+			add(laserFields, "Laser", laserEnabled) ;
+			add(laserFields, "Use falloff", laserFalloffEnabled) ;
+			add(laserFields, "Falloff exponent", laserFalloff) ;
+			add(laserFields, "Red (0-255)", laserRed) ;
+			add(laserFields, "Green (0-255)", laserGreen) ;
+			add(laserFields, "Blue (0-255)", laserBlue) ;
+			add(laserFields, "Alpha (0-255)", laserAlpha) ;
+			add(laserFields, "Line width", laserWidth) ;
+			add(laserFields, "Maximum range", laserRange) ;
+			add(laserFields, "Endpoint dot", laserEndDot) ;
+			add(laserFields, "Endpoint scale", laserEndDotScale) ;
+			add(laserFields, "Emitter X offset", laserOffsetX) ;
+			add(laserFields, "Emitter Y offset", laserOffsetY) ;
+			JButton chooseLaserColor = new JButton("Choose color...") ;
+			chooseLaserColor.addActionListener(event -> chooseLaserColor()) ;
+			JPanel laserColorPicker = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0)) ;
+			laserColorPicker.add(laserColorSwatch) ;
+			laserColorPicker.add(chooseLaserColor) ;
+			JPanel laserPreviewArea = new JPanel(new BorderLayout(12, 0)) ;
+			laserPreviewArea.setBorder(BorderFactory.createTitledBorder("Live laser preview")) ;
+			laserPreviewArea.add(laserPreview, BorderLayout.CENTER) ;
+			laserPreviewArea.add(laserColorPicker, BorderLayout.EAST) ;
+			JPanel laserPage = new JPanel(new BorderLayout(0, 10)) ;
+			laserPage.setBorder(new EmptyBorder(10, 10, 10, 10)) ;
+			laserPage.add(laserPreviewArea, BorderLayout.NORTH) ;
+			laserPage.add(scrollable(laserFields), BorderLayout.CENTER) ;
+
 			JTabbedPane pages = new JTabbedPane() ;
 			pages.addTab("1. Weapon", weaponPage) ;
 			pages.addTab("2. Tracer", tracerPage) ;
+			pages.addTab("3. Laser", laserPage) ;
 			content.add(pages, BorderLayout.CENTER) ;
 			JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT)) ;
 			JButton cancel = new JButton("Cancel") ;
@@ -535,6 +681,7 @@ public class GunPreviewer {
 			setContentPane(content) ;
 			loadValues() ;
 			installTracerPreviewListeners() ;
+			installLaserPreviewListeners() ;
 			setSize(720, 620) ;
 			setMinimumSize(new Dimension(640, 500)) ;
 			setLocationRelativeTo(frame) ;
@@ -582,7 +729,89 @@ public class GunPreviewer {
 			tracerStyle.setSelectedItem(tracer.style) ;
 			tracerRed.setValue(tracer.red) ; tracerGreen.setValue(tracer.green) ; tracerBlue.setValue(tracer.blue) ;
 			tracerAlpha.setValue(tracer.alpha) ; tracerLength.setValue((double)tracer.length) ; tracerWidth.setValue((double)tracer.width) ;
+			laserEnabled.setSelected(laser.enabled) ; laserFalloffEnabled.setSelected(laser.falloffEnabled) ;
+			laserRed.setValue(laser.red) ; laserGreen.setValue(laser.green) ; laserBlue.setValue(laser.blue) ; laserAlpha.setValue(laser.alpha) ;
+			laserWidth.setValue((double)laser.width) ; laserRange.setValue((double)laser.range) ; laserFalloff.setValue((double)laser.falloff) ;
+			laserEndDot.setSelected(laser.endDot) ; laserEndDotScale.setValue((double)laser.endDotScale) ;
+			laserOffsetX.setValue((double)laser.offsetX) ; laserOffsetY.setValue((double)laser.offsetY) ;
 			refreshTracerPreview() ;
+			refreshLaserPreview() ;
+		}
+
+		void installLaserPreviewListeners() {
+			laserEnabled.addActionListener(event -> refreshLaserPreview()) ;
+			laserFalloffEnabled.addActionListener(event -> refreshLaserPreview()) ;
+			laserEndDot.addActionListener(event -> refreshLaserPreview()) ;
+			JSpinner[] controls = {laserRed, laserGreen, laserBlue, laserAlpha, laserWidth, laserRange, laserFalloff, laserEndDotScale, laserOffsetX, laserOffsetY} ;
+			for (JSpinner control : controls) control.addChangeListener(event -> refreshLaserPreview()) ;
+		}
+
+		LaserConfig previewLaser() {
+			LaserConfig preview = new LaserConfig() ;
+			preview.enabled = laserEnabled.isSelected() ; preview.falloffEnabled = laserFalloffEnabled.isSelected() ;
+			preview.red = integer(laserRed) ; preview.green = integer(laserGreen) ; preview.blue = integer(laserBlue) ; preview.alpha = integer(laserAlpha) ;
+			preview.width = decimal(laserWidth) ; preview.range = decimal(laserRange) ; preview.falloff = decimal(laserFalloff) ;
+			preview.endDot = laserEndDot.isSelected() ; preview.endDotScale = decimal(laserEndDotScale) ;
+			preview.offsetX = decimal(laserOffsetX) ; preview.offsetY = decimal(laserOffsetY) ;
+			return preview ;
+		}
+
+		void refreshLaserPreview() {
+			laserFalloff.setEnabled(laserFalloffEnabled.isSelected()) ;
+			laserEndDotScale.setEnabled(laserEndDot.isSelected()) ;
+			laserColorSwatch.repaint() ;
+			laserPreview.repaint() ;
+		}
+
+		void chooseLaserColor() {
+			Color selected = JColorChooser.showDialog(this, "Choose laser color", previewLaser().color()) ;
+			if (selected == null) return ;
+			laserRed.setValue(selected.getRed()) ; laserGreen.setValue(selected.getGreen()) ; laserBlue.setValue(selected.getBlue()) ;
+			refreshLaserPreview() ;
+		}
+
+		class LaserColorSwatch extends JComponent {
+			LaserColorSwatch() {setPreferredSize(new Dimension(64, 64)) ; setToolTipText("Current laser RGBA color") ;}
+			protected void paintComponent(Graphics graphics) {
+				Graphics2D g = (Graphics2D)graphics.create() ;
+				try {g.setColor(previewLaser().color()) ; g.fillOval(4, 4, getWidth()-8, getHeight()-8) ;
+					g.setColor(new Color(75, 80, 86)) ; g.setStroke(new BasicStroke(2.0f)) ; g.drawOval(4, 4, getWidth()-8, getHeight()-8) ;}
+				finally {g.dispose() ;}
+			}
+		}
+
+		class LaserPreviewPanel extends JPanel {
+			LaserPreviewPanel() {setPreferredSize(new Dimension(430, 110)) ; setBackground(BACKGROUND) ;}
+			protected void paintComponent(Graphics graphics) {
+				super.paintComponent(graphics) ;
+				Graphics2D g = (Graphics2D)graphics.create() ;
+				try {
+					g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON) ;
+					LaserConfig preview = previewLaser() ;
+					if (!preview.enabled) {frame.canvas.drawCentered(g, "disabled", getWidth()/2, getHeight()/2, MUTED) ; return ;}
+					double originX = 42.0, originY = getHeight()/2.0 ;
+					g.setColor(new Color(110, 116, 124)) ;
+					g.drawLine((int)originX-5, (int)originY, (int)originX+5, (int)originY) ;
+					g.drawLine((int)originX, (int)originY-5, (int)originX, (int)originY+5) ;
+					double startX = originX+preview.offsetX*2.0, y = originY+preview.offsetY*2.0 ;
+					double endX = Math.min(getWidth()-18.0, startX+Math.max(20.0, preview.range*0.45)) ;
+					int segments = preview.falloffEnabled && preview.falloff > 0.0f ? 12 : 1 ;
+					for (int index=0 ; index<segments ; index++) {
+						double from = index/(double)segments, to = (index+1)/(double)segments ;
+						double intensity = segments == 1 ? 1.0 : Math.pow(Math.max(0.0, 1.0-(from+to)*0.5), preview.falloff) ;
+						Color color = new Color(preview.red, preview.green, preview.blue, (int)(preview.alpha*intensity)) ;
+						frame.canvas.drawTracerLine(g,startX+(endX-startX)*from,y,startX+(endX-startX)*to,y,preview.width,color) ;
+					}
+					if (preview.endDot) {
+						double intensity = preview.falloffEnabled && preview.falloff > 0.0f ? 0.15 : 1.0 ;
+						frame.canvas.drawTracerPoint(g,endX,y,preview.endDotScale,new Color(preview.red,preview.green,preview.blue,(int)(preview.alpha*intensity))) ;
+					}
+					double[] gunAnchor = frame.canvas.idleGunAnchor(weapon) ;
+					frame.canvas.drawWeaponCell(g,frame.model.handPage(weapon.id),weapon.id,
+					                            originX+gunAnchor[0]*2.0,originY+gunAnchor[1]*2.0,
+					                            16,8,-Math.PI/2.0,2.0) ;
+				} finally {g.dispose() ;}
+			}
 		}
 
 		void installTracerPreviewListeners() {
@@ -720,6 +949,11 @@ public class GunPreviewer {
 			tracer.style = (String)tracerStyle.getSelectedItem() ;
 			tracer.red = integer(tracerRed) ; tracer.green = integer(tracerGreen) ; tracer.blue = integer(tracerBlue) ;
 			tracer.alpha = integer(tracerAlpha) ; tracer.length = decimal(tracerLength) ; tracer.width = decimal(tracerWidth) ;
+			laser.enabled = laserEnabled.isSelected() ; laser.falloffEnabled = laserFalloffEnabled.isSelected() ;
+			laser.red = integer(laserRed) ; laser.green = integer(laserGreen) ; laser.blue = integer(laserBlue) ; laser.alpha = integer(laserAlpha) ;
+			laser.width = decimal(laserWidth) ; laser.range = decimal(laserRange) ; laser.falloff = decimal(laserFalloff) ;
+			laser.endDot = laserEndDot.isSelected() ; laser.endDotScale = decimal(laserEndDotScale) ;
+			laser.offsetX = decimal(laserOffsetX) ; laser.offsetY = decimal(laserOffsetY) ;
 			boolean appended = false ;
 			boolean dataSaved = false ;
 			try {
@@ -734,6 +968,7 @@ public class GunPreviewer {
 					frame.model.replaceWeaponSprite(weapon.id, pendingGroundSprite, false) ;
 				}
 				frame.model.saveTracer(weapon.id, tracer) ;
+				frame.model.saveLaser(weapon.id, laser) ;
 				frame.reloadResources(weapon.id) ;
 				dispose() ;
 			} catch (IOException exception) {
@@ -1203,10 +1438,16 @@ public class GunPreviewer {
 			double centerY = gunPanels[0].getCenterY() + 15 ;
 			double aimAngle = Math.toRadians(frame.angleSlider.getValue()) ;
 			double spriteAngle = aimAngle - Math.PI / 2.0 ;
-			drawWeaponCell(g, frame.model.handPage(weapon.id), weapon.id, centerX, centerY, 16, 8, spriteAngle, gunZoom[0]) ;
+			double directionX = Math.cos(aimAngle) ;
+			double directionY = Math.sin(aimAngle) ;
+			double[] gunAnchor = idleGunAnchor(weapon) ;
+			double gunX = centerX + (directionX*gunAnchor[0]-directionY*gunAnchor[1])*gunZoom[0] ;
+			double gunY = centerY + (directionY*gunAnchor[0]+directionX*gunAnchor[1])*gunZoom[0] ;
+			drawWeaponLaser(g, weapon, centerX, centerY, aimAngle, gunZoom[0]) ;
+			drawWeaponCell(g, frame.model.handPage(weapon.id), weapon.id, gunX, gunY, 16, 8, spriteAngle, gunZoom[0]) ;
 			if (hasMuzzleFlash(weapon) && frame.flashVisible()) {
 				BufferedImage flash = frame.model.flash(weapon.flashStyle) ;
-				drawQuad(g, flash, frame.flashFrame() * 32, 0, 32, 32, centerX, centerY, 16, -16, spriteAngle, gunZoom[0], false) ;
+				drawQuad(g, flash, frame.flashFrame() * 32, 0, 32, 32, gunX, gunY, 16, -16, spriteAngle, gunZoom[0], false) ;
 			}
 			drawLiveTracers(g, weapon, centerX, centerY) ;
 			String metadata = weapon.weaponType() + " / " + weapon.bulletType() + " / SPEED " + weapon.bulletSpeed ;
@@ -1214,6 +1455,50 @@ public class GunPreviewer {
 			drawWeaponCell(g, frame.model.groundPage(weapon.id), weapon.id, gunPanels[1].getCenterX(), gunPanels[1].getCenterY() + 8, 16, 16, 0, gunZoom[1]) ;
 			drawWeaponCell(g, frame.model.handPage(weapon.id), weapon.id, gunPanels[2].getCenterX(), gunPanels[2].getCenterY() + 8, 16, 16, 0, gunZoom[2]) ;
 			drawFlash(g, weapon, (int)gunPanels[3].getCenterX(), (int)gunPanels[3].getCenterY() + 8, gunZoom[3]) ;
+		}
+
+		double[] idleGunAnchor(WeaponInfo weapon) {
+			double body, rightArm, rightHand ;
+			if (weapon.type == 0) {body=30.0 ; rightArm=15.0 ; rightHand=-60.0 ;}
+			else if (weapon.type == 1) {body=5.0 ; rightArm=-10.0 ; rightHand=-40.0 ;}
+			else if (weapon.type == 2) {body=0.0 ; rightArm=20.0 ; rightHand=-40.0 ;}
+			else {body=0.0 ; rightArm=20.0 ; rightHand=-30.0 ;}
+			body = Math.toRadians(body) ;
+			rightArm = Math.toRadians(rightArm) ;
+			rightHand = Math.toRadians(rightHand) ;
+			return new double[] {
+				-5.0-10.0*Math.sin(body)+8.0*Math.cos(rightArm)+10.0*Math.cos(rightHand),
+				10.0*Math.cos(body)+8.0*Math.sin(rightArm)+10.0*Math.sin(rightHand)
+			} ;
+		}
+
+		void drawWeaponLaser(Graphics2D g, WeaponInfo weapon, double centerX, double centerY, double aimAngle, double zoom) {
+			LaserConfig laser = frame.model.laser(weapon.id) ;
+			if (!laser.enabled) return ;
+			double directionX = Math.cos(aimAngle) ;
+			double directionY = Math.sin(aimAngle) ;
+			double startX = centerX + (directionX * laser.offsetX - directionY * laser.offsetY) * zoom ;
+			double startY = centerY + (directionY * laser.offsetX + directionX * laser.offsetY) * zoom ;
+			double endX = startX + directionX * laser.range * zoom ;
+			double endY = startY + directionY * laser.range * zoom ;
+			int segments = laser.falloffEnabled && laser.falloff > 0.0f ? 12 : 1 ;
+			Shape oldClip = g.getClip() ;
+			g.clip(gunPanels[0]) ;
+			for (int index = 0 ; index < segments ; index++) {
+				double from = index / (double)segments ;
+				double to = (index + 1) / (double)segments ;
+				double intensity = segments == 1 ? 1.0 : Math.pow(Math.max(0.0, 1.0 - (from + to) * 0.5), laser.falloff) ;
+				Color color = new Color(laser.red, laser.green, laser.blue, (int)(laser.alpha * intensity)) ;
+				drawTracerLine(g, startX + (endX - startX) * from, startY + (endY - startY) * from,
+				               startX + (endX - startX) * to, startY + (endY - startY) * to,
+				               laser.width * (float)zoom, color) ;
+			}
+			if (laser.endDot) {
+				double intensity = laser.falloffEnabled && laser.falloff > 0.0f ? 0.15 : 1.0 ;
+				drawTracerPoint(g, endX, endY, laser.endDotScale * (float)zoom,
+				                new Color(laser.red, laser.green, laser.blue, (int)(laser.alpha * intensity))) ;
+			}
+			g.setClip(oldClip) ;
 		}
 
 		void drawPlayerPreview(Graphics2D g) {

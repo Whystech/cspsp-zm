@@ -18,6 +18,7 @@ AudioConfig gAudioConfig;
 ThemeConfig gThemeConfig;
 BotConfig gBotConfig;
 LimitsConfig gLimitsConfig;
+LaserConfig gLaserConfigs[MAX_GUNS];
 bool gReconnect;
 bool gLogout;
 char gName[32];
@@ -42,8 +43,14 @@ JQuad* gLogoQuad;
 Gun gGuns[MAX_GUNS];
 JQuad** gGunHandQuads;
 JQuad** gGunGroundQuads;
-JQuad* gPlayersQuads[2][4][NUM_QUADS];
-JQuad* gPlayersDeadQuads[2][4];
+JQuad* gPlayersQuads[MAX_PLAYER_SKINS][NUM_QUADS];
+JQuad* gPlayersDeadQuads[MAX_PLAYER_SKINS];
+bool gPlayerSkinLoaded[MAX_PLAYER_SKINS];
+int gPlayerSkinTeams[MAX_PLAYER_SKINS];
+char gPlayerSkinNames[MAX_PLAYER_SKINS][PLAYER_SKIN_NAME_LENGTH];
+int gTeamSkinIds[2][MAX_PLAYER_SKINS];
+int gTeamSkinCounts[2];
+char gTeamNames[2][TEAM_NAME_LENGTH];
 JQuad* gRadarQuad;
 JQuad* gBuyZoneQuad;
 JQuad* gDecalQuads[5];
@@ -68,6 +75,31 @@ JQuad* gFlagHomeQuad;
 JQuad* gFlagArrowQuad;
 JQuad* gFlagRadarQuad;
 JQuad* gHomeRadarQuad;
+
+bool IsPlayerSkinValid(int id, int team)
+{
+	return id >= 0 && id < MAX_PLAYER_SKINS && gPlayerSkinLoaded[id] &&
+		(team == NONE || gPlayerSkinTeams[id] == team);
+}
+
+int GetDefaultPlayerSkin(int team)
+{
+	if (team < T || team > CT || gTeamSkinCounts[team] <= 0) return -1;
+	return gTeamSkinIds[team][0];
+}
+
+int ResolvePlayerSkin(int id, int team)
+{
+	if (IsPlayerSkinValid(id,team)) return id;
+	if (team >= T && team <= CT && id >= 0 && id < gTeamSkinCounts[team]) return gTeamSkinIds[team][id];
+	return GetDefaultPlayerSkin(team);
+}
+
+int GetRandomPlayerSkin(int team)
+{
+	if (team < T || team > CT || gTeamSkinCounts[team] <= 0) return -1;
+	return gTeamSkinIds[team][rand()%gTeamSkinCounts[team]];
+}
 
 
 JSample* gDryFireRifleSound;
@@ -129,6 +161,52 @@ JQuad* GetMuzzleFlashQuad(int type, int frame)
 	if (found != gMuzzleFlashQuads.end() && frame < (int)found->second.size() && found->second[frame] != NULL) return found->second[frame];
 	found = gMuzzleFlashQuads.find(0);
 	return found != gMuzzleFlashQuads.end() && frame < (int)found->second.size() ? found->second[frame] : NULL;
+}
+
+void LoadLaserConfigs(const char* filename)
+{
+	for (int i=0; i<MAX_GUNS; i++) {
+		gLaserConfigs[i].enabled = false;
+		gLaserConfigs[i].falloffEnabled = false;
+		gLaserConfigs[i].red = 255;
+		gLaserConfigs[i].green = 32;
+		gLaserConfigs[i].blue = 24;
+		gLaserConfigs[i].alpha = 180;
+		gLaserConfigs[i].width = 1.0f;
+		gLaserConfigs[i].range = 700.0f;
+		gLaserConfigs[i].falloff = 1.0f;
+		gLaserConfigs[i].endDot = true;
+		gLaserConfigs[i].endDotScale = 1.0f;
+		gLaserConfigs[i].offsetX = 12.0f;
+		gLaserConfigs[i].offsetY = 0.0f;
+	}
+	FILE* file = fopen(filename,"r");
+	if (file == NULL) return;
+	char line[512];
+	while (fgets(line,sizeof(line),file) != NULL) {
+		if (line[0] == '#') continue;
+		int id, enabled, falloffEnabled, red, green, blue, alpha, endDot;
+		float width, range, falloff, endDotScale, offsetX = 12.0f, offsetY = 0.0f;
+		int fields = sscanf(line,"%d %d %d %d %d %d %d %f %f %f %d %f %f %f",&id,&enabled,&falloffEnabled,
+			&red,&green,&blue,&alpha,&width,&range,&falloff,&endDot,&endDotScale,&offsetX,&offsetY);
+		if (fields != 12 && fields != 14) continue;
+		if (id < 0 || id >= MAX_GUNS) continue;
+		LaserConfig& config = gLaserConfigs[id];
+		config.enabled = enabled != 0;
+		config.falloffEnabled = falloffEnabled != 0;
+		config.red = std::max(0,std::min(255,red));
+		config.green = std::max(0,std::min(255,green));
+		config.blue = std::max(0,std::min(255,blue));
+		config.alpha = std::max(0,std::min(255,alpha));
+		config.width = std::max(0.1f,std::min(20.0f,width));
+		config.range = std::max(1.0f,std::min(5000.0f,range));
+		config.falloff = std::max(0.0f,std::min(10.0f,falloff));
+		config.endDot = endDot != 0;
+		config.endDotScale = std::max(0.1f,std::min(20.0f,endDotScale));
+		config.offsetX = std::max(-100.0f,std::min(100.0f,offsetX));
+		config.offsetY = std::max(-100.0f,std::min(100.0f,offsetY));
+	}
+	fclose(file);
 }
 
 bool SetConfigValue(const char* location, const char* key, const char* value)

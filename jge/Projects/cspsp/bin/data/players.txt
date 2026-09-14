@@ -1,0 +1,23 @@
+# Team IDs: 0 = T, 1 = CT.
+# player <network ID 0..31> <team ID> <atlas cell> <menu name>
+# Rows may use sparse IDs and any order. Only valid populated rows create slots.
+# Cells 0..7 use page 1, 8..15 page 2, 16..23 page 3, and 24..31 page 4.
+team 0 Zombies
+team 1 UN Forces
+
+player 0 1 4 SEAL TEAM 6
+player 1 1 5 GSG-9
+player 2 1 6 SAS
+player 3 1 7 GIGN
+player 4 0 0 PHOENIX CONNEXION
+player 5 0 1 ELITE CREW
+player 6 0 2 ARCTIC AVENGERS
+player 7 0 3 GUERILLA WARFARE
+player 8 1 8 AEGIS ENGINEER
+player 9 1 9 NIGHT RECOVERY
+player 10 1 10 HELLWARDEN
+player 11 1 11 HAZARD SENTINEL
+player 12 0 12 SPINE RIPPER
+player 13 0 13 CARRION STALKER
+player 14 0 14 ASHEN CRAWLER
+player 15 0 15 BLIGHT HOST

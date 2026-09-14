@@ -5,6 +5,8 @@
 JGE* TeamMenu::mEngine = NULL;
 JRenderer* TeamMenu::mRenderer = NULL;
 
+#define TEAM_MENU_VISIBLE_ROWS 7
+
 //------------------------------------------------------------------------------------------------
 TeamMenu::TeamMenu()
 {
@@ -20,32 +22,38 @@ TeamMenu::TeamMenu()
 	mSelectedIndex = -1;
 
 	mCategories[MAIN1].id = MAIN1;
-	mCategories[MAIN1].buttons.push_back(Button(T,"Zombies"));
-	mCategories[MAIN1].buttons.push_back(Button(CT,"UN Forces"));
+	if (gTeamSkinCounts[T] > 0) mCategories[MAIN1].buttons.push_back(Button(T,gTeamNames[T]));
+	if (gTeamSkinCounts[CT] > 0) mCategories[MAIN1].buttons.push_back(Button(CT,gTeamNames[CT]));
 	mCategories[MAIN1].buttons.push_back(Button(NONE,"Spectator"));
 
 	mCategories[CT].id = CT;
-	mCategories[CT].buttons.push_back(Button(0,"SEAL TEAM 6"));
-	mCategories[CT].buttons.push_back(Button(1,"GSG-9"));
-	mCategories[CT].buttons.push_back(Button(2,"SAS"));
-	mCategories[CT].buttons.push_back(Button(3,"GIGN"));
+	for (int i=0; i<gTeamSkinCounts[CT]; i++) {
+		int id = gTeamSkinIds[CT][i];
+		mCategories[CT].buttons.push_back(Button(id,gPlayerSkinNames[id]));
+	}
 
 	mCategories[T].id = T;
-	mCategories[T].buttons.push_back(Button(0,"PHOENIX CONNEXION"));
-	mCategories[T].buttons.push_back(Button(1,"ELITE CREW"));
-	mCategories[T].buttons.push_back(Button(2,"ARCTIC AVENGERS"));
-	mCategories[T].buttons.push_back(Button(3,"GUERILLA WARFARE"));
+	for (int i=0; i<gTeamSkinCounts[T]; i++) {
+		int id = gTeamSkinIds[T][i];
+		mCategories[T].buttons.push_back(Button(id,gPlayerSkinNames[id]));
+	}
 
-	mCT = new Person(gPlayersQuads[CT][0],gPlayersDeadQuads[0][0],NULL,NULL,CT,"test",0);
-	mT = new Person(gPlayersQuads[T][0],gPlayersDeadQuads[0][0],NULL,NULL,CT,"test",0);
+	int ctSkin = GetDefaultPlayerSkin(CT);
+	int tSkin = GetDefaultPlayerSkin(T);
+	mCT = new Person(gPlayersQuads[ctSkin],gPlayersDeadQuads[ctSkin],NULL,NULL,CT,"test",0);
+	mT = new Person(gPlayersQuads[tSkin],gPlayersDeadQuads[tSkin],NULL,NULL,T,"test",0);
 	mCT->mGuns[KNIFE] = new GunObject(&gGuns[0],0,0);
 	mT->mGuns[KNIFE] = new GunObject(&gGuns[ZOMBIECLAWS],0,0);
 	mCT->PickUp(new GunObject(&gGuns[17],0,0));
 	mT->PickUp(new GunObject(&gGuns[18],0,0));
-	mCT->mX = -SCREEN_WIDTH_2+330;
-	mCT->mY = -SCREEN_HEIGHT_2+155;
-	mT->mX = -SCREEN_WIDTH_2+330;
-	mT->mY = -SCREEN_HEIGHT_2+155;
+	mCT->SetState(NORMAL);
+	mT->SetState(NORMAL);
+	mCT->mRenderScale = 1.6f;
+	mT->mRenderScale = 1.6f;
+	mCT->mX = -SCREEN_WIDTH_2+385;
+	mCT->mY = -SCREEN_HEIGHT_2+205;
+	mT->mX = -SCREEN_WIDTH_2+385;
+	mT->mY = -SCREEN_HEIGHT_2+205;
 
 	mIsOldStyle = true;
 
@@ -77,13 +85,14 @@ void TeamMenu::Update(float dt)
 
 	if (mEngine->GetButtonClick(PSP_CTRL_CROSS)) {
 		if (mSelectedIndex != -1) {
-			if (mCategoryIndex == MAIN1 && mSelectedIndex != 2) {
-				mCategoryIndex = mCategories[mCategoryIndex].buttons[mSelectedIndex].id;
+			int id = mCategories[mCategoryIndex].buttons[mSelectedIndex].id;
+			if (mCategoryIndex == MAIN1 && id != NONE) {
+				mCategoryIndex = id;
 				if (mIsOldStyle) {
 					mSelectedIndex = 0;
 				}
 			}
-			else if (mCategoryIndex == MAIN1 && mSelectedIndex == 2) {
+			else if (mCategoryIndex == MAIN1 && id == NONE) {
 				mTeam = NONE;
 				mType = 0;
 				mIsSelected = true;
@@ -91,18 +100,19 @@ void TeamMenu::Update(float dt)
 			}
 			else {	
 				mTeam = mCategoryIndex;
-				mType = mCategories[mCategoryIndex].buttons[mSelectedIndex].id;
+				mType = id;
 				mIsSelected = true;
 				Disable();
 			}
 		}
 	}
 
-	if (!mIsOldStyle) {
+	int size = mCategories[mCategoryIndex].buttons.size();
+	bool useList = mIsOldStyle || (mCategoryIndex != MAIN1 && size > 8);
+	if (!useList) {
 		float aX = mEngine->GetAnalogX()-127.5f;
 		float aY = mEngine->GetAnalogY()-127.5f;
 		
-		int size = mCategories[mCategoryIndex].buttons.size();
 		if (aX >= 20 || aX <= -20 || aY >= 20 || aY <= -20) {
 			angle = atan2f(aX,aY) + M_PI;
 			if (mCategoryIndex == MAIN1) {
@@ -118,7 +128,6 @@ void TeamMenu::Update(float dt)
 		}
 	}
 	else {
-		int size = mCategories[mCategoryIndex].buttons.size();
 		if (mEngine->GetButtonClick(PSP_CTRL_UP)) {
 			mSelectedIndex--;
 			if (mSelectedIndex < 0) mSelectedIndex = size-1;
@@ -147,7 +156,9 @@ void TeamMenu::Render()
 	gFont->DrawString("Team Select", 310, 40);
 	gFont->SetScale(0.75f);
 
-	if (!mIsOldStyle) {
+	int size = mCategories[mCategoryIndex].buttons.size();
+	bool useList = mIsOldStyle || (mCategoryIndex != MAIN1 && size > 8);
+	if (!useList) {
 		gFont->DrawString("[ANALOG+X] Select",320,70);
 	}
 	else {
@@ -191,20 +202,37 @@ void TeamMenu::Render()
 			}
 		}
 	}
+	else {
+		gFont->SetScale(0.75f);
+		gFont->DrawString(gTeamNames[mCategoryIndex],310,140);
+		if (size > TEAM_MENU_VISIBLE_ROWS) {
+			char pageText[32];
+			sprintf(pageText,"Skin %d / %d",mSelectedIndex+1,size);
+			gFont->SetScale(0.6f);
+			gFont->DrawString(pageText,310,160);
+		}
+	}
 
-	int size = mCategories[mCategoryIndex].buttons.size();
 	float theta = -M_PI_2;
 	if (mCategoryIndex == MAIN1) {
 		theta += M_PI/3;
 	}
 	float step = 1.0f/size*(2*M_PI);
-	for (int i=0; i<size; i++) {
+	int first = 0;
+	int last = size;
+	if (useList && size > TEAM_MENU_VISIBLE_ROWS) {
+		first = mSelectedIndex-TEAM_MENU_VISIBLE_ROWS/2;
+		if (first < 0) first = 0;
+		if (first > size-TEAM_MENU_VISIBLE_ROWS) first = size-TEAM_MENU_VISIBLE_ROWS;
+		last = first+TEAM_MENU_VISIBLE_ROWS;
+	}
+	for (int i=first; i<last; i++) {
 		//float theta = (float)i/size*(2*M_PI);
 		float x = 140+75*cosf(theta);
 		float y = SCREEN_HEIGHT_2+75*sinf(theta);
-		if (mIsOldStyle) {
+		if (useList) {
 			x = 50;
-			y = 25+32*i;
+			y = 25+32*(i-first);
 		}
 
 		if (i == mSelectedIndex) {
@@ -225,7 +253,7 @@ void TeamMenu::Render()
 			}
 
 			gFont->SetScale(1.0f);
-			if (!mIsOldStyle) {
+			if (!useList) {
 				mRenderer->FillRect(x-30,y-30,60,60,ARGB(220,0,0,0));
 				mRenderer->DrawRect(x-30,y-30,60,60,ARGB(255,255,128,0));
 				gFont->DrawShadowedString(mCategories[mCategoryIndex].buttons[i].name,x,y-8,JGETEXT_CENTER);
@@ -257,7 +285,7 @@ void TeamMenu::Render()
 				gFont->SetColor(ARGB(255,153,204,255));
 			}
 
-			if (!mIsOldStyle) {
+			if (!useList) {
 				mRenderer->FillRect(x-20,y-20,40,40,ARGB(220,0,0,0));
 				mRenderer->DrawRect(x-20,y-20,40,40,ARGB(255,255,128,0));
 				gFont->DrawShadowedString(mCategories[mCategoryIndex].buttons[i].name,x,y-5,JGETEXT_CENTER);
@@ -277,11 +305,11 @@ void TeamMenu::Render()
 	if (mCategoryIndex != MAIN1 && mSelectedIndex != -1) {
 		int id = mCategories[mCategoryIndex].buttons[mSelectedIndex].id;
 		if (mCategoryIndex == CT) {
-			mCT->SetQuads(gPlayersQuads[CT][id],gPlayersDeadQuads[0][0]);
+			mCT->SetQuads(gPlayersQuads[id],gPlayersDeadQuads[id]);
 			mCT->Render(0,0);
 		}
 		else if (mCategoryIndex == T) {
-			mT->SetQuads(gPlayersQuads[T][id],gPlayersDeadQuads[0][0]);
+			mT->SetQuads(gPlayersQuads[id],gPlayersDeadQuads[id]);
 			mT->Render(0,0);
 		}
 	}

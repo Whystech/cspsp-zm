@@ -6,6 +6,67 @@ static bool IsTeamRoundMode(int gameType)
 	return gameType == TEAM || gameType == EXTERMINATION || gameType == INFECTION || gameType == HORDE;
 }
 
+static void RenderWeaponLaser(JRenderer* renderer, TileMap* map, Person* person, float cameraX, float cameraY)
+{
+	if (person == NULL || person->mState == DEAD) return;
+	GunObject* gunObject = person->GetCurrentGun();
+	if (gunObject == NULL || gunObject->mGun == NULL) return;
+	int gunId = gunObject->mGun->mId;
+	if (gunId < 0 || gunId >= MAX_GUNS) return;
+	LaserConfig config = gLaserConfigs[gunId];
+	if (!config.enabled || config.alpha <= 0 || config.width <= 0.0f || config.range <= 0.0f) return;
+
+	float directionX = cosf(person->mFacingAngle);
+	float directionY = sinf(person->mFacingAngle);
+	float startX = person->mX+directionX*config.offsetX-directionY*config.offsetY;
+	float startY = person->mY+directionY*config.offsetX+directionX*config.offsetY;
+	float endX = startX+directionX*config.range;
+	float endY = startY+directionY*config.range;
+	Line laserLine(startX,startY,endX,endY);
+	float closestDistanceSquared = config.range*config.range;
+	for (unsigned int i=0; i<map->mCollisionLines.size(); i++) {
+		if (!map->mCollisionLines[i].bullets) continue;
+		Line collisionLine = map->mCollisionLines[i].line;
+		Vector2D intersection;
+		if (!LineLineIntersect(laserLine,collisionLine,intersection,true)) continue;
+		float dx = intersection.x-startX;
+		float dy = intersection.y-startY;
+		float distanceSquared = dx*dx+dy*dy;
+		if (distanceSquared < closestDistanceSquared) {
+			closestDistanceSquared = distanceSquared;
+			endX = intersection.x;
+			endY = intersection.y;
+		}
+	}
+
+	float screenStartX = startX-(cameraX-SCREEN_WIDTH_2);
+	float screenStartY = startY-(cameraY-SCREEN_HEIGHT_2);
+	float screenEndX = endX-(cameraX-SCREEN_WIDTH_2);
+	float screenEndY = endY-(cameraY-SCREEN_HEIGHT_2);
+	float actualDistance = sqrtf(closestDistanceSquared);
+	int segments = config.falloffEnabled && config.falloff > 0.0f ? 12 : 1;
+	for (int segment=0; segment<segments; segment++) {
+		float start = segment/(float)segments;
+		float end = (segment+1)/(float)segments;
+		float normalizedDistance = (actualDistance/config.range)*((start+end)*0.5f);
+		float intensity = segments == 1 ? 1.0f : powf(std::max(0.0f,1.0f-normalizedDistance),config.falloff);
+		int alpha = (int)(config.alpha*intensity);
+		renderer->DrawLine(screenStartX+(screenEndX-screenStartX)*start,
+			screenStartY+(screenEndY-screenStartY)*start,
+			screenStartX+(screenEndX-screenStartX)*end,
+			screenStartY+(screenEndY-screenStartY)*end,
+			config.width,ARGB(alpha,config.red,config.green,config.blue));
+	}
+	if (config.endDot) {
+		float normalizedDistance = actualDistance/config.range;
+		float intensity = config.falloffEnabled && config.falloff > 0.0f ?
+			powf(std::max(0.0f,1.0f-normalizedDistance),config.falloff) : 1.0f;
+		if (intensity < 0.15f) intensity = 0.15f;
+		int alpha = (int)(config.alpha*intensity);
+		renderer->FillCircle(screenEndX,screenEndY,config.endDotScale,ARGB(alpha,config.red,config.green,config.blue));
+	}
+}
+
 //------------------------------------------------------------------------------------------------
 Game::Game(GameApp* parent): GameState(parent) 
 {
@@ -86,6 +147,8 @@ void Game::Init()
 	mNumTs = 0;
 	mNumRemainingCTs = 0;
 	mNumRemainingTs = 0;
+	mPreviousRemainingCTs = 0;
+	mLastSurvivorMessageTimer = 0.0f;
 
 	mNumRounds = 0;
 	mNumCTWins = 0;
@@ -1266,6 +1329,17 @@ void Game::Update(float dt)
 
 	mMap->Update(dt*mTimeMultiplier);
 	gParticleEngine->Update(dt*mTimeMultiplier);
+	if (mNumRemainingCTs == 1 && mPreviousRemainingCTs > 1) {
+		mLastSurvivorMessageTimer = 2000.0f;
+	}
+	else if (mNumRemainingCTs != 1) {
+		mLastSurvivorMessageTimer = 0.0f;
+	}
+	if (mLastSurvivorMessageTimer > 0.0f) {
+		mLastSurvivorMessageTimer -= dt;
+		if (mLastSurvivorMessageTimer < 0.0f) mLastSurvivorMessageTimer = 0.0f;
+	}
+	mPreviousRemainingCTs = mNumRemainingCTs;
 
 	if (mGameType == FFA || mGameType == CTF) {
 		mRespawnTimer -= dt*mTimeMultiplier;
@@ -1572,6 +1646,11 @@ void Game::Render()
 		}*/
 	}
 
+	for (unsigned int i=0; i<mPeople.size(); i++) {
+		if (mPeople[i]->mTeam == NONE || mPeople[i]->mState == DEAD) continue;
+		RenderWeaponLaser(mRenderer,mMap,mPeople[i],dx,dy);
+	}
+
 	gFont->SetScale(0.7f);
 	for(unsigned int i=0; i<mPeople.size(); i++)
 	{
@@ -1840,7 +1919,7 @@ void Game::Render()
 			gFont->DrawShadowedString(buffer, SCREEN_WIDTH_2, SCREEN_HEIGHT-gHudConfig.timerBottomOffset, JGETEXT_CENTER);
 		}
 
-		if (mPlayer->mTeam == CT && mNumRemainingCTs == 1 && mRoundState == STARTED && mWinner == NONE) {
+		if (mPlayer->mTeam == CT && mLastSurvivorMessageTimer > 0.0f && mRoundState == STARTED && mWinner == NONE) {
 			gFont->SetScale(0.9f);
 			gFont->SetColor(ARGB(255,255,200,0));
 			gFont->DrawShadowedString("Last survivor standing", SCREEN_WIDTH_2, 100.0f, JGETEXT_CENTER);
@@ -2540,10 +2619,10 @@ void Game::Render()
 				gFont->SetColor(ARGB(255,255,64,64));
 				char buffer[128];
 				if (IsTeamRoundMode(mGameType)) {
-					sprintf(buffer,"Zombies (%d/%d)",mNumRemainingTs,scoreboardTs);
+					sprintf(buffer,"%s (%d/%d)",gTeamNames[T],mNumRemainingTs,scoreboardTs);
 				}
 				else if (mGameType == CTF) {
-					sprintf(buffer,"Zombies (%d)",mNumTs);
+					sprintf(buffer,"%s (%d)",gTeamNames[T],mNumTs);
 				}
 				gFont->DrawString(buffer, 55.0f, y, JGETEXT_LEFT);
 
@@ -2608,10 +2687,10 @@ void Game::Render()
 				//char buffer[128];
 
 				if (IsTeamRoundMode(mGameType)) {
-					sprintf(buffer,"UN Forces (%d/%d)",mNumRemainingCTs,scoreboardCTs);
+					sprintf(buffer,"%s (%d/%d)",gTeamNames[CT],mNumRemainingCTs,scoreboardCTs);
 				}
 				else if (mGameType == CTF) {
-					sprintf(buffer,"UN Forces (%d)",mNumCTs);
+					sprintf(buffer,"%s (%d)",gTeamNames[CT],mNumCTs);
 				}
 				gFont->DrawString(buffer, 55.0f, y, JGETEXT_LEFT);
 
@@ -2825,7 +2904,9 @@ void Game::Render()
 				gFont->DrawShadowedString("Squad Wiped", 240.0f, 100.0f, JGETEXT_CENTER);
 			}
 			else {
-				gFont->DrawShadowedString("Zombies Win", 240.0f, 100.0f, JGETEXT_CENTER);
+				char winnerText[48];
+				sprintf(winnerText,"%s Win",gTeamNames[T]);
+				gFont->DrawShadowedString(winnerText, 240.0f, 100.0f, JGETEXT_CENTER);
 			}
 		}
 		else if (mWinner == CT) {
@@ -2833,7 +2914,9 @@ void Game::Render()
 				gFont->DrawShadowedString("Wave Cleared", 240.0f, 100.0f, JGETEXT_CENTER);
 			}
 			else {
-				gFont->DrawShadowedString("UN Forces Win", 240.0f, 100.0f, JGETEXT_CENTER);
+				char winnerText[48];
+				sprintf(winnerText,"%s Win",gTeamNames[CT]);
+				gFont->DrawShadowedString(winnerText, 240.0f, 100.0f, JGETEXT_CENTER);
 			}
 		}
 		else if (mWinner == TIE) {

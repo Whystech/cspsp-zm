@@ -12,6 +12,7 @@ Person::Person(JQuad* quads[], JQuad* deadquad, std::vector<Bullet*>* bullets, s
 	SetQuads(quads,deadquad);
 	mX = 0.0f;
 	mY = 0.0f;
+	mRenderScale = 1.0f;
 	mOldX = 0.0f;
 	mOldY = 0.0f;
 	mWalkX = 0.0f;
@@ -417,14 +418,15 @@ void Person::Render(float x, float y)
 	float offsetX = (x-SCREEN_WIDTH_2);
 	float offsetY = (y-SCREEN_HEIGHT_2);
 	if (mState != DEAD) {	
+		float scale = mRenderScale;
 		float rotation = mRotation+M_PI_2;
-		float centerx = mX-offsetX-4*cosf(rotation);
-		float centery = mY-offsetY-4*sinf(rotation);
+		float centerx = mX-offsetX-4*scale*cosf(rotation);
+		float centery = mY-offsetY-4*scale*sinf(rotation);
 		float x = centerx;
 		float y = centery;
 
 		float offsetangle = mWalkTime/WALKTIME*(M_PI_2);
-		float offset = 7*sinf(offsetangle);
+		float offset = 7*scale*sinf(offsetangle);
 		if (mWalkState == WALK3 || mWalkState == WALK4) {
 			//offset = -offset;
 			mQuads[LEGS]->SetHFlip(true);	
@@ -444,7 +446,7 @@ void Person::Render(float x, float y)
 			rotation += 2*M_PI;
 		}*/
 		
-		mRenderer->RenderQuad(mQuads[LEGS],x,y,mWalkAngle-M_PI_2,1.0f,offset/7);
+		mRenderer->RenderQuad(mQuads[LEGS],x,y,mWalkAngle-M_PI_2,scale,offset/7);
 		//mQuads[RIGHTLEG]->SetVFlip(true);
 		//mRenderer->RenderQuad(mQuads[LEFTLEG],x+4*cosf(mWalkAngle-M_PI_2),y+4*sinf(mWalkAngle-M_PI_2),mWalkAngle-M_PI_2,1.0f,-offset/7);
 		//mRenderer->FillCircle(x+4*cosf(mWalkAngle-M_PI_2) - offset*cosf(mWalkAngle),y+4*sinf(mWalkAngle-M_PI_2) - offset*sinf(mWalkAngle),3.0f,ARGB(255,0,0,0));
@@ -471,12 +473,12 @@ void Person::Render(float x, float y)
 		//mRenderer->RenderQuad(mQuads[mGunIndex],mX-offsetX,mY-offsetY,mRotation);
 
 		rotation = mRotation+M_PI_2;
-		centerx = mX-offsetX-5*cosf(rotation);
-		centery = mY-offsetY-5*sinf(rotation);
+		centerx = mX-offsetX-5*scale*cosf(rotation);
+		centery = mY-offsetY-5*scale*sinf(rotation);
 		x = centerx;
 		y = centery;
-		dx = 10*cosf(mRotation+mKeyFrame.angles[BODY]);
-		dy = 10*sinf(mRotation+mKeyFrame.angles[BODY]);
+		dx = 10*scale*cosf(mRotation+mKeyFrame.angles[BODY]);
+		dy = 10*scale*sinf(mRotation+mKeyFrame.angles[BODY]);
 		x2 = x+dx;
 		y2 = y+dy;
 
@@ -492,19 +494,19 @@ void Person::Render(float x, float y)
 			mRenderer->RenderQuad(gFlagQuad,tempx,tempy,mRotation+mKeyFrame.angles[BODY]-M_PI_4*0.6f);
 		}
 
-		mRenderer->RenderQuad(mQuads[BODY],x,y,mRotation+mKeyFrame.angles[BODY]);
+		mRenderer->RenderQuad(mQuads[BODY],x,y,mRotation+mKeyFrame.angles[BODY],scale,scale);
 		//mRenderer->DrawLine(x,y,x2,y2,ARGB(255,255,255,255));
 		x = x2;
 		y = y2;
-		x2 = x+8*cosf(rotation+mKeyFrame.angles[LEFTARM]);
-		y2 = y+8*sinf(rotation+mKeyFrame.angles[LEFTARM]);
-		mRenderer->RenderQuad(mQuads[LEFTARM],x,y,mRotation+mKeyFrame.angles[LEFTARM]);
+		x2 = x+8*scale*cosf(rotation+mKeyFrame.angles[LEFTARM]);
+		y2 = y+8*scale*sinf(rotation+mKeyFrame.angles[LEFTARM]);
+		mRenderer->RenderQuad(mQuads[LEFTARM],x,y,mRotation+mKeyFrame.angles[LEFTARM],scale,scale);
 		//mRenderer->DrawLine(x,y,x2,y2,ARGB(255,255,255,255));
 		x = x2;
 		y = y2;
 		//x2 = x+10*cosf(mRotation+mKeyFrame.angles[LEFTHAND]);
 		//y2 = y+10*sinf(mRotation+mKeyFrame.angles[LEFTHAND]);
-		mRenderer->RenderQuad(mQuads[LEFTHAND],x,y,mRotation+mKeyFrame.angles[LEFTHAND]);
+		mRenderer->RenderQuad(mQuads[LEFTHAND],x,y,mRotation+mKeyFrame.angles[LEFTHAND],scale,scale);
 		//mRenderer->DrawLine(x,y,x2,y2,ARGB(255,255,255,255));
 		x = centerx;
 		y = centery;
@@ -513,22 +515,22 @@ void Person::Render(float x, float y)
 		//mRenderer->DrawLine(x,y,x2,y2,ARGB(255,255,255,255));
 		x = x2;
 		y = y2;
-		x2 = x+8*cosf(rotation+mKeyFrame.angles[RIGHTARM]);
-		y2 = y+8*sinf(rotation+mKeyFrame.angles[RIGHTARM]);
-		mRenderer->RenderQuad(mQuads[RIGHTARM],x,y,mRotation+mKeyFrame.angles[RIGHTARM]);
+		x2 = x+8*scale*cosf(rotation+mKeyFrame.angles[RIGHTARM]);
+		y2 = y+8*scale*sinf(rotation+mKeyFrame.angles[RIGHTARM]);
+		mRenderer->RenderQuad(mQuads[RIGHTARM],x,y,mRotation+mKeyFrame.angles[RIGHTARM],scale,scale);
 		//mRenderer->DrawLine(x,y,x2,y2,ARGB(255,255,255,255));
 		x = x2;
 		y = y2;
-		x2 = x+10*cosf(rotation+mKeyFrame.angles[RIGHTHAND]);
-		y2 = y+10*sinf(rotation+mKeyFrame.angles[RIGHTHAND]);
-		mRenderer->RenderQuad(mQuads[RIGHTHAND],x,y,mRotation+mKeyFrame.angles[RIGHTHAND]);
+		x2 = x+10*scale*cosf(rotation+mKeyFrame.angles[RIGHTHAND]);
+		y2 = y+10*scale*sinf(rotation+mKeyFrame.angles[RIGHTHAND]);
+		mRenderer->RenderQuad(mQuads[RIGHTHAND],x,y,mRotation+mKeyFrame.angles[RIGHTHAND],scale,scale);
 		//mRenderer->DrawLine(x,y,x2,y2,ARGB(255,255,255,255));
 		x = x2;
 		y = y2;
 		//x2 = x+11*cosf(mRotation+mKeyFrame.angles[GUN]);
 		//y2 = y+11*sinf(mRotation+mKeyFrame.angles[GUN]);
 		if (mTeam != T || mGunIndex != KNIFE || mGuns[mGunIndex]->mGun->mId == ZOMBIECLAWS) {
-			mRenderer->RenderQuad(mGuns[mGunIndex]->mGun->mHandQuad,x,y,mLastFireAngle+mKeyFrame.angles[GUN]);
+			mRenderer->RenderQuad(mGuns[mGunIndex]->mGun->mHandQuad,x,y,mLastFireAngle+mKeyFrame.angles[GUN],scale,scale);
 		}
 
 		if (mMuzzleFlashTime > 0.0f) {
@@ -538,10 +540,10 @@ void Person::Render(float x, float y)
 			y = y2;*/
 			//int alpha = mMuzzleFlashTime/100.0f*255;
 			JQuad* muzzleFlash = GetMuzzleFlashQuad(mMuzzleFlashType,mMuzzleFlashFrame);
-			if (muzzleFlash != NULL) mRenderer->RenderQuad(muzzleFlash,x,y,mMuzzleFlashAngle-M_PI_2);
+			if (muzzleFlash != NULL) mRenderer->RenderQuad(muzzleFlash,x,y,mMuzzleFlashAngle-M_PI_2,scale,scale);
 		}
 
-		mRenderer->RenderQuad(mQuads[5],centerx,centery,mRotation);
+		mRenderer->RenderQuad(mQuads[5],centerx,centery,mRotation,scale,scale);
 		//mRenderer->DrawLine(x,y,x2,y2,ARGB(255,255,255,255));
 		/*mAnimationAngles[BODY] = 0.0f;
 		mAnimationAngles[RIGHTARM] = 0.0f;
@@ -556,7 +558,7 @@ void Person::Render(float x, float y)
 	else {
 		if (mFadeTime > 0) {
 			mDeadQuad->SetColor(ARGB((int)(mFadeTime*(255.0f/1000.0f)),255,255,255));
-			mRenderer->RenderQuad(mDeadQuad,mX-offsetX,mY-offsetY,mRotation);
+			mRenderer->RenderQuad(mDeadQuad,mX-offsetX,mY-offsetY,mRotation,mRenderScale,mRenderScale);
 		}
 	}
 }
@@ -827,6 +829,8 @@ void Person::SetKnifeForTeam(int team)
 	}
 
 	mKnifeGun = new Gun(gGuns[meleeWeaponId]);
+	mKnifeGun->mHandQuad = gGunHandQuads[meleeWeaponId];
+	mKnifeGun->mGroundQuad = gGunGroundQuads[meleeWeaponId];
 	mGuns[KNIFE] = new GunObject(mKnifeGun, 0, 0);
 	mGunIndex = KNIFE;
 }
@@ -1202,10 +1206,11 @@ void Person::LeaveCorpse() {
 }
 
 void Person::SetTeamAppearance(int team) {
+	int skin = GetDefaultPlayerSkin(team);
 	for (int i=0; i<NUM_QUADS; i++) {
-		mQuads[i] = gPlayersQuads[team][0][i];
+		mQuads[i] = gPlayersQuads[skin][i];
 	}
-	mDeadQuad = gPlayersDeadQuads[team][0];
+	mDeadQuad = gPlayersDeadQuads[skin];
 }
 
 void Person::RestoreOriginalAppearance() {

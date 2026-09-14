@@ -43,24 +43,19 @@ void AI::Update(float dt)
 	//if (mGunIndex != KNIFE) Switch(KNIFE);
 	float dx = mOldX-mX;
 	float dy = mOldY-mY;
-	if (fabs(dx) >= EPSILON || fabs(dy) >= EPSILON) {
-		if (dx*dx + dy*dy < 0.0016f) {
-			mStuckTimer += dt;
-			if (mStuckTimer > gBotConfig.stuckTime) {
-				mPath.clear();
-				mTargetNode = mNode;
-			}
-		}
-		else {
-			mStuckTimer = 0.0f;
-		}
+	if (dx*dx + dy*dy < 0.0016f) {
+		mStuckTimer += dt;
 	}
 	else {
-		mStuckTimer += dt;
-		if (mStuckTimer > gBotConfig.stuckTime) {
-			mPath.clear();
-			mTargetNode = mNode;
-		}
+		mStuckTimer = 0.0f;
+	}
+	if (mStuckTimer > gBotConfig.stuckTime) {
+		mPath.clear();
+		mTargetNode = NULL;
+		mNode = NULL;
+		mTarget = GetClosestPerson();
+		SetAIState(AI_SEARCHING);
+		mStuckTimer = 0.0f;
 	}
 
 	if (mIsFlashed) {
@@ -103,6 +98,12 @@ void AI::Update(float dt)
 			float dy = mTargetNode->mY-mY;
 			float distance = dx*dx + dy*dy;
 			if (distance < gBotConfig.waypointTolerance*gBotConfig.waypointTolerance) {
+				if (mTargetNode->mConnections.empty()) {
+					mNode = NULL;
+					mTargetNode = NULL;
+					SetAIState(AI_SEARCHING);
+					break;
+				}
 				Node* mTempNode;
 				for (int i=0;i<50;i++) {
 					mTempNode = mTargetNode->mConnections[rand()%mTargetNode->mConnections.size()];
@@ -451,7 +452,7 @@ void AI::Update(float dt)
 		if (mBuyGun->mType == PRIMARY) {
 			mMoney -= mBuyGun->mCost;
 			Drop(PRIMARY);
-			GunObject *gun = new GunObject(mBuyGun,mBuyGun->mClip,0);
+			GunObject *gun = new GunObject(mBuyGun,mBuyGun->mClip,mBuyGun->mClip*(mBuyGun->mNumClips-1));
 			PickUp(gun);
 			//mPlayer->mGuns[PRIMARY] = gun;
 			//mPlayer->mGunIndex = PRIMARY;
@@ -500,7 +501,15 @@ void AI::Reset()
 	mStuckTimer = 0.0f;
 
 	if (mBuyGun == NULL) {
-		mBuyGun = &(*mGameGuns)[7+rand()%18];
+		std::vector<Gun*> buyGuns;
+		int buyTeam = (mTeam == T) ? BUY_TEAM_T : BUY_TEAM_CT;
+		for (int i=0; i<MAX_GUNS; i++) {
+			Gun* gun = &(*mGameGuns)[i];
+			if (gun->mType != PRIMARY || gun->mBuyCategory == BUY_CATEGORY_NONE) continue;
+			if ((gun->mBuyTeams & buyTeam) == 0) continue;
+			buyGuns.push_back(gun);
+		}
+		if (!buyGuns.empty()) mBuyGun = buyGuns[rand()%buyGuns.size()];
 	}
 
 	Person::Reset();

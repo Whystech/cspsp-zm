@@ -47,6 +47,42 @@ not override server-owned gameplay results.
   resources.txt  Texture paths, including gfx/radar.png
   limits.txt     HUD event queue capacities
   tracers.txt    Per-weapon client-only tracer styles
+  lasers.txt     Per-weapon client-only aiming lasers
+
+LASER CUSTOMIZATION
+-------------------
+lasers.txt uses optional records keyed by weapon ID:
+  id enabled falloffEnabled red green blue alpha width range falloff endDot endDotScale offsetX offsetY
+
+Boolean fields use 0 or 1. Falloff disabled, or a falloff value of 0, produces
+a solid beam. The optional endpoint dot shares the beam color and has its own
+scale. offsetX moves the emitter forward/back along the aim direction and
+offsetY moves it sideways. Old 12-field records without offsets remain valid
+and default to 12,0. Missing IDs have no laser. Gun Editor.jar provides a
+Laser tab with a live preview for all fields.
+
+PLAYER AND TEAM DATA
+--------------------
+players.txt controls both team display names and selectable player skins. It
+uses row-based entries:
+  team <team ID> <display name>
+  player <skin ID> <team ID> <atlas cell> <member name>
+
+Team IDs are 0 for T and 1 for CT. Skin IDs are stable network values from 0
+through 31 and may be sparse or listed in any order. Each atlas page contains
+eight 32-pixel columns shared by its live and dead textures. Cells 0..7 use
+players/players_dead, 8..15 use players_page_2/players_dead_page_2, and the same
+pattern continues through page 4. A row creates a menu slot only when its ID,
+team, name, and atlas cell are valid; duplicate IDs and cells outside either
+texture are skipped.
+Long team lists scroll automatically. If a team has no valid rows, its four
+original definitions are restored when the original atlas cells are available.
+
+To add genuinely different skins, create matching 256x64 live/dead atlas pages,
+configure their paths in resources.txt, and append player rows using that page's
+cell range. Up to 32 total IDs can be configured, with at most 16 assigned to
+either team; no empty placeholder slots are created. Run generate_players2.ps1
+from the project directory to reproduce the included page-2 original variants.
 
 The resources.txt ammo_ground path selects the 32x32 image used for both map
 ammo pickups and the Ammo entry in the buy menu.
@@ -54,6 +90,7 @@ ammo pickups and the Ammo entry in the buy menu.
 OTHER FILES
 -----------
   guns.txt       Weapon definitions; it uses its own row-based format
+  players.txt    Team names and player skin definitions
   animations.txt Animation definitions; it uses its own row-based format
   favorites.txt  Saved server favorites
 

@@ -33,14 +33,14 @@ std::vector<Node*> AStar::GetPath(Node* start, Node* end, int randomfactor)
 	bool exists = true;
 	Node* currentnode;
 	while(true) {
+		if (openlist.empty()) {
+			exists = false;
+			break;
+		}
 		std::sort(openlist.begin(),openlist.end(),SortByF());
 		currentnode = openlist.back();
 
 		if (currentnode == end) break; //found end
-		if (openlist.size() == 0) {
-			exists = false;
-			break;
-		}
 
 		openlist.pop_back();
 		closedlist.push_back(currentnode);
@@ -81,9 +81,6 @@ std::vector<Node*> AStar::GetPath(Node* start, Node* end, int randomfactor)
 			tempnode = tempnode->mParent;
 			if (tempnode->mParent == NULL) break;
 		}
-	}
-	else {
-		path.push_back(start);
 	}
 	return path;
 }
@@ -163,6 +160,7 @@ int AStar::GetG(Node* node, Node* parent, int randomfactor)
 {
 	int dx = node->mX-parent->mX;
 	int dy = node->mY-parent->mY;
+	if (randomfactor < 1) randomfactor = 1;
 	return (int)sqrtf(dx*dx + dy*dy) + rand()%randomfactor;
 }
 
