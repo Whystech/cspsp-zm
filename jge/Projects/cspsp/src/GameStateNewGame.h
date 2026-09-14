@@ -48,7 +48,7 @@ class GameStateNewGame:	public GameState,
 {
 private:
 	ListBox *mMapsListBox;
-	JGuiController* mModeControllers[5];
+	JGuiController* mModeControllers[6];
 	int mStage;
 	int mSetupIndex;
 	bool mSetupMain;
@@ -57,6 +57,7 @@ private:
 	int mHordeRegroup;
 	int mHordeWaveDelay;
 	int mHordeReviveSurvivors;
+	int mHordeTimer;
 
 	char mSearchString[256];
 	bool mMatch;

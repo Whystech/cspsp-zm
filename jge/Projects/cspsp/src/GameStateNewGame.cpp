@@ -111,14 +111,17 @@ void GameStateNewGame::Create()
 	mModeControllers[4] = new JGuiController(4,this,JGUI_STYLE_LEFTRIGHT);
 	mModeControllers[4]->Add(new MenuItem(MODE_OPTION_OFF,gFont,"Off",x,150,TYPE_OPTION,JGETEXT_LEFT));
 	mModeControllers[4]->Add(new MenuItem(MODE_OPTION_ON,gFont,"On",x+70,150,TYPE_OPTION,JGETEXT_LEFT));
-	for (int i=0; i<5; i++) mModeControllers[i]->SetActive(false);
+	mModeControllers[5] = new JGuiController(5,this,JGUI_STYLE_LEFTRIGHT);
+	mModeControllers[5]->Add(new MenuItem(MODE_OPTION_OFF,gFont,"Off",x,175,TYPE_OPTION,JGETEXT_LEFT));
+	mModeControllers[5]->Add(new MenuItem(MODE_OPTION_ON,gFont,"On",x+70,175,TYPE_OPTION,JGETEXT_LEFT));
+	for (int i=0; i<6; i++) mModeControllers[i]->SetActive(false);
 }
 
 
 void GameStateNewGame::Destroy()
 {
 	SAFE_DELETE(mMapsListBox);
-	for (int i=0; i<5; i++) SAFE_DELETE(mModeControllers[i]);
+	for (int i=0; i<6; i++) SAFE_DELETE(mModeControllers[i]);
 }
 
 
@@ -142,7 +145,7 @@ void GameStateNewGame::Update(float dt)
 {
 	if (mStage == STAGE_MODE_SETUP) {
 		int firstController = gSinglePlayerMode == SINGLEPLAYER_INFECTION ? 0 : 2;
-		int setupCount = gSinglePlayerMode == SINGLEPLAYER_INFECTION ? 3 : 4;
+		int setupCount = gSinglePlayerMode == SINGLEPLAYER_INFECTION ? 3 : 5;
 		if (mSetupMain) {
 			if (mEngine->GetButtonClick(PSP_CTRL_UP) || mEngine->GetAnalogY()<64) {
 				mSetupIndex--;
@@ -329,6 +332,12 @@ void GameStateNewGame::LoadModeSettings()
 		if (strcmp(reviveSurvivors,"on") == 0) mHordeReviveSurvivors = MODE_OPTION_ON;
 		delete reviveSurvivors;
 	}
+	mHordeTimer = gShowHordeTimer ? MODE_OPTION_ON : MODE_OPTION_OFF;
+	char* hordeTimer = GetConfig("data/config.txt","show_horde_timer");
+	if (hordeTimer != NULL) {
+		mHordeTimer = strcmp(hordeTimer,"on") == 0 ? MODE_OPTION_ON : MODE_OPTION_OFF;
+		delete hordeTimer;
+	}
 	mModeControllers[0]->SetCurr(mRespawnStyle);
 	mModeControllers[1]->SetCurr(mInfectionDelay);
 	mModeControllers[2]->SetCurr(mHordeRegroup);
@@ -338,6 +347,7 @@ void GameStateNewGame::LoadModeSettings()
 	else if (mHordeWaveDelay == 15) hordeDelayIndex = 3;
 	mModeControllers[3]->SetCurr(hordeDelayIndex);
 	mModeControllers[4]->SetCurr(mHordeReviveSurvivors);
+	mModeControllers[5]->SetCurr(mHordeTimer);
 }
 
 void GameStateNewGame::SaveModeSettings()
@@ -353,6 +363,8 @@ void GameStateNewGame::SaveModeSettings()
 		sprintf(value,"%d",mHordeWaveDelay);
 		SetConfigValue("data/config.txt","horde_wave_delay",value);
 		SetConfigValue("data/config.txt","horde_revive_survivors",mHordeReviveSurvivors == MODE_OPTION_ON ? "on" : "off");
+		SetConfigValue("data/config.txt","show_horde_timer",mHordeTimer == MODE_OPTION_ON ? "on" : "off");
+		gShowHordeTimer = mHordeTimer == MODE_OPTION_ON;
 	}
 }
 
@@ -360,18 +372,19 @@ void GameStateNewGame::RenderModeSetup()
 {
 	mRenderer->ClearScreen(ARGB(255,255,255,255));
 	mRenderer->RenderQuad(gBgQuad,0.0f,0.0f);
-	mRenderer->FillRect(0,55,SCREEN_WIDTH,140,ARGB(150,0,0,0));
+	mRenderer->FillRect(0,55,SCREEN_WIDTH,165,ARGB(150,0,0,0));
 	gFont->SetColor(ARGB(255,255,255,255));
 	gFont->SetScale(1.0f);
 	gFont->DrawShadowedString(gSinglePlayerMode == SINGLEPLAYER_INFECTION ? "Infection Setup" : "Horde Setup",SCREEN_WIDTH_2,25,JGETEXT_CENTER);
 	gFont->SetScale(0.75f);
 	const char* firstLabel = gSinglePlayerMode == SINGLEPLAYER_INFECTION ? "Zombie Respawn" : "Survivor Regroup";
 	const char* secondLabel = gSinglePlayerMode == SINGLEPLAYER_INFECTION ? "Respawn Delay" : "Wave Delay";
-	int setupCount = gSinglePlayerMode == SINGLEPLAYER_INFECTION ? 3 : 4;
+	int setupCount = gSinglePlayerMode == SINGLEPLAYER_INFECTION ? 3 : 5;
 	const char* info[] = {
 		gSinglePlayerMode == SINGLEPLAYER_INFECTION ? "Choose where converted players return." : "Choose where survivors begin the next wave.",
 		gSinglePlayerMode == SINGLEPLAYER_INFECTION ? "Seconds before a converted player respawns." : "Seconds between Horde waves.",
 		gSinglePlayerMode == SINGLEPLAYER_INFECTION ? "Continue to map selection." : "Revive eliminated survivors after a cleared wave.",
+		"Show total survival time during the Horde run.",
 		"Continue to map selection."
 	};
 	if (mSetupMain) mRenderer->FillRect(0,95+mSetupIndex*25,SCREEN_WIDTH,20,ARGB(180,0,0,0));
@@ -379,13 +392,15 @@ void GameStateNewGame::RenderModeSetup()
 	gFont->DrawShadowedString(firstLabel,170,100,JGETEXT_RIGHT);
 	gFont->DrawShadowedString(secondLabel,170,125,JGETEXT_RIGHT);
 	if (gSinglePlayerMode == SINGLEPLAYER_HORDE) gFont->DrawShadowedString("Revive Survivors",170,150,JGETEXT_RIGHT);
+	if (gSinglePlayerMode == SINGLEPLAYER_HORDE) gFont->DrawShadowedString("Survival Timer",170,175,JGETEXT_RIGHT);
 	gFont->DrawShadowedString("Continue",170,100+(setupCount-1)*25,JGETEXT_RIGHT);
 	int firstController = gSinglePlayerMode == SINGLEPLAYER_INFECTION ? 0 : 2;
 	mModeControllers[firstController]->Render();
 	mModeControllers[firstController+1]->Render();
 	if (gSinglePlayerMode == SINGLEPLAYER_HORDE) mModeControllers[4]->Render();
+	if (gSinglePlayerMode == SINGLEPLAYER_HORDE) mModeControllers[5]->Render();
 	gFont->SetColor(ARGB(255,255,128,0));
-	gFont->DrawShadowedString(info[mSetupIndex],SCREEN_WIDTH_2,200,JGETEXT_CENTER);
+	gFont->DrawShadowedString(info[mSetupIndex],SCREEN_WIDTH_2,225,JGETEXT_CENTER);
 	gFont->SetColor(ARGB(255,255,255,255));
 	gFont->DrawShadowedString(mSetupMain ? "[X] Select     [O] Return" : "[DIR PAD/ANALOG] Change     [X] Select     [O] Cancel",SCREEN_WIDTH_2,SCREEN_HEIGHT_F-20,JGETEXT_CENTER);
 }
@@ -399,4 +414,5 @@ void GameStateNewGame::ButtonPressed(int controllerId, int controlId)
 	else if (controllerId == 2) mHordeRegroup = controlId;
 	else if (controllerId == 3) mHordeWaveDelay = controlId;
 	else if (controllerId == 4) mHordeReviveSurvivors = controlId;
+	else if (controllerId == 5) mHordeTimer = controlId;
 }

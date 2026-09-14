@@ -1082,12 +1082,10 @@ void GameStatePlay::ResetRound() {
 		delete mBullets[i];
 	}
 	mBullets.clear();
-	if (!mIsHordeMode) {
-		for (unsigned int i=0;i<mGunObjects.size();i++) {
-			delete mGunObjects[i];
-		}
-		mGunObjects.clear();
+	for (unsigned int i=0;i<mGunObjects.size();i++) {
+		delete mGunObjects[i];
 	}
+	mGunObjects.clear();
 	
 	for (int i=0; i<3; i++) {
 		gParticleSystems[i]->Stop(true);
