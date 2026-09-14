@@ -815,7 +815,7 @@ void GameStatePlay::Update(float dt)
 		}
 		else {
 			if (mIsHordeMode) mHordeWave = 1;
-			ResetRound();
+			ResetRound(true);
 		}
 	}
 	/*if (mNumRemainingCTs == 0 || mNumRemainingTs == 0) {
@@ -976,6 +976,15 @@ void GameStatePlay::NewGame() {
 		if (seconds == 3 || seconds == 5 || seconds == 10 || seconds == 15) mHordeWaveDelay = seconds;
 		delete hordeWaveDelay;
 	}
+	mHordeWaveReward = 3250;
+	char* hordeWaveReward = GetConfig("data/config.txt","horde_wave_reward");
+	if (hordeWaveReward == NULL) hordeWaveReward = GetConfig("data/modes.txt","horde_wave_reward");
+	if (hordeWaveReward != NULL) {
+		mHordeWaveReward = atoi(hordeWaveReward);
+		if (mHordeWaveReward < 0) mHordeWaveReward = 0;
+		else if (mHordeWaveReward > 32767) mHordeWaveReward = 32767;
+		delete hordeWaveReward;
+	}
 	mHordeReviveSurvivors = false;
 	char* hordeReviveSurvivors = GetConfig("data/config.txt","horde_revive_survivors");
 	if (hordeReviveSurvivors == NULL) hordeReviveSurvivors = GetConfig("data/modes.txt","horde_revive_survivors");
@@ -1061,7 +1070,7 @@ void GameStatePlay::NewGame() {
 
 }
 
-void GameStatePlay::ResetRound() {
+void GameStatePlay::ResetRound(bool awardMoney) {
 	mTimeMultiplier = 1.0f;
 	mNumRounds++;
 	if (mIsHordeMode) mHordeSurvivalTime = 0.0f;
@@ -1155,27 +1164,29 @@ void GameStatePlay::ResetRound() {
 		mCamera->mY = mPlayer->mY;
 	}
 
-	if (mWinner == NONE) {
-		if (mPlayer->mMoney < 3400) {
-			mPlayer->mMoney += 1400;
-			if (mPlayer->mMoney > 3400) {
-				mPlayer->mMoney = 3400;
-			}
-		}
-	}
-	else {
-		for (unsigned int i=0;i<mPeople.size();i++) {
-			if (mPeople[i]->mTeam == mWinner) {
-				mPeople[i]->mMoney += 3250;
-				if (mPeople[i]->mMoney > 16000) {
-					mPeople[i]->mMoney = 16000;
+	if (awardMoney) {
+		if (mWinner == NONE) {
+			if (mPlayer->mMoney < 3400) {
+				mPlayer->mMoney += 1400;
+				if (mPlayer->mMoney > 3400) {
+					mPlayer->mMoney = 3400;
 				}
 			}
-			else {
-				if (mPeople[i]->mMoney < 3400) {
-					mPeople[i]->mMoney += 1400;
-					if (mPeople[i]->mMoney > 3400) {
-						mPeople[i]->mMoney = 3400;
+		}
+		else {
+			for (unsigned int i=0;i<mPeople.size();i++) {
+				if (mPeople[i]->mTeam == mWinner) {
+					mPeople[i]->mMoney += 3250;
+					if (mPeople[i]->mMoney > 16000) {
+						mPeople[i]->mMoney = 16000;
+					}
+				}
+				else {
+					if (mPeople[i]->mMoney < 3400) {
+						mPeople[i]->mMoney += 1400;
+						if (mPeople[i]->mMoney > 3400) {
+							mPeople[i]->mMoney = 3400;
+						}
 					}
 				}
 			}
@@ -1215,7 +1226,7 @@ void GameStatePlay::ResetHordeWave() {
 			if (person->mState == DEAD && !mHordeReviveSurvivors) continue;
 			if (person->mState == DEAD) person->Reset();
 			person->mHealth = gPlayerConfig.ctMaxHealth;
-			person->mMoney += 3250;
+			person->mMoney += mHordeWaveReward;
 			if (person->mMoney > 16000) person->mMoney = 16000;
 			person->mIsActive = (mHordeRegroupStyle == RESPAWN_INPLACE);
 			person->SetMoveState(NOTMOVING);

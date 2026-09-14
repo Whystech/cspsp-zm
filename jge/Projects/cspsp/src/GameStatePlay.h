@@ -34,6 +34,7 @@ class GameStatePlay:	public Game,
 private:
 
 	AStar* mAStar;
+	int mHordeWaveReward;
 	/*float mRoundTimer;
 	float mRoundEndTimer;
 	int mRoundState;
@@ -76,7 +77,7 @@ public:
 	void CheckCollisions();
 	void CheckMapPickups(Person* person);
 	void NewGame();
-	void ResetRound();
+	void ResetRound(bool awardMoney = false);
 	void ResetHordeWave();
 	void Explode(Grenade* grenade);
 	void StopInput();

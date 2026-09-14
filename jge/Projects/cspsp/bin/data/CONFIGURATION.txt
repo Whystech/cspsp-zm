@@ -32,7 +32,7 @@ OFFLINE GAMEPLAY DATA
   player.txt     Team health/armor, pickups, money, movement and hit slowdown
   grenades.txt   Grenade fuse, flash and HE behavior
   modes.txt      Fallbacks for local mode options. Horde supports regroup,
-                 wave delay and horde_revive_survivors (on/off).
+                 wave delay, wave reward and horde_revive_survivors (on/off).
   bots.txt       Offline bot perception, movement and firing behavior
 
 CLIENT PRESENTATION DATA
@@ -47,6 +47,9 @@ not override server-owned gameplay results.
   resources.txt  Texture paths, including gfx/radar.png
   limits.txt     HUD event queue capacities
   tracers.txt    Per-weapon client-only tracer styles
+
+The resources.txt ammo_ground path selects the 32x32 image used for both map
+ammo pickups and the Ammo entry in the buy menu.
 
 OTHER FILES
 -----------
