@@ -11,6 +11,10 @@ background = gfx/bg.png
 logo = gfx/logo.png
 players = gfx/players.png
 players_dead = gfx/playersdead.png
+players_page_2 = gfx/players2.png
+players_dead_page_2 = gfx/playersdead2.png
+# Future pages use players_page_3/players_dead_page_3 and
+# players_page_4/players_dead_page_4.
 radar = gfx/radar.png
 buyzone = gfx/buyzone.png
 decals = gfx/decals.png

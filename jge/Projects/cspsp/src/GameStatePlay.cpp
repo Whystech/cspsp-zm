@@ -2,6 +2,7 @@
 
 GameStatePlay::GameStatePlay(GameApp* parent): Game(parent) 
 {
+	mHordeSpawnPending = false;
 	/*mSpecState = FREELOOK;
 	mSpecDead = false;
 	mRoundTimer = 0;
@@ -178,10 +179,12 @@ void GameStatePlay::Start()
 
 	char* name = GetConfig("data/config.txt","name");
 	if (name == NULL) {
-		mPlayer = new Person(gPlayersQuads[0][0], gPlayersDeadQuads[0][0], &mBullets, &mGunObjects, NONE, "player", mMovementStyle);
+		int defaultSkin = GetDefaultPlayerSkin(CT);
+		mPlayer = new Person(gPlayersQuads[defaultSkin], gPlayersDeadQuads[defaultSkin], &mBullets, &mGunObjects, NONE, "player", mMovementStyle);
 	}
 	else {
-		mPlayer = new Person(gPlayersQuads[0][0], gPlayersDeadQuads[0][0], &mBullets, &mGunObjects, NONE, name, mMovementStyle);
+		int defaultSkin = GetDefaultPlayerSkin(CT);
+		mPlayer = new Person(gPlayersQuads[defaultSkin], gPlayersDeadQuads[defaultSkin], &mBullets, &mGunObjects, NONE, name, mMovementStyle);
 		delete name;
 	}
 
@@ -646,8 +649,8 @@ void GameStatePlay::Update(float dt)
 						
 						mPlayer->mTeam = team;
 						mPlayer->mOriginalTeam = team;
-						if (team < 2 && type < 4) {
-							mPlayer->SetQuads(gPlayersQuads[team][type],gPlayersDeadQuads[team][type]);
+						if (IsPlayerSkinValid(type,team)) {
+							mPlayer->SetQuads(gPlayersQuads[type],gPlayersDeadQuads[type]);
 							//mPlayer->mQuads = gPlayersQuads[team][type];
 							//mPlayer->mDeadQuad = gPlayersDeadQuads[team][type];
 						}
@@ -778,7 +781,12 @@ void GameStatePlay::Update(float dt)
 	}
 	//float dt = mEngine->GetDelta();	// get number of milliseconds passed since last frame
 
+	int previousRoundState = mRoundState;
 	Game::Update(dt);
+	if (mIsHordeMode && mHordeSpawnPending && previousRoundState == FREEZETIME && mRoundState == STARTED) {
+		SpawnHordeWave();
+		mHordeSpawnPending = false;
+	}
 	for (unsigned int i=0; i<mMap->mPickups.size(); i++) {
 		MapPickup& pickup = mMap->mPickups[i];
 		if (pickup.active || pickup.respawnTime <= 0.0f) continue;
@@ -827,28 +835,6 @@ void GameStatePlay::Update(float dt)
 
 	mMap->Update(dt);
 	gParticleEngine->Update(dt);
-
-	mRoundTimer -= dt;
-	if (mRoundState == FREEZETIME) {
-
-		for(unsigned int i=0; i<mPeople.size(); i++)
-		{
-			mPeople[i]->mIsActive = false;
-		}			
-		if (mRoundTimer < 0) {
-			mRoundTimer = 120000;
-			mRoundState = STARTED;
-			for(unsigned int i=0; i<mPeople.size(); i++)
-			{
-				mPeople[i]->mIsActive = true;
-			}			
-		}
-	}
-	else if (mRoundState != FREEZETIME) {
-		if (mRoundTimer < 0) {
-			mRoundTimer = 0;
-		}
-	}
 
 	for(unsigned int i=0; i<mPeople.size(); i++)
 	{
@@ -1004,8 +990,8 @@ void GameStatePlay::NewGame() {
 	for (int i=0;i<mNumCTs;i++) {
 		char* botName = botNames[(botNameOffset+i)%botNameCount];
 
-		int type = rand()%4;
-		AI *ct = new AI(gPlayersQuads[CT][type], gPlayersDeadQuads[CT][type], &mBullets, &mGunObjects, mMap->mNodes, CT, botName, ABSOLUTE1);
+		int type = GetRandomPlayerSkin(CT);
+		AI *ct = new AI(gPlayersQuads[type], gPlayersDeadQuads[type], &mBullets, &mGunObjects, mMap->mNodes, CT, botName, ABSOLUTE1);
 		//ct->mSpawn = mMap->mCTSpawns[i];
 		//ct->SetPosition(mMap->mCTSpawns[i]->x,mMap->mCTSpawns[i]->y);
 		//ct->SetTotalRotation(M_PI_2);
@@ -1022,8 +1008,8 @@ void GameStatePlay::NewGame() {
 	for (int i=0;i<mNumTs;i++) {
 		char* botName = botNames[(botNameOffset+mNumCTs+i)%botNameCount];
 
-		int type = rand()%4;
-		AI *t = new AI(gPlayersQuads[T][type], gPlayersDeadQuads[T][type], &mBullets, &mGunObjects, mMap->mNodes, T, botName, ABSOLUTE1);
+		int type = GetRandomPlayerSkin(T);
+		AI *t = new AI(gPlayersQuads[type], gPlayersDeadQuads[type], &mBullets, &mGunObjects, mMap->mNodes, T, botName, ABSOLUTE1);
 		//t->mSpawn = mMap->mTSpawns[i];
 		//t->SetPosition(mMap->mTSpawns[i]->x,mMap->mTSpawns[i]->y);
 		//t->SetTotalRotation(M_PI_2);
@@ -1044,7 +1030,8 @@ void GameStatePlay::NewGame() {
 		strcpy(buffer,"spec");
 		strcat(buffer,numberbuffer);
 
-		Person* p = new Person(gPlayersQuads[0][0], gPlayersDeadQuads[0][0], &mBullets, &mGunObjects, NONE, buffer, mMovementStyle);
+		int defaultSkin = GetDefaultPlayerSkin(CT);
+		Person* p = new Person(gPlayersQuads[defaultSkin], gPlayersDeadQuads[defaultSkin], &mBullets, &mGunObjects, NONE, buffer, mMovementStyle);
 		p->mGuns[KNIFE] = new GunObject(&mGuns[0],0,0);
 		p->SetState(DEAD);
 		p->mTeam = NONE;
@@ -1072,6 +1059,7 @@ void GameStatePlay::NewGame() {
 
 void GameStatePlay::ResetRound(bool awardMoney) {
 	mTimeMultiplier = 1.0f;
+	mHordeSpawnPending = false;
 	mNumRounds++;
 	if (mIsHordeMode) mHordeSurvivalTime = 0.0f;
 
@@ -1208,6 +1196,7 @@ void GameStatePlay::ResetHordeWave() {
 	mBuyTimer = mBuyTime;
 	mWinner = NONE;
 	mFFAWinner = NULL;
+	mHordeSpawnPending = true;
 
 	mGrid->ClearCells();
 	for (unsigned int i=0; i<mBullets.size(); i++) delete mBullets[i];
@@ -1216,7 +1205,6 @@ void GameStatePlay::ResetHordeWave() {
 	mMap->ClearDecals();
 
 	int ctspawnindex = rand()%mMap->mNumCTs;
-	int tspawnindex = rand()%mMap->mNumTs;
 	mNumRemainingCTs = 0;
 	mNumRemainingTs = 0;
 
@@ -1244,14 +1232,6 @@ void GameStatePlay::ResetHordeWave() {
 			}
 			mNumRemainingCTs++;
 		}
-		else if (person->mTeam == T) {
-			bool keepCorpse = person->mHasCorpse;
-			person->Reset();
-			person->mHasCorpse = keepCorpse;
-			person->Teleport(mMap->mTSpawns[tspawnindex]->x,mMap->mTSpawns[tspawnindex]->y);
-			tspawnindex = (tspawnindex+1)%mMap->mNumTs;
-			mNumRemainingTs++;
-		}
 	}
 
 	if (mPlayer->mState != DEAD) {
@@ -1259,6 +1239,29 @@ void GameStatePlay::ResetHordeWave() {
 		mSpecState = NONE;
 		mCamera->mX = mPlayer->mX;
 		mCamera->mY = mPlayer->mY;
+	}
+	Hash();
+}
+
+void GameStatePlay::SpawnHordeWave() {
+	int tspawnindex = rand()%mMap->mNumTs;
+	mNumRemainingTs = 0;
+	for (unsigned int i=0; i<mPeople.size(); i++) {
+		Person* person = mPeople[i];
+		if (person->mTeam != T) continue;
+		bool keepCorpse = person->mHasCorpse;
+		person->Reset();
+		person->mHasCorpse = keepCorpse;
+		person->Teleport(mMap->mTSpawns[tspawnindex]->x,mMap->mTSpawns[tspawnindex]->y);
+		tspawnindex = (tspawnindex+1)%mMap->mNumTs;
+		person->mIsActive = true;
+		mNumRemainingTs++;
+		if (person == mPlayer) {
+			mSpec = mPlayer;
+			mSpecState = NONE;
+			mCamera->mX = mPlayer->mX;
+			mCamera->mY = mPlayer->mY;
+		}
 	}
 	Hash();
 }

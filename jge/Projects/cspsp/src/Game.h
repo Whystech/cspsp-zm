@@ -97,6 +97,8 @@ public:
 	int mNumTs;
 	int mNumRemainingCTs;
 	int mNumRemainingTs;
+	int mPreviousRemainingCTs;
+	float mLastSurvivorMessageTimer;
 
 	unsigned int mSpecIndex;
 	int mSpecState;

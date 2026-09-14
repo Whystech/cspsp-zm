@@ -178,6 +178,7 @@ public:
 
 	Person(JQuad* quads[], JQuad* deadquad, std::vector<Bullet*>* bullets, std::vector<GunObject*>* guns, int team, char* name, int movementstyle);
 	virtual ~Person();
+	float mRenderScale;
 
 	void PreUpdate(float dt);
 	virtual void Update(float dt);

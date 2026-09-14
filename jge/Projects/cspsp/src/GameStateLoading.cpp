@@ -8,6 +8,21 @@ static JTexture* LoadConfiguredTexture(JRenderer* renderer, char* key, char* fal
 	return texture;
 }
 
+static JTexture* LoadOptionalConfiguredTexture(JRenderer* renderer, char* key, bool mipmap)
+{
+	char* configured = GetConfig("data/resources.txt",key);
+	if (configured == NULL) return NULL;
+	FILE* file = fopen(configured,"rb");
+	if (file == NULL) {
+		delete[] configured;
+		return NULL;
+	}
+	fclose(file);
+	JTexture* texture = renderer->LoadTexture(configured,mipmap);
+	delete[] configured;
+	return texture;
+}
+
 static JSample* LoadConfiguredSample(JSoundSystem* soundSystem, char* key, char* fallback)
 {
 	char* configured = GetConfig("data/audio.txt",key);
@@ -23,6 +38,119 @@ static JSample* LoadConfiguredSampleWithLegacyKey(JSoundSystem* soundSystem, cha
 	JSample* sample = soundSystem->LoadSample(configured == NULL ? fallback : configured);
 	delete[] configured;
 	return sample;
+}
+
+static char* SkipPlayerDataWhitespace(char* text)
+{
+	while (*text == ' ' || *text == '\t') text++;
+	return text;
+}
+
+static void TrimPlayerDataText(char* text)
+{
+	int length = strlen(text);
+	while (length > 0 && (text[length-1] == '\r' || text[length-1] == '\n' || text[length-1] == ' ' || text[length-1] == '\t')) {
+		text[--length] = '\0';
+	}
+}
+
+static bool AddPlayerSkin(int id, int team, int atlasId, char* name, JTexture* playersTextures[], JTexture* playersDeadTextures[])
+{
+	if (id < 0 || id >= MAX_PLAYER_SKINS || team < T || team > CT || atlasId < 0 || name == NULL || name[0] == '\0') return false;
+	if (gTeamSkinCounts[team] >= MAX_PLAYER_SKINS/2) return false;
+	int page = atlasId/8;
+	int pageCell = atlasId%8;
+	if (page < 0 || page >= 4 || playersTextures[page] == NULL || playersDeadTextures[page] == NULL) return false;
+	JTexture* playersTexture = playersTextures[page];
+	JTexture* playersDeadTexture = playersDeadTextures[page];
+	if (gPlayerSkinLoaded[id] || pageCell*32+32 > playersTexture->mTexWidth || playersTexture->mTexHeight < 64) return false;
+	if (pageCell*32+29 > playersDeadTexture->mTexWidth || playersDeadTexture->mTexHeight < 47) return false;
+
+	int offsetX = pageCell*32;
+	gPlayersQuads[id][BODY] = new JQuad(playersTexture,offsetX,0,32,16);
+	gPlayersQuads[id][BODY]->SetHotSpot(16,8);
+	gPlayersQuads[id][HEAD] = new JQuad(playersTexture,offsetX+16,16,16,16);
+	gPlayersQuads[id][HEAD]->SetHotSpot(8,7);
+	gPlayersQuads[id][RIGHTARM] = new JQuad(playersTexture,offsetX+8,16,8,16);
+	gPlayersQuads[id][RIGHTARM]->SetHotSpot(4.0f,4.0f);
+	gPlayersQuads[id][RIGHTHAND] = new JQuad(playersTexture,offsetX,16,8,16);
+	gPlayersQuads[id][RIGHTHAND]->SetHotSpot(4.0f,3.0f);
+	gPlayersQuads[id][LEFTARM] = new JQuad(playersTexture,offsetX+8,16,8,16);
+	gPlayersQuads[id][LEFTARM]->SetHotSpot(4.0f,4.0f);
+	gPlayersQuads[id][LEFTARM]->SetHFlip(true);
+	gPlayersQuads[id][LEFTHAND] = new JQuad(playersTexture,offsetX,16,8,16);
+	gPlayersQuads[id][LEFTHAND]->SetHotSpot(4.0f,3.0f);
+	gPlayersQuads[id][LEFTHAND]->SetHFlip(true);
+	gPlayersQuads[id][LEGS] = new JQuad(playersTexture,offsetX,32,32,32);
+	gPlayersQuads[id][LEGS]->SetHotSpot(16,16);
+	gPlayersDeadQuads[id] = new JQuad(playersDeadTexture,offsetX,0,29,47);
+	gPlayersDeadQuads[id]->SetHotSpot(14,23);
+
+	gPlayerSkinLoaded[id] = true;
+	gPlayerSkinTeams[id] = team;
+	strncpy(gPlayerSkinNames[id],name,PLAYER_SKIN_NAME_LENGTH-1);
+	gPlayerSkinNames[id][PLAYER_SKIN_NAME_LENGTH-1] = '\0';
+	gTeamSkinIds[team][gTeamSkinCounts[team]++] = id;
+	return true;
+}
+
+static void AddLegacyPlayerSkins(int team, JTexture* playersTextures[], JTexture* playersDeadTextures[])
+{
+	static char* ctNames[] = {"SEAL TEAM 6","GSG-9","SAS","GIGN"};
+	static char* tNames[] = {"PHOENIX CONNEXION","ELITE CREW","ARCTIC AVENGERS","GUERILLA WARFARE"};
+	for (int i=0; i<4; i++) {
+		int id = team == CT ? i : i+4;
+		if (gPlayerSkinLoaded[id]) {
+			for (id=0; id<MAX_PLAYER_SKINS && gPlayerSkinLoaded[id]; id++) {}
+			if (id >= MAX_PLAYER_SKINS) return;
+		}
+		int atlasId = team == CT ? i+4 : i;
+		AddPlayerSkin(id,team,atlasId,team == CT ? ctNames[i] : tNames[i],playersTextures,playersDeadTextures);
+	}
+}
+
+static void LoadPlayerSkins(JTexture* playersTextures[], JTexture* playersDeadTextures[])
+{
+	strcpy(gTeamNames[T],"Zombies");
+	strcpy(gTeamNames[CT],"UN Forces");
+	gTeamSkinCounts[T] = 0;
+	gTeamSkinCounts[CT] = 0;
+	for (int id=0; id<MAX_PLAYER_SKINS; id++) {
+		gPlayerSkinLoaded[id] = false;
+		gPlayerSkinTeams[id] = NONE;
+		gPlayerSkinNames[id][0] = '\0';
+		gPlayersDeadQuads[id] = NULL;
+		for (int part=0; part<NUM_QUADS; part++) gPlayersQuads[id][part] = NULL;
+	}
+
+	FILE* file = fopen("data/players.txt","r");
+	char line[256];
+	while (file != NULL && fgets(line,sizeof(line),file) != NULL) {
+		char* text = SkipPlayerDataWhitespace(line);
+		if (*text == '\0' || *text == '\r' || *text == '\n' || *text == '#') continue;
+		int team = 0;
+		int consumed = 0;
+		if (sscanf(text,"team %d %n",&team,&consumed) == 1 && team >= T && team <= CT) {
+			char* name = SkipPlayerDataWhitespace(text+consumed);
+			TrimPlayerDataText(name);
+			if (name[0] != '\0') {
+				strncpy(gTeamNames[team],name,TEAM_NAME_LENGTH-1);
+				gTeamNames[team][TEAM_NAME_LENGTH-1] = '\0';
+			}
+			continue;
+		}
+		int id = 0;
+		int atlasId = 0;
+		consumed = 0;
+		if (sscanf(text,"player %d %d %d %n",&id,&team,&atlasId,&consumed) == 3) {
+			char* name = SkipPlayerDataWhitespace(text+consumed);
+			TrimPlayerDataText(name);
+			AddPlayerSkin(id,team,atlasId,name,playersTextures,playersDeadTextures);
+		}
+	}
+	if (file != NULL) fclose(file);
+	if (gTeamSkinCounts[CT] == 0) AddLegacyPlayerSkins(CT,playersTextures,playersDeadTextures);
+	if (gTeamSkinCounts[T] == 0) AddLegacyPlayerSkins(T,playersTextures,playersDeadTextures);
 }
 
 GameStateLoading::GameStateLoading(GameApp* parent): GameState(parent) {}
@@ -94,54 +222,19 @@ void GameStateLoading::Render()
 int GameStateLoading::Load(int stage) {
 	switch (stage) {
 		case 0: {
-			/*gPlayersQuads = new JQuad*[mParent->mPlayersTexture->mTexWidth/32];
-			for (int i=0;i<mParent->mPlayersTexture->mTexWidth/32;i++) {
-				gPlayersQuads[i] = new JQuad(mParent->mPlayersTexture,i*32,0,32,32);
-				gPlayersQuads[i]->SetHotSpot(16,10);
+			JTexture* playersTextures[4];
+			JTexture* playersDeadTextures[4];
+			playersTextures[0] = LoadConfiguredTexture(mRenderer,"players","gfx/players.png",true);
+			playersDeadTextures[0] = LoadConfiguredTexture(mRenderer,"players_dead","gfx/playersdead.png",true);
+			for (int page=1; page<4; page++) {
+				char playerKey[32];
+				char deadKey[32];
+				sprintf(playerKey,"players_page_%d",page+1);
+				sprintf(deadKey,"players_dead_page_%d",page+1);
+				playersTextures[page] = LoadOptionalConfiguredTexture(mRenderer,playerKey,true);
+				playersDeadTextures[page] = LoadOptionalConfiguredTexture(mRenderer,deadKey,true);
 			}
-
-			gPlayersDeadQuads = new JQuad*[mParent->mPlayersDeadTexture->mTexWidth/32];
-			for (int i=0;i<mParent->mPlayersDeadTexture->mTexWidth/32;i++) {
-				gPlayersDeadQuads[i] = new JQuad(mParent->mPlayersDeadTexture,i*32,0,29,47);
-				gPlayersDeadQuads[i]->SetHotSpot(14,23);
-			}*/
-			JTexture* playersTexture = LoadConfiguredTexture(mRenderer,"players","gfx/players.png",true);
-			JTexture* playersDeadTexture = LoadConfiguredTexture(mRenderer,"players_dead","gfx/playersdead.png",true);
-			
-			for (int i=0; i<2; i++) {
-				for (int j=0; j<4; j++) {
-					/*for (int k=0; k<5; k++) {
-						gPlayersQuads[i][j][k] = new JQuad(playersTexture,(j+i*4)*32,k*32,32,32);
-						gPlayersQuads[i][j][k]->SetHotSpot(16,10);
-					}*/
-					int offsetX = (j+i*4)*32;
-					gPlayersQuads[i][j][BODY] = new JQuad(playersTexture,offsetX+0,0,32,16);
-					gPlayersQuads[i][j][BODY]->SetHotSpot(16,8);
-
-					gPlayersQuads[i][j][HEAD] = new JQuad(playersTexture,offsetX+16,16,16,16);
-					gPlayersQuads[i][j][HEAD]->SetHotSpot(8,7);
-
-					gPlayersQuads[i][j][RIGHTARM] = new JQuad(playersTexture,offsetX+8,16,8,16);
-					gPlayersQuads[i][j][RIGHTARM]->SetHotSpot(4.0f,4.0f);
-
-					gPlayersQuads[i][j][RIGHTHAND] = new JQuad(playersTexture,offsetX+0,16,8,16);
-					gPlayersQuads[i][j][RIGHTHAND]->SetHotSpot(4.0f,3.0f);
-
-					gPlayersQuads[i][j][LEFTARM] = new JQuad(playersTexture,offsetX+8,16,8,16);
-					gPlayersQuads[i][j][LEFTARM]->SetHotSpot(4.0f,4.0f);
-					gPlayersQuads[i][j][LEFTARM]->SetHFlip(true);
-
-					gPlayersQuads[i][j][LEFTHAND] = new JQuad(playersTexture,offsetX+0,16,8,16);
-					gPlayersQuads[i][j][LEFTHAND]->SetHotSpot(4.0f,3.0f);
-					gPlayersQuads[i][j][LEFTHAND]->SetHFlip(true);
-
-					gPlayersQuads[i][j][LEGS] = new JQuad(playersTexture,offsetX+0,32,32,32);
-					gPlayersQuads[i][j][LEGS]->SetHotSpot(16,16);
-
-					gPlayersDeadQuads[i][j] = new JQuad(playersDeadTexture,(j+i*4)*32,64,29,47);
-					gPlayersDeadQuads[i][j]->SetHotSpot(14,23);
-				}
-			}
+			LoadPlayerSkins(playersTextures,playersDeadTextures);
 
 			JTexture* radarTexture = LoadConfiguredTexture(mRenderer,"radar","gfx/radar.png",true);
 			gRadarQuad = new JQuad(radarTexture,0,0,64,64);
@@ -485,6 +578,7 @@ int GameStateLoading::Load(int stage) {
 			}
 			fclose(file);
 			Bullet::LoadTracerConfig("data/tracers.txt");
+			LoadLaserConfigs("data/lasers.txt");
 
 			break;
 		}
