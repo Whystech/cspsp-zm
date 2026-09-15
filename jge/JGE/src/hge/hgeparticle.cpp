@@ -52,6 +52,20 @@ hgeParticleSystem::hgeParticleSystem(const char *filename, JQuad *sprite)
 {
 	//void *psi;
 	//hgeParticleSystemInfo psi;
+	memset(&info, 0, sizeof(hgeParticleSystemInfo));
+	info.sprite=sprite;
+
+	vecLocation.x=vecPrevLocation.x=0.0f;
+	vecLocation.y=vecPrevLocation.y=0.0f;
+	fTx=fTy=0;
+
+	fEmissionResidue=0.0f;
+	nParticlesAlive=0;
+	fAge=-2.0f;
+	mTimer=0.0f;
+
+	rectBoundingBox.Clear();
+	bUpdateBoundingBox=false;
 
 	JFileSystem* fileSys = JFileSystem::GetInstance();
 	//hge=hgeCreate(HGE_VERSION);
@@ -64,25 +78,12 @@ hgeParticleSystem::hgeParticleSystem(const char *filename, JQuad *sprite)
 	//memcpy(&info, psi, sizeof(hgeParticleSystemInfo));
 	//hge->Resource_Free(psi);
 
-	fileSys->ReadFile(&info, sizeof(hgeParticleSystemInfo));
+	int bytesRead = fileSys->ReadFile(&info, sizeof(hgeParticleSystemInfo));
 	fileSys->CloseFile();
 
+	if (bytesRead != sizeof(hgeParticleSystemInfo))
+		memset(&info, 0, sizeof(hgeParticleSystemInfo));
 	info.sprite=sprite;
-//  	info.fGravityMin *= 100;
-//  	info.fGravityMax *= 100;
-// 	info.fSpeedMin *= 100;
-// 	info.fSpeedMax *= 100;
-
-	vecLocation.x=vecPrevLocation.x=0.0f;
-	vecLocation.y=vecPrevLocation.y=0.0f;
-	fTx=fTy=0;
-
-	fEmissionResidue=0.0f;
-	nParticlesAlive=0;
-	fAge=-2.0;
-
-	rectBoundingBox.Clear();
-	bUpdateBoundingBox=false;
 }
 
 hgeParticleSystem::hgeParticleSystem(hgeParticleSystemInfo *psi)
@@ -98,6 +99,7 @@ hgeParticleSystem::hgeParticleSystem(hgeParticleSystemInfo *psi)
 	fEmissionResidue=0.0f;
 	nParticlesAlive=0;
 	fAge=-2.0;
+	mTimer=0.0f;
 
 	rectBoundingBox.Clear();
 	bUpdateBoundingBox=false;

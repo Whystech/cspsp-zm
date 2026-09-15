@@ -102,11 +102,16 @@ KeyFrameAnim* Animation::LoadKeyFrames(char* name) {
     FILE *file;
 
 	file = fopen("data/animations.txt", "r"); 
+	if (file == NULL) {
+		KeyFrame keyframe = KeyFrame();
+		keyframe.duration = 1.0f;
+		anim->mKeyFrames.push_back(keyframe);
+		return anim;
+	}
 
 	char buffer[256];
 	float duration;
 	char line[4096];
-	char* s;
 	float angles[6];
 
 	bool isReading = false;
@@ -126,8 +131,8 @@ KeyFrameAnim* Animation::LoadKeyFrames(char* name) {
 					break;
 				}
 			}
-			if (sscanf(line,"%f %f %f %f %f %f %f",&duration,&angles[0],&angles[1],&angles[2],&angles[3],&angles[4],&angles[5]) != EOF) {
-				KeyFrame keyframe = keyframe = KeyFrame();
+			if (sscanf(line,"%f %f %f %f %f %f %f",&duration,&angles[0],&angles[1],&angles[2],&angles[3],&angles[4],&angles[5]) == 7 && duration > 0.0f) {
+				KeyFrame keyframe = KeyFrame();
 				keyframe.duration = duration;
 
 				for (int i=0; i<6; i++) {
@@ -156,6 +161,11 @@ KeyFrameAnim* Animation::LoadKeyFrames(char* name) {
 	}
 
 	fclose(file);
+	if (anim->mKeyFrames.empty()) {
+		KeyFrame keyframe = KeyFrame();
+		keyframe.duration = 1.0f;
+		anim->mKeyFrames.push_back(keyframe);
+	}
 
 	return anim;
 }
