@@ -32,7 +32,8 @@ OFFLINE GAMEPLAY DATA
   player.txt     Team health/armor, pickups, money, movement and hit slowdown
   grenades.txt   Grenade fuse, flash and HE behavior
   modes.txt      Fallbacks for local mode options. Horde supports regroup,
-                 wave delay, wave reward and horde_revive_survivors (on/off).
+                 wave delay, wave reward, survivor revival, and per-wave
+                 health, melee-damage and movement-speed multipliers.
   bots.txt       Offline bot perception, movement and firing behavior
 
 CLIENT PRESENTATION DATA

@@ -11,6 +11,9 @@
 # horde_wave_delay: seconds before the next Horde wave; use 3, 5, 10 or 15.
 # horde_wave_reward: cash awarded after clearing a wave, range 0-32767.
 # horde_revive_survivors: on/off; revives eliminated survivors after a cleared wave.
+# horde_*_multiplier_per_wave: multiplier applied once per completed wave.
+# Wave 1 uses base values; values are clamped to 1.0-2.0. Effective health and
+# damage stop at 32767, while effective zombie movement speed stops at 3x.
 friendly_fire = on
 respawn = base
 infection_respawn_delay = 1
@@ -19,3 +22,6 @@ horde_regroup = inplace
 horde_wave_delay = 3
 horde_wave_reward = 3250
 horde_revive_survivors = off
+horde_health_multiplier_per_wave = 1.10
+horde_damage_multiplier_per_wave = 1.05
+horde_speed_multiplier_per_wave = 1.02

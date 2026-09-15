@@ -120,6 +120,7 @@ public:
 	std::vector<GunObject*>* mGunObjects;	
 
 	float mMaxSpeed;
+	float mMovementSpeedMultiplier;
 	int mState;
 	int mMoveState;
 	float mStateTime;
