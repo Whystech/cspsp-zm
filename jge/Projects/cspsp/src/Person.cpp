@@ -20,6 +20,7 @@ Person::Person(JQuad* quads[], JQuad* deadquad, std::vector<Bullet*>* bullets, s
 	mSpeed = 0.0f;
 	mAngle = 0.0f;
 	mMaxSpeed = 0.0f;
+	mMovementSpeedMultiplier = 1.0f;
 
 	mMoveState = NOTMOVING;
 	mState = DEAD;
@@ -577,7 +578,7 @@ void Person::Move(float speed, float angle)
 {
 	if (!mIsActive) return;
 	SetMoveState(MOVING);
-	mMaxSpeed = speed*mGuns[mGunIndex]->mGun->mSpeed;
+	mMaxSpeed = speed*mMovementSpeedMultiplier*mGuns[mGunIndex]->mGun->mSpeed;
 	if (mMovementStyle == RELATIVE1) {
 		mAngle = mFacingAngle+angle;
 	}
@@ -1120,6 +1121,7 @@ void Person::RestoreOriginalTeam()
 
 void Person::Reset()
 {
+	mMovementSpeedMultiplier = 1.0f;
 	//mX = mSpawn->x;
 	//mY = mSpawn->y;
 	//SetPosition(mSpawn->x,mSpawn->y);

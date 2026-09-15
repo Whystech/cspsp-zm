@@ -36,6 +36,14 @@ private:
 	AStar* mAStar;
 	int mHordeWaveReward;
 	bool mHordeSpawnPending;
+	float mHordeHealthMultiplierPerWave;
+	float mHordeDamageMultiplierPerWave;
+	float mHordeSpeedMultiplierPerWave;
+	float mHordeHealthMultiplier;
+	float mHordeDamageMultiplier;
+	float mHordeSpeedMultiplier;
+	void AdvanceHordeScaling();
+	int GetHordeMeleeDamage(Person* attacker) const;
 	/*float mRoundTimer;
 	float mRoundEndTimer;
 	int mRoundState;

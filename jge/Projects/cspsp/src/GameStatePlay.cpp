@@ -1,8 +1,29 @@
 #include "GameStatePlay.h"
 
+static float LoadHordeMultiplier(char* key, float defaultValue)
+{
+	char* value = GetConfig("data/config.txt",key);
+	if (value == NULL) value = GetConfig("data/modes.txt",key);
+	float result = defaultValue;
+	if (value != NULL && sscanf(value,"%f",&result) != 1) result = defaultValue;
+	delete[] value;
+	unsigned int bits = 0;
+	memcpy(&bits,&result,sizeof(result));
+	if ((bits & 0x7f800000) == 0x7f800000) result = defaultValue;
+	if (result < 1.0f) result = 1.0f;
+	if (result > 2.0f) result = 2.0f;
+	return result;
+}
+
 GameStatePlay::GameStatePlay(GameApp* parent): Game(parent) 
 {
 	mHordeSpawnPending = false;
+	mHordeHealthMultiplierPerWave = 1.0f;
+	mHordeDamageMultiplierPerWave = 1.0f;
+	mHordeSpeedMultiplierPerWave = 1.0f;
+	mHordeHealthMultiplier = 1.0f;
+	mHordeDamageMultiplier = 1.0f;
+	mHordeSpeedMultiplier = 1.0f;
 	/*mSpecState = FREELOOK;
 	mSpecDead = false;
 	mRoundTimer = 0;
@@ -204,6 +225,9 @@ void GameStatePlay::Start()
 	mIsInfectionMode = (gSinglePlayerMode == SINGLEPLAYER_INFECTION);
 	mIsHordeMode = (gSinglePlayerMode == SINGLEPLAYER_HORDE);
 	mHordeWave = 1;
+	mHordeHealthMultiplier = 1.0f;
+	mHordeDamageMultiplier = 1.0f;
+	mHordeSpeedMultiplier = 1.0f;
 	mRespawnTimer = 3000.0f;
 	mFFAWinner = NULL;
 
@@ -468,7 +492,7 @@ void GameStatePlay::CheckCollisions()
 								gParticleEngine->GenerateParticles(BLOOD,x2,y2,gEffectsConfig.bloodParticleCount);
 								mMap->AddDecal(x2,y2,DECAL_BLOOD);
 								gSfxManager->PlaySample((mPeople[i]->mGuns[KNIFE]->mGun->mId == ZOMBIECLAWS) ? gZombieClawsHitSound : gKnifeHitSound,x,y);
-								mPeopleTemp[j]->TakeDamage(mPeople[i]->mGuns[KNIFE]->mGun->mDamage);
+								mPeopleTemp[j]->TakeDamage(GetHordeMeleeDamage(mPeople[i]));
 								if (mPeopleTemp[j]->mState == DEAD) {
 									UpdateScores(mPeople[i],mPeopleTemp[j],mPeople[i]->mGuns[KNIFE]->mGun);
 									if (mPeopleTemp[j]->mState != DEAD && mPeopleTemp[j]->mOriginalTeam == CT && mPeopleTemp[j]->mTeam == T) continue;
@@ -487,7 +511,7 @@ void GameStatePlay::CheckCollisions()
 								gParticleEngine->GenerateParticles(BLOOD,x,y,gEffectsConfig.bloodParticleCount);
 								mMap->AddDecal(x,y,DECAL_BLOOD);
 								gSfxManager->PlaySample((mPeopleTemp[j]->mGuns[KNIFE]->mGun->mId == ZOMBIECLAWS) ? gZombieClawsHitSound : gKnifeHitSound,x2,y2);
-								mPeople[i]->TakeDamage(mPeopleTemp[j]->mGuns[KNIFE]->mGun->mDamage);
+								mPeople[i]->TakeDamage(GetHordeMeleeDamage(mPeopleTemp[j]));
 								if (mPeople[i]->mState == DEAD) {
 									UpdateScores(mPeopleTemp[j],mPeople[i],mPeople[j]->mGuns[KNIFE]->mGun);
 									if (mPeople[i]->mState != DEAD && mPeople[i]->mOriginalTeam == CT && mPeople[i]->mTeam == T) continue;
@@ -971,6 +995,9 @@ void GameStatePlay::NewGame() {
 		else if (mHordeWaveReward > 32767) mHordeWaveReward = 32767;
 		delete hordeWaveReward;
 	}
+	mHordeHealthMultiplierPerWave = LoadHordeMultiplier("horde_health_multiplier_per_wave",1.0f);
+	mHordeDamageMultiplierPerWave = LoadHordeMultiplier("horde_damage_multiplier_per_wave",1.0f);
+	mHordeSpeedMultiplierPerWave = LoadHordeMultiplier("horde_speed_multiplier_per_wave",1.0f);
 	mHordeReviveSurvivors = false;
 	char* hordeReviveSurvivors = GetConfig("data/config.txt","horde_revive_survivors");
 	if (hordeReviveSurvivors == NULL) hordeReviveSurvivors = GetConfig("data/modes.txt","horde_revive_survivors");
@@ -1189,6 +1216,7 @@ void GameStatePlay::ResetRound(bool awardMoney) {
 void GameStatePlay::ResetHordeWave() {
 	mTimeMultiplier = 1.0f;
 	mHordeWave++;
+	AdvanceHordeScaling();
 	mNumRounds++;
 	mRoundState = FREEZETIME;
 	mRoundTimer = mHordeWaveDelay;
@@ -1252,6 +1280,9 @@ void GameStatePlay::SpawnHordeWave() {
 		bool keepCorpse = person->mHasCorpse;
 		person->Reset();
 		person->mHasCorpse = keepCorpse;
+		float scaledHealth = gPlayerConfig.tSpawnHealth*mHordeHealthMultiplier;
+		person->mHealth = scaledHealth > 32767.0f ? 32767 : (int)(scaledHealth+0.5f);
+		person->mMovementSpeedMultiplier = mHordeSpeedMultiplier;
 		person->Teleport(mMap->mTSpawns[tspawnindex]->x,mMap->mTSpawns[tspawnindex]->y);
 		tspawnindex = (tspawnindex+1)%mMap->mNumTs;
 		person->mIsActive = true;
@@ -1264,6 +1295,23 @@ void GameStatePlay::SpawnHordeWave() {
 		}
 	}
 	Hash();
+}
+
+void GameStatePlay::AdvanceHordeScaling() {
+	mHordeHealthMultiplier *= mHordeHealthMultiplierPerWave;
+	float maximumHealthMultiplier = 32767.0f/gPlayerConfig.tSpawnHealth;
+	if (mHordeHealthMultiplier > maximumHealthMultiplier) mHordeHealthMultiplier = maximumHealthMultiplier;
+	mHordeDamageMultiplier *= mHordeDamageMultiplierPerWave;
+	if (mHordeDamageMultiplier > 32767.0f) mHordeDamageMultiplier = 32767.0f;
+	mHordeSpeedMultiplier *= mHordeSpeedMultiplierPerWave;
+	if (mHordeSpeedMultiplier > 3.0f) mHordeSpeedMultiplier = 3.0f;
+}
+
+int GameStatePlay::GetHordeMeleeDamage(Person* attacker) const {
+	int damage = attacker->mGuns[KNIFE]->mGun->mDamage;
+	if (!mIsHordeMode || attacker->mTeam != T) return damage;
+	float scaledDamage = damage*mHordeDamageMultiplier;
+	return scaledDamage > 32767.0f ? 32767 : (int)(scaledDamage+0.5f);
 }
 
 
