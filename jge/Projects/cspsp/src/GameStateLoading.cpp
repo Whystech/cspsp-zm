@@ -302,7 +302,7 @@ int GameStateLoading::Load(int stage) {
 			char resourceLine[1024];
 			while (resourceFile != NULL && fgets(resourceLine,sizeof(resourceLine),resourceFile) != NULL) {
 				int type = 0;
-				if (sscanf(resourceLine,"muzzle_flash_%d",&type) == 1 && type > 0) muzzleFlashTypes.push_back(type);
+				if (sscanf(resourceLine,"muzzle_flash_%d",&type) == 1 && type > 0 && type < MAX_MUZZLE_FLASH_TYPES) muzzleFlashTypes.push_back(type);
 			}
 			if (resourceFile != NULL) fclose(resourceFile);
 			std::sort(muzzleFlashTypes.begin(),muzzleFlashTypes.end());
@@ -453,7 +453,7 @@ int GameStateLoading::Load(int stage) {
 					if (fields != 18) continue;
 				}
 				if (gun.mId < 0 || gun.mId >= MAX_GUNS) continue;
-				if (gun.mMuzzleFlashType < 0) gun.mMuzzleFlashType = 0;
+				if (gun.mMuzzleFlashType < 0 || gun.mMuzzleFlashType >= MAX_MUZZLE_FLASH_TYPES) gun.mMuzzleFlashType = 0;
 				if (gun.mPellets < 1) gun.mPellets = 1;
 				if (gun.mPellets > MAX_PELLETS) gun.mPellets = MAX_PELLETS;
 				if (gun.mScope < SCOPE_NONE || gun.mScope > SCOPE_HIGH) gun.mScope = SCOPE_NONE;

@@ -1672,7 +1672,7 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 				mGuns[id] = gun;
 
 				strcpy(mGuns[id].mName,name);
-				mGuns[id].mMuzzleFlashType = muzzleflashtype >= 0 ? muzzleflashtype : 0;
+				mGuns[id].mMuzzleFlashType = muzzleflashtype >= 0 && muzzleflashtype < MAX_MUZZLE_FLASH_TYPES ? muzzleflashtype : 0;
 				mGuns[id].mFireSound = gGuns[id].mFireSound;
 				mGuns[id].mReloadSound = gGuns[id].mReloadSound;
 				mGuns[id].mDryFireSound = gGuns[id].mDryFireSound;

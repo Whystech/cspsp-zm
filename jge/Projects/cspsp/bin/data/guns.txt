@@ -99,7 +99,7 @@
 # category       Buy menu: 0=HIDDEN, 1=PISTOLS, 2=SHOTGUNS, 3=SMG,
 #                4=RIFLES, 5=MACHINEGUNS, 6=EQUIPMENT.
 # teams          Buy availability: 0=NONE, 1=T only, 2=CT only, 3=BOTH.
-# muzzleflash    Optional flash ID before name, from 0 through 15.
+# muzzleflash    Optional flash ID before name, from 0 through 127.
 #                0=muzzleflash.png; N uses the resources.txt key
 #                muzzle_flash_N. Missing resource keys safely use style 0.
 #                Omit this field to use 0 with old 18-value weapon rows.
