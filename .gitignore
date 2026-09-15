@@ -25,6 +25,9 @@
 *.la
 *.a
 *.lib
+!jge/JGE/lib/psp/libhgetools.a
+!jge/JGE/lib/psp/libjge300.a
+!jge/JGE/lib/psp/libjinput.a
 
 # Executables
 *.exe
