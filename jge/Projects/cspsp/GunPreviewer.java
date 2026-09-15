@@ -15,6 +15,7 @@ import javax.swing.border.EmptyBorder ;
 import javax.swing.filechooser.FileNameExtensionFilter ;
 
 public class GunPreviewer {
+	static final int MAX_MUZZLE_FLASH_TYPES = 128 ;
 	static final Color BACKGROUND = new Color(20, 23, 27) ;
 	static final Color PANEL = new Color(29, 33, 38) ;
 	static final Color PANEL_LIGHT = new Color(39, 44, 50) ;
@@ -66,6 +67,7 @@ public class GunPreviewer {
 			category = Integer.parseInt(fields[15]) ;
 			teams = Integer.parseInt(fields[16]) ;
 			flashStyle = fields.length >= 19 ? Integer.parseInt(fields[17]) : 0 ;
+			if (flashStyle < 0 || flashStyle >= MAX_MUZZLE_FLASH_TYPES) flashStyle = 0 ;
 			name = fields[fields.length - 1] ;
 		}
 
@@ -271,7 +273,7 @@ public class GunPreviewer {
 							try {style = Integer.parseInt(key.substring(13)) ;}
 							catch (NumberFormatException ignored) {continue ;}
 						} else continue ;
-						if (style >= 0) paths.put(Integer.valueOf(style), line.substring(separator + 1).trim()) ;
+						if (style >= 0 && style < MAX_MUZZLE_FLASH_TYPES) paths.put(Integer.valueOf(style), line.substring(separator + 1).trim()) ;
 					}
 				} finally {reader.close() ;}
 			}
@@ -545,7 +547,7 @@ public class GunPreviewer {
 		final JTextField name = new JTextField() ;
 		final JSpinner damage = integer(0, 10000), delay = integer(0, 60000), clip = integer(0, 10000) ;
 		final JSpinner numClips = integer(0, 1000), reloadDelay = integer(0, 60000), cost = integer(0, 100000) ;
-		final JSpinner pellets = integer(1, 1000), flashStyle = integer(0, Integer.MAX_VALUE) ;
+		final JSpinner pellets = integer(1, 1000), flashStyle = integer(0, MAX_MUZZLE_FLASH_TYPES - 1) ;
 		final JSpinner tracerRed = integer(0, 255), tracerGreen = integer(0, 255), tracerBlue = integer(0, 255), tracerAlpha = integer(0, 255) ;
 		final JSpinner spread = decimal(0.0, 100.0, 0.01), walkingSpeed = decimal(0.0, 100.0, 0.05) ;
 		final JSpinner bulletSpeed = decimal(0.0, 100.0, 0.05), viewAngle = decimal(0.0, 10.0, 0.01) ;
