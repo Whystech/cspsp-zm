@@ -192,6 +192,7 @@ void GameStateLobby::Update(float dt)
 		mNewsTextBox->Update(dt);
 	}
 	else if (mStage == STAGE_SERVERS) {
+		int previousServersStage = mServersStage;
 		if (mEngine->GetButtonClick(PSP_CTRL_LTRIGGER)) {
 			mServersStage--;
 			if (mServersStage < 0) {
@@ -203,6 +204,9 @@ void GameStateLobby::Update(float dt)
 			if (mServersStage > SERVERSSTAGE_FAVORITES) {
 				mServersStage = 0;
 			}
+		}
+		if (mServersStage != previousServersStage) {
+			PingServers(mServersStage);
 		}
 
 		ListBox *mListBox = NULL;
@@ -360,6 +364,9 @@ void GameStateLobby::Update(float dt)
 						if (mPingTimer > mMaxPing) {
 							SocketClose(mPingSocket);
 							(*mPingList)[mPingIndex].ping = MAXPING;
+							if (mMaxPing >= MAXPING) {
+								mPingListBox->AddItem(new ServerItem((*mPingList)[mPingIndex]));
+							}
 						
 							mPingIndex++;
 
@@ -1001,8 +1008,8 @@ bool GameStateLobby::LoadFavorites()
 
 		if (n == 2) {
 			serverinfo.id = mFavoritesCounter;
-			strcpy(serverinfo.name,"???");
-			strcpy(serverinfo.map,"???");
+			strcpy(serverinfo.name,serverinfo.ip);
+			strcpy(serverinfo.map,"-");
 			serverinfo.numPlayers = 0;
 			serverinfo.numMaxPlayers = 0;
 			serverinfo.ping = MAXPING;

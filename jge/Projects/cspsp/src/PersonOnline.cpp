@@ -25,6 +25,7 @@ PersonOnline::PersonOnline(JQuad* quads[], JQuad* deadquad, std::vector<Bullet*>
 
 	mIconTexture = mRenderer->CreateTexture(10,10);
 	mIconQuad = new JQuad(mIconTexture,0,0,10,10);
+	mHasIcon = false;
 }
 
 //------------------------------------------------------------------------------------------------

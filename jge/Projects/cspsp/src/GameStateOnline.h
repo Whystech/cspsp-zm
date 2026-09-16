@@ -90,6 +90,7 @@ private:
 	float mSTime;
 	float mPing;
 	float mSPing;
+	int mOnlineInactivityTimeout;
 
 	bool mIsResetting;
 

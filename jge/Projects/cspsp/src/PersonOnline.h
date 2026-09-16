@@ -54,6 +54,7 @@ public:
 
 	JTexture* mIconTexture;
 	JQuad* mIconQuad;
+	bool mHasIcon;
 
 	//UdpManager* mUdpManager;
 

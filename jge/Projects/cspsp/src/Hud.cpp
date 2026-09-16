@@ -17,6 +17,7 @@ Hud::Hud()
 
 	mEventTime = 0;
 	mEventType = 0;
+	mEventPerson = NULL;
 
 	strcpy(mEventText,"");
 }
@@ -215,6 +216,7 @@ void Hud::Render()
 	if (mEventTime > 0.0f && mEventPerson != NULL) {
 		char buffer[256];
 		float y = SCREEN_HEIGHT-50;
+		bool showEventIcon = mIsOnline && ((PersonOnline*)mEventPerson)->mHasIcon;
 
 		float scale = 0.75f;
 		if (mEventTime > 1950) {
@@ -234,7 +236,7 @@ void Hud::Render()
 			strcpy(buffer,mEventText);
 			float w1 = gFont->GetStringWidth(buffer);
 			float w = w1 + gFont->GetStringWidth(mEventPerson->mName);
-			if (mIsOnline) {
+			if (showEventIcon) {
 				w += 20;
 			}
 			float x = SCREEN_WIDTH_2-w*0.5f;
@@ -242,7 +244,7 @@ void Hud::Render()
 			gFont->SetColor(ARGB(255,255,200,0));
 			gFont->DrawShadowedString(buffer,x,y);
 			x += w1;
-			if (mIsOnline) {
+			if (showEventIcon) {
 				mRenderer->RenderQuad(((PersonOnline*)mEventPerson)->mIconQuad,x+5,y+2,0.0f,scale/0.75f,scale/0.75f);
 				x += 20;
 			}
@@ -269,12 +271,12 @@ void Hud::Render()
 			
 			float w1 = gFont->GetStringWidth(mEventPerson->mName);
 			float w = w1 + gFont->GetStringWidth(buffer);
-			if (mIsOnline) {
+			if (showEventIcon) {
 				w += 15;
 			}
 			float x = SCREEN_WIDTH_2-w*0.5f;
 
-			if (mIsOnline) {
+			if (showEventIcon) {
 				mRenderer->RenderQuad(((PersonOnline*)mEventPerson)->mIconQuad,x,y+2,0.0f,scale/0.75f,scale/0.75f);
 				x += 15;
 			}
