@@ -43,6 +43,12 @@ not override server-owned gameplay results.
   camera.txt     Camera following, scope ranges and local input response
   hud.txt        HUD positions, radar scale, crosshair size and event timing
   effects.txt    Particles, decals and visual performance limits
+
+ONLINE NETWORKING
+-----------------
+  network.txt    Client network tolerance settings. online_inactivity_timeout_ms
+                 controls established-session silence before disconnecting,
+                 range 10000-120000 milliseconds. Use the server's value.
   audio.txt      Sound paths, volume and positional sound falloff
   theme.txt      Team, crosshair and radar-marker colors
   resources.txt  Texture paths, including gfx/radar.png

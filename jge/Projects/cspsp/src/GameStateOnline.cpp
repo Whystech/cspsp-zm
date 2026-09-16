@@ -68,6 +68,17 @@ void GameStateOnline::Start()
 	dltimer = 0.0f;
 	dlsum = 0;
 	dl = 0;
+	mOnlineInactivityTimeout = 30000;
+	char* inactivityTimeout = GetConfig("data/network.txt","online_inactivity_timeout_ms");
+	if (inactivityTimeout != NULL) {
+		int configuredTimeout;
+		if (sscanf(inactivityTimeout,"%d",&configuredTimeout) == 1) {
+			if (configuredTimeout < 10000) configuredTimeout = 10000;
+			if (configuredTimeout > 120000) configuredTimeout = 120000;
+			mOnlineInactivityTimeout = configuredTimeout;
+		}
+		delete[] inactivityTimeout;
+	}
 
 	gReconnect = false;
 
@@ -966,7 +977,7 @@ void GameStateOnline::Update(float dt)
 	}
 
 	mTimer += dt;
-	if (mTimer > 10000) {
+	if (mTimer > mOnlineInactivityTimeout) {
 		mState = ERROR;
 		mErrorString = "Error: Connection with server timed out";
 	}
@@ -1845,7 +1856,7 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 				}
 
 				PersonOnline* player = (PersonOnline*)GetPerson(id);
-				if (player == NULL) break;
+				if (player == NULL || datalength != sizeof(icon)) break;
 				
 				DWORD bits[100];
 				int i=0;
@@ -1860,6 +1871,7 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 					}
 				}
 				player->mIconTexture->UpdateBits(0,0,10,10,bits);
+				player->mHasIcon = true;
 
 				break;
 			}

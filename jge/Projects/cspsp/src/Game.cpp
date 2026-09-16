@@ -2329,8 +2329,14 @@ void Game::Render()
 			}
 				
 			if (mIsOnline) {
-				mRenderer->RenderQuad(((PersonOnline*)mSpec)->mIconQuad,15,245+3);
-				gFont->DrawString(buffer, 30, 245.0f);
+				PersonOnline* onlineSpec = (PersonOnline*)mSpec;
+				if (onlineSpec->mHasIcon) {
+					mRenderer->RenderQuad(onlineSpec->mIconQuad,15,245+3);
+					gFont->DrawString(buffer, 30, 245.0f);
+				}
+				else {
+					gFont->DrawString(buffer, 15, 245.0f);
+				}
 			}
 			else {
 				gFont->DrawString(buffer, 15, 245.0f);
