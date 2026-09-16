@@ -24,7 +24,27 @@ enum TracerStyle {
 	TRACER_FLARE,
 	TRACER_STREAK,
 	TRACER_SLUG,
-	TRACER_BLADE
+	TRACER_BLADE,
+	TRACER_GAUSS,
+	TRACER_LIGHTNING,
+	TRACER_SPIRAL,
+	TRACER_WAVE,
+	TRACER_CHAIN,
+	TRACER_RICOCHET,
+	TRACER_PENETRATOR,
+	TRACER_CHARGE,
+	TRACER_FADING,
+	TRACER_EXPANDING,
+	TRACER_TAPERED,
+	TRACER_GRADIENT,
+	TRACER_HEAT,
+	TRACER_DISRUPTOR,
+	TRACER_PARTICLE,
+	TRACER_SMOKE,
+	TRACER_IMPACT_RING,
+	TRACER_IMPACT_BURST,
+	TRACER_AFTERIMAGE,
+	TRACER_ANIMATED
 };
 
 struct TracerConfig {
@@ -68,10 +88,10 @@ void Bullet::LoadTracerConfig(const char* filename)
 		if (line[0] == '#' || line[0] == '\r' || line[0] == '\n') continue;
 
 		int id;
-		char style[16];
+		char style[20];
 		TracerConfig config;
-		if (sscanf(line,"%d %15s %d %d %d %d %f %f",&id,style,&config.red,&config.green,&config.blue,&config.alpha,&config.length,&config.width) != 8) continue;
-		if (id < 0 || id >= MAX_GUNS || config.length < 0.0f || config.width <= 0.0f) continue;
+		if (sscanf(line,"%d %19s %d %d %d %d %f %f",&id,style,&config.red,&config.green,&config.blue,&config.alpha,&config.length,&config.width) != 8) continue;
+		if (id < 0 || id >= MAX_GUNS || config.length < 0.0f || config.length > 5000.0f || config.width <= 0.0f || config.width > 20.0f) continue;
 
 		if (strcmp(style,"none") == 0) config.style = TRACER_NONE;
 		else if (strcmp(style,"line") == 0) config.style = TRACER_LINE;
@@ -92,6 +112,26 @@ void Bullet::LoadTracerConfig(const char* filename)
 		else if (strcmp(style,"streak") == 0) config.style = TRACER_STREAK;
 		else if (strcmp(style,"slug") == 0) config.style = TRACER_SLUG;
 		else if (strcmp(style,"blade") == 0) config.style = TRACER_BLADE;
+		else if (strcmp(style,"gauss") == 0) config.style = TRACER_GAUSS;
+		else if (strcmp(style,"lightning") == 0) config.style = TRACER_LIGHTNING;
+		else if (strcmp(style,"spiral") == 0) config.style = TRACER_SPIRAL;
+		else if (strcmp(style,"wave") == 0) config.style = TRACER_WAVE;
+		else if (strcmp(style,"chain") == 0) config.style = TRACER_CHAIN;
+		else if (strcmp(style,"ricochet") == 0) config.style = TRACER_RICOCHET;
+		else if (strcmp(style,"penetrator") == 0) config.style = TRACER_PENETRATOR;
+		else if (strcmp(style,"charge_beam") == 0 || strcmp(style,"charge") == 0) config.style = TRACER_CHARGE;
+		else if (strcmp(style,"fading_beam") == 0 || strcmp(style,"fading") == 0) config.style = TRACER_FADING;
+		else if (strcmp(style,"expanding_beam") == 0 || strcmp(style,"expanding") == 0) config.style = TRACER_EXPANDING;
+		else if (strcmp(style,"tapered_beam") == 0 || strcmp(style,"tapered") == 0) config.style = TRACER_TAPERED;
+		else if (strcmp(style,"gradient_beam") == 0 || strcmp(style,"gradient") == 0) config.style = TRACER_GRADIENT;
+		else if (strcmp(style,"heat_ray") == 0 || strcmp(style,"heat") == 0) config.style = TRACER_HEAT;
+		else if (strcmp(style,"disruptor") == 0) config.style = TRACER_DISRUPTOR;
+		else if (strcmp(style,"particle_trail") == 0 || strcmp(style,"particle") == 0) config.style = TRACER_PARTICLE;
+		else if (strcmp(style,"smoke_trail") == 0 || strcmp(style,"smoke") == 0) config.style = TRACER_SMOKE;
+		else if (strcmp(style,"impact_ring") == 0) config.style = TRACER_IMPACT_RING;
+		else if (strcmp(style,"impact_burst") == 0) config.style = TRACER_IMPACT_BURST;
+		else if (strcmp(style,"afterimage") == 0) config.style = TRACER_AFTERIMAGE;
+		else if (strcmp(style,"animated_texture") == 0 || strcmp(style,"animated") == 0) config.style = TRACER_ANIMATED;
 		else continue;
 
 		config.red = ClampColor(config.red);
@@ -340,6 +380,142 @@ void Bullet::Render(float x, float y)
 		}
 		mRenderer->FillRect(tipX-config.width,tipY-config.width,config.width*2.0f,config.width*2.0f,ARGB(config.alpha,config.red,config.green,config.blue));
 	}
+	else if (config.style == TRACER_GAUSS || config.style == TRACER_CHARGE) {
+		float startX = limit(mX-tailX,mStartX,signX)-offsetX;
+		float startY = limit(mY-tailY,mStartY,signY)-offsetY;
+		float glow = config.style == TRACER_CHARGE ? 8.0f : 6.0f;
+		mRenderer->SetTexBlend(BLEND_SRC_ALPHA, BLEND_ONE);
+		mRenderer->DrawLine(startX,startY,endX-offsetX,endY-offsetY,config.width*glow,ARGB(config.alpha/5,darkRed,darkGreen,darkBlue));
+		mRenderer->DrawLine(startX,startY,endX-offsetX,endY-offsetY,config.width*2.0f,ARGB(config.alpha,config.red,config.green,config.blue));
+		mRenderer->DrawLine(startX,startY,endX-offsetX,endY-offsetY,config.width*0.6f,ARGB(config.alpha,255,255,255));
+	}
+	else if (config.style == TRACER_LIGHTNING || config.style == TRACER_WAVE || config.style == TRACER_HEAT) {
+		float startX = limit(mX-tailX,mStartX,signX)-offsetX;
+		float startY = limit(mY-tailY,mStartY,signY)-offsetY;
+		float tipX = endX-offsetX;
+		float tipY = endY-offsetY;
+		float previousX = startX;
+		float previousY = startY;
+		float sideScale = config.style == TRACER_HEAT ? config.width*4.0f : config.width*3.0f;
+		mRenderer->SetTexBlend(BLEND_SRC_ALPHA, BLEND_ONE);
+		for (int i=1; i<=8; i++) {
+			float scale = i/8.0f;
+			float side = (i == 8) ? 0.0f : sinf((i+(mState*2))*1.7f)*sideScale;
+			if (config.style == TRACER_LIGHTNING) side += ((i*7+mState*3)%5-2)*config.width;
+			float nextX = startX+(tipX-startX)*scale-sinAngle*side;
+			float nextY = startY+(tipY-startY)*scale+cosAngle*side;
+			mRenderer->DrawLine(previousX,previousY,nextX,nextY,config.width,ARGB(config.alpha,config.red,config.green,config.blue));
+			previousX = nextX;
+			previousY = nextY;
+		}
+	}
+	else if (config.style == TRACER_SPIRAL) {
+		float startX = limit(mX-tailX,mStartX,signX)-offsetX;
+		float startY = limit(mY-tailY,mStartY,signY)-offsetY;
+		float tipX = endX-offsetX;
+		float tipY = endY-offsetY;
+		for (int strand=0; strand<2; strand++) {
+			float previousX = startX;
+			float previousY = startY;
+			for (int i=1; i<=8; i++) {
+				float scale = i/8.0f;
+				float side = sinf(scale*12.56637f+strand*3.14159f+mState*0.8f)*config.width*3.0f;
+				float nextX = startX+(tipX-startX)*scale-sinAngle*side;
+				float nextY = startY+(tipY-startY)*scale+cosAngle*side;
+				mRenderer->DrawLine(previousX,previousY,nextX,nextY,config.width*0.7f,ARGB(config.alpha,config.red,config.green,config.blue));
+				previousX = nextX;
+				previousY = nextY;
+			}
+		}
+	}
+	else if (config.style == TRACER_CHAIN || config.style == TRACER_RICOCHET || config.style == TRACER_PENETRATOR) {
+		float startX = limit(mX-tailX,mStartX,signX)-offsetX;
+		float startY = limit(mY-tailY,mStartY,signY)-offsetY;
+		float tipX = endX-offsetX;
+		float tipY = endY-offsetY;
+		float previousX = startX;
+		float previousY = startY;
+		int segments = config.style == TRACER_CHAIN ? 6 : 3;
+		for (int i=1; i<=segments; i++) {
+			float scale = i/(float)segments;
+			float side = (i == segments) ? 0.0f : ((i%2 == 0) ? -1.0f:1.0f)*config.width*(config.style == TRACER_RICOCHET ? 8.0f:2.0f);
+			float nextX = startX+(tipX-startX)*scale-sinAngle*side;
+			float nextY = startY+(tipY-startY)*scale+cosAngle*side;
+			mRenderer->DrawLine(previousX,previousY,nextX,nextY,config.width,ARGB(config.alpha,config.red,config.green,config.blue));
+			if (config.style == TRACER_CHAIN && i < segments) mRenderer->FillRect(nextX-config.width,nextY-config.width,config.width*2.0f,config.width*2.0f,ARGB(config.alpha,config.red,config.green,config.blue));
+			previousX = nextX;
+			previousY = nextY;
+		}
+		if (config.style == TRACER_PENETRATOR) mRenderer->DrawLine(tipX,tipY,tipX+cosAngle*12.0f,tipY+sinAngle*12.0f,config.width*0.7f,ARGB(config.alpha/2,config.red,config.green,config.blue));
+	}
+	else if (config.style == TRACER_FADING || config.style == TRACER_EXPANDING || config.style == TRACER_TAPERED || config.style == TRACER_GRADIENT) {
+		float startX = limit(mX-tailX,mStartX,signX)-offsetX;
+		float startY = limit(mY-tailY,mStartY,signY)-offsetY;
+		float tipX = endX-offsetX;
+		float tipY = endY-offsetY;
+		int stateAlpha = config.alpha*(BULLET_DEAD-mState)/BULLET_DEAD;
+		for (int i=0; i<6; i++) {
+			float from = i/6.0f;
+			float to = (i+1)/6.0f;
+			float segmentWidth = config.width;
+			int segmentAlpha = config.alpha;
+			int red = config.red;
+			int green = config.green;
+			int blue = config.blue;
+			if (config.style == TRACER_FADING) segmentAlpha = stateAlpha;
+			else if (config.style == TRACER_EXPANDING) segmentWidth *= 1.0f+mState*0.6f;
+			else if (config.style == TRACER_TAPERED) segmentWidth *= 2.0f-from*1.7f;
+			else {
+				red = config.red+(255-config.red)*i/6;
+				green = config.green+(255-config.green)*i/6;
+				blue = config.blue+(255-config.blue)*i/6;
+			}
+			mRenderer->DrawLine(startX+(tipX-startX)*from,startY+(tipY-startY)*from,startX+(tipX-startX)*to,startY+(tipY-startY)*to,segmentWidth,ARGB(segmentAlpha,red,green,blue));
+		}
+	}
+	else if (config.style == TRACER_DISRUPTOR || config.style == TRACER_ANIMATED) {
+		float startX = limit(mX-tailX,mStartX,signX)-offsetX;
+		float startY = limit(mY-tailY,mStartY,signY)-offsetY;
+		float tipX = endX-offsetX;
+		float tipY = endY-offsetY;
+		for (int i=0; i<8; i++) {
+			if (config.style == TRACER_DISRUPTOR && (i+mState)%3 == 1) continue;
+			if (config.style == TRACER_ANIMATED && (i+mState)%2 == 1) continue;
+			float from = i/8.0f;
+			float to = (i+0.7f)/8.0f;
+			mRenderer->DrawLine(startX+(tipX-startX)*from,startY+(tipY-startY)*from,startX+(tipX-startX)*to,startY+(tipY-startY)*to,config.width,ARGB(config.alpha,config.red,config.green,config.blue));
+		}
+	}
+	else if (config.style == TRACER_PARTICLE || config.style == TRACER_SMOKE) {
+		for (int i=0; i<8; i++) {
+			float scale = i/7.0f;
+			float particleX = endX-tailX*scale-offsetX;
+			float particleY = endY-tailY*scale-offsetY;
+			float size = config.width*(config.style == TRACER_SMOKE ? 2.0f+scale*2.0f:1.0f);
+			int particleAlpha = config.alpha*(8-i)/8;
+			mRenderer->FillRect(particleX-size,particleY-size,size*2.0f,size*2.0f,ARGB(particleAlpha,config.red,config.green,config.blue));
+		}
+	}
+	else if (config.style == TRACER_IMPACT_RING || config.style == TRACER_IMPACT_BURST) {
+		float tipX = endX-offsetX;
+		float tipY = endY-offsetY;
+		float radius = (4.0f+mState*2.0f)*config.width;
+		int impactAlpha = config.alpha*(BULLET_DEAD-mState)/BULLET_DEAD;
+		for (int i=0; i<8; i++) {
+			float angle1 = i*0.785398f;
+			float angle2 = (i+1)*0.785398f;
+			if (config.style == TRACER_IMPACT_RING) mRenderer->DrawLine(tipX+cosf(angle1)*radius,tipY+sinf(angle1)*radius,tipX+cosf(angle2)*radius,tipY+sinf(angle2)*radius,config.width,ARGB(impactAlpha,config.red,config.green,config.blue));
+			else mRenderer->DrawLine(tipX+cosf(angle1)*radius*0.25f,tipY+sinf(angle1)*radius*0.25f,tipX+cosf(angle1)*radius,tipY+sinf(angle1)*radius,config.width,ARGB(impactAlpha,config.red,config.green,config.blue));
+		}
+	}
+	else if (config.style == TRACER_AFTERIMAGE) {
+		float startX = limit(mX-tailX,mStartX,signX)-offsetX;
+		float startY = limit(mY-tailY,mStartY,signY)-offsetY;
+		for (int i=0; i<4; i++) {
+			float side = (i-1.5f)*config.width*2.0f;
+			mRenderer->DrawLine(startX-sinAngle*side,startY+cosAngle*side,endX-offsetX-sinAngle*side,endY-offsetY+cosAngle*side,config.width,ARGB(config.alpha*(4-i)/4,config.red,config.green,config.blue));
+		}
+	}
 	else {
 		mRenderer->SetTexBlend(BLEND_SRC_ALPHA, BLEND_ONE);
 		mRenderer->DrawLine(limit(mX-tailX,mStartX,signX)-offsetX,limit(mY-tailY,mStartY,signY)-offsetY,endX-offsetX,endY-offsetY,config.width*0.7f,ARGB(config.alpha/3,darkRed,darkGreen,darkBlue));
@@ -350,7 +526,7 @@ void Bullet::Render(float x, float y)
 		mRenderer->DrawLine(limit(mX-tailX*0.5f,mStartX,signX)-offsetX,limit(mY-tailY*0.5f,mStartY,signY)-offsetY,endX-offsetX,endY-offsetY,config.width*0.8f,ARGB(config.alpha*5/9,config.red,config.green,config.blue));
 		mRenderer->DrawLine(limit(mX-tailX*0.25f,mStartX,signX)-offsetX,limit(mY-tailY*0.25f,mStartY,signY)-offsetY,endX-offsetX,endY-offsetY,config.width*0.9f,ARGB(config.alpha,config.red,config.green,config.blue));
 	}
-	if (config.style != TRACER_BOLT && config.style != TRACER_PLASMA && config.style != TRACER_COMET && config.style != TRACER_PULSE && config.style != TRACER_BLADE) {
+	if (config.style != TRACER_BOLT && config.style != TRACER_PLASMA && config.style != TRACER_COMET && config.style != TRACER_PULSE && config.style != TRACER_BLADE && config.style != TRACER_PARTICLE && config.style != TRACER_SMOKE && config.style != TRACER_IMPACT_RING && config.style != TRACER_IMPACT_BURST) {
 		int endpointAlpha = config.customized ? config.alpha : 255;
 		mRenderer->FillRect(endX-offsetX,endY-offsetY-1,1,1,ARGB(endpointAlpha,config.red,config.green,config.blue));
 	}

@@ -537,7 +537,10 @@ public class GunPreviewer {
 	static class WeaponEditorDialog extends JDialog {
 		static final String[] TRACER_STYLES = {"none", "line", "laser", "dot", "dashed", "beam", "plasma", "bolt",
 		                                                "comet", "pulse", "rail", "spark", "needle", "twin", "zigzag",
-		                                                "flare", "streak", "slug", "blade"} ;
+		                                                "flare", "streak", "slug", "blade", "gauss", "lightning",
+		                                                "spiral", "wave", "chain", "ricochet", "penetrator", "charge_beam",
+		                                                "fading_beam", "expanding_beam", "tapered_beam", "gradient_beam", "heat_ray", "disruptor",
+		                                                "particle_trail", "smoke_trail", "impact_ring", "impact_burst", "afterimage", "animated_texture"} ;
 		final PreviewFrame frame ;
 		final WeaponInfo weapon ;
 		final boolean newWeapon ;
@@ -551,7 +554,7 @@ public class GunPreviewer {
 		final JSpinner tracerRed = integer(0, 255), tracerGreen = integer(0, 255), tracerBlue = integer(0, 255), tracerAlpha = integer(0, 255) ;
 		final JSpinner spread = decimal(0.0, 100.0, 0.01), walkingSpeed = decimal(0.0, 100.0, 0.05) ;
 		final JSpinner bulletSpeed = decimal(0.0, 100.0, 0.05), viewAngle = decimal(0.0, 10.0, 0.01) ;
-		final JSpinner tracerLength = decimal(0.0, 10000.0, 1.0), tracerWidth = decimal(0.1, 100.0, 0.1) ;
+		final JSpinner tracerLength = decimal(0.0, 5000.0, 1.0), tracerWidth = decimal(0.1, 20.0, 0.1) ;
 		final JSpinner laserRed = integer(0, 255), laserGreen = integer(0, 255), laserBlue = integer(0, 255), laserAlpha = integer(0, 255) ;
 		final JSpinner laserWidth = decimal(0.1, 20.0, 0.1), laserRange = decimal(1.0, 5000.0, 10.0) ;
 		final JSpinner laserFalloff = decimal(0.0, 10.0, 0.1), laserEndDotScale = decimal(0.1, 20.0, 0.1) ;
@@ -1702,6 +1705,101 @@ public class GunPreviewer {
 				}
 				drawTracerPoint(g, tipX, tipY, width, color) ;
 				return ;
+			} else if ("gauss".equals(style) || "charge_beam".equals(style)) {
+				float glow = "charge_beam".equals(style) ? 8.0f : 6.0f ;
+				drawTracerLine(g, startX, startY, tipX, tipY, width * glow, dim) ;
+				drawTracerLine(g, startX, startY, tipX, tipY, width * 2.0f, color) ;
+				drawTracerLine(g, startX, startY, tipX, tipY, width * 0.6f, Color.WHITE) ;
+			} else if ("lightning".equals(style) || "wave".equals(style) || "heat_ray".equals(style)) {
+				double previousX = startX, previousY = startY ;
+				double sideScale = width * ("heat_ray".equals(style) ? 4.0 : 3.0) ;
+				int phase = (int)(System.currentTimeMillis() / 90L) ;
+				for (int index = 1 ; index <= 8 ; index++) {
+					double scale = index / 8.0 ;
+					double offset = index == 8 ? 0.0 : Math.sin((index + phase * 2) * 1.7) * sideScale ;
+					if ("lightning".equals(style)) offset += ((index * 7 + phase * 3) % 5 - 2) * width ;
+					double nextX = startX + directionX * length * scale + sideX * offset ;
+					double nextY = startY + directionY * length * scale + sideY * offset ;
+					drawTracerLine(g, previousX, previousY, nextX, nextY, width, color) ;
+					previousX = nextX ; previousY = nextY ;
+				}
+			} else if ("spiral".equals(style)) {
+				int phase = (int)(System.currentTimeMillis() / 90L) ;
+				for (int strand = 0 ; strand < 2 ; strand++) {
+					double previousX = startX, previousY = startY ;
+					for (int index = 1 ; index <= 8 ; index++) {
+						double scale = index / 8.0 ;
+						double offset = Math.sin(scale * Math.PI * 4.0 + strand * Math.PI + phase * 0.8) * width * 3.0 ;
+						double nextX = startX + directionX * length * scale + sideX * offset ;
+						double nextY = startY + directionY * length * scale + sideY * offset ;
+						drawTracerLine(g, previousX, previousY, nextX, nextY, width * 0.7f, color) ;
+						previousX = nextX ; previousY = nextY ;
+					}
+				}
+			} else if ("chain".equals(style) || "ricochet".equals(style) || "penetrator".equals(style)) {
+				double previousX = startX, previousY = startY ;
+				int segments = "chain".equals(style) ? 6 : 3 ;
+				for (int index = 1 ; index <= segments ; index++) {
+					double scale = index / (double)segments ;
+					double offset = index == segments ? 0.0 : (index % 2 == 0 ? -1.0 : 1.0) * width * ("ricochet".equals(style) ? 8.0 : 2.0) ;
+					double nextX = startX + directionX * length * scale + sideX * offset ;
+					double nextY = startY + directionY * length * scale + sideY * offset ;
+					drawTracerLine(g, previousX, previousY, nextX, nextY, width, color) ;
+					if ("chain".equals(style) && index < segments) drawTracerPoint(g, nextX, nextY, width, color) ;
+					previousX = nextX ; previousY = nextY ;
+				}
+				if ("penetrator".equals(style)) drawTracerLine(g, tipX, tipY, tipX + directionX * 12.0 * zoom, tipY + directionY * 12.0 * zoom, width * 0.7f, dim) ;
+			} else if ("fading_beam".equals(style) || "expanding_beam".equals(style) || "tapered_beam".equals(style) || "gradient_beam".equals(style)) {
+				int phase = (int)(System.currentTimeMillis() / 90L) % 5 ;
+				for (int index = 0 ; index < 6 ; index++) {
+					double from = index / 6.0, to = (index + 1) / 6.0 ;
+					float segmentWidth = width ;
+					Color segmentColor = color ;
+					if ("fading_beam".equals(style)) segmentColor = tracerColor(tracer, tracer.alpha * (5 - phase) / 5, 1.0) ;
+					else if ("expanding_beam".equals(style)) segmentWidth *= 1.0f + phase * 0.6f ;
+					else if ("tapered_beam".equals(style)) segmentWidth *= 2.0f - (float)from * 1.7f ;
+					else segmentColor = new Color(tracer.red + (255 - tracer.red) * index / 6,
+					                                  tracer.green + (255 - tracer.green) * index / 6,
+					                                  tracer.blue + (255 - tracer.blue) * index / 6, tracer.alpha) ;
+					drawTracerLine(g, startX + directionX * length * from, startY + directionY * length * from,
+					               startX + directionX * length * to, startY + directionY * length * to, segmentWidth, segmentColor) ;
+				}
+			} else if ("disruptor".equals(style) || "animated_texture".equals(style)) {
+				int phase = (int)(System.currentTimeMillis() / 90L) ;
+				for (int index = 0 ; index < 8 ; index++) {
+					if ("disruptor".equals(style) && (index + phase) % 3 == 1) continue ;
+					if ("animated_texture".equals(style) && (index + phase) % 2 == 1) continue ;
+					double from = index / 8.0, to = (index + 0.7) / 8.0 ;
+					drawTracerLine(g, startX + directionX * length * from, startY + directionY * length * from,
+					               startX + directionX * length * to, startY + directionY * length * to, width, color) ;
+				}
+			} else if ("particle_trail".equals(style) || "smoke_trail".equals(style)) {
+				for (int index = 0 ; index < 8 ; index++) {
+					double scale = index / 7.0 ;
+					float size = width * ("smoke_trail".equals(style) ? 2.0f + (float)scale * 2.0f : 1.0f) ;
+					drawTracerPoint(g, tipX - directionX * length * scale, tipY - directionY * length * scale,
+					                size, tracerColor(tracer, tracer.alpha * (8 - index) / 8, 1.0)) ;
+				}
+				return ;
+			} else if ("impact_ring".equals(style) || "impact_burst".equals(style)) {
+				int phase = (int)(System.currentTimeMillis() / 90L) % 5 ;
+				double radius = (4.0 + phase * 2.0) * width ;
+				Color impactColor = tracerColor(tracer, tracer.alpha * (5 - phase) / 5, 1.0) ;
+				for (int index = 0 ; index < 8 ; index++) {
+					double angle1 = index * Math.PI / 4.0, angle2 = (index + 1) * Math.PI / 4.0 ;
+					if ("impact_ring".equals(style)) drawTracerLine(g, tipX + Math.cos(angle1) * radius, tipY + Math.sin(angle1) * radius,
+					                                                   tipX + Math.cos(angle2) * radius, tipY + Math.sin(angle2) * radius, width, impactColor) ;
+					else drawTracerLine(g, tipX + Math.cos(angle1) * radius * 0.25, tipY + Math.sin(angle1) * radius * 0.25,
+					                     tipX + Math.cos(angle1) * radius, tipY + Math.sin(angle1) * radius, width, impactColor) ;
+				}
+				return ;
+			} else if ("afterimage".equals(style)) {
+				for (int index = 0 ; index < 4 ; index++) {
+					double offset = (index - 1.5) * width * 2.0 ;
+					drawTracerLine(g, startX + sideX * offset, startY + sideY * offset,
+					               tipX + sideX * offset, tipY + sideY * offset, width,
+					               tracerColor(tracer, tracer.alpha * (4 - index) / 4, 1.0)) ;
+				}
 			} else {
 				drawTracerLine(g, startX, startY, tipX, tipY, width * 0.7f, dim) ;
 				drawTracerLine(g, tipX - directionX * length * 0.75, tipY - directionY * length * 0.75,
