@@ -56,6 +56,17 @@ ONLINE NETWORKING
   tracers.txt    Per-weapon client-only tracer styles
   lasers.txt     Per-weapon client-only aiming lasers
 
+TRACER CUSTOMIZATION
+--------------------
+tracers.txt uses one optional record per weapon ID:
+  id style red green blue alpha length width
+
+Weapon IDs range from 0-127, RGBA channels from 0-255, length from 0-5000,
+and width from 0.1-20. A length of 0 uses the original speed-scaled trail.
+Styles are client-only and never change server collision or damage. Visual
+chain, ricochet, penetrator and charge styles do not add those gameplay
+mechanics. See tracers.txt for the complete style list and descriptions.
+
 LASER CUSTOMIZATION
 -------------------
 lasers.txt uses optional records keyed by weapon ID:
