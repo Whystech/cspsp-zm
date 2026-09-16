@@ -94,6 +94,14 @@ ParticleEngine::~ParticleEngine()
 }
 
 void ParticleEngine::GenerateParticles(int type, float x, float y, int amount) {
+	GenerateParticles(type,x,y,amount,NULL,1.0f);
+}
+
+void ParticleEngine::GenerateParticles(int type, float x, float y, int amount, JQuad* quad, float scale) {
+	GenerateParticles(type,x,y,amount,quad,scale,255,128,35,gEffectsConfig.impactParticleLifetime);
+}
+
+void ParticleEngine::GenerateParticles(int type, float x, float y, int amount, JQuad* quad, float scale, int red, int green, int blue, float lifetime) {
 
 	for (int i=0;i<amount;i++) {
 		Particle *temp = mParticles[mIndex];
@@ -109,40 +117,39 @@ void ParticleEngine::GenerateParticles(int type, float x, float y, int amount) {
 			}
 					
 			temp->SetPosition(x, y);
-			temp->SetQuad(mQuad);
+			temp->SetQuad(quad == NULL ? mQuad : quad);
 			temp->mSpeed = abs(rand()%50)/1000.0f;
 			temp->mAngle = abs(rand()%360)*DEG2RAD;
 			//mQuad->mBlend = GU_TFX_MODULATE;
 			if (type == BULLETIMPACT) {
 				//temp->ResetVelocity();
 				temp->mCircularAcceleration = -0.004f;
-							
-				float lifetime = gEffectsConfig.impactParticleLifetime;
+				if (lifetime < 1.0f) lifetime = 1.0f;
 				temp->mLifetime = lifetime;
-				temp->mScale = 0.3;
-				temp->mScaleEnd = 0.1f;
-				temp->mScaleDelta = -0.001f;//(0.1f-temp->mScale)/lifetime;
+				temp->mScale = 0.3f*scale;
+				temp->mScaleEnd = 0.1f*scale;
+				temp->mScaleDelta = (temp->mScaleEnd-temp->mScale)/lifetime;
 				temp->mRotation = 0.0f;
 				temp->mRotationDelta = 0.002f;
 				temp->mAlpha = 255.0f;
 				temp->mAlphaEnd = 0.0f;
-				temp->mAlphaDelta = -0.2f;//.0f/lifetime);
+				temp->mAlphaDelta = -255.0f/lifetime;
 						
 				//float r = 0.0f;//abs(RAND%256);
 				//float g = 0.0f;//213.1f;//abs(RAND%256);
 				//float b = 0.0f;//55.0f;//abs(RAND%256);
 				//temp->mColor.a = 255.0f;
-				temp->mColor[0] = 0.0f;
-				temp->mColor[1] = 0.0f;
-				temp->mColor[2] = 0.0f;
+				temp->mColor[0] = (float)red;
+				temp->mColor[1] = (float)green;
+				temp->mColor[2] = (float)blue;
 
 				//r = 255.0f;
 				//g = 128.0f;
 				//b = 35.0f;
 				//temp->mColorEnd.a= 255.0f;
-				temp->mColorEnd[0] = 255.0f;
-				temp->mColorEnd[1] = 128.0f;;
-				temp->mColorEnd[2] = 35.0f;
+				temp->mColorEnd[0] = (float)red;
+				temp->mColorEnd[1] = (float)green;
+				temp->mColorEnd[2] = (float)blue;
 			}
 			else if (type == BLOOD) {
 				//temp->ResetVelocity();

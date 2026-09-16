@@ -1684,6 +1684,12 @@ void GameStateOnline::HandlePacket(Packet &packet, bool sendack) {
 
 				strcpy(mGuns[id].mName,name);
 				mGuns[id].mMuzzleFlashType = muzzleflashtype >= 0 && muzzleflashtype < MAX_MUZZLE_FLASH_TYPES ? muzzleflashtype : 0;
+				mGuns[id].mBulletImpactType = gGuns[id].mBulletImpactType;
+				mGuns[id].mBulletImpactScale = gGuns[id].mBulletImpactScale;
+				mGuns[id].mBulletImpactRed = gGuns[id].mBulletImpactRed;
+				mGuns[id].mBulletImpactGreen = gGuns[id].mBulletImpactGreen;
+				mGuns[id].mBulletImpactBlue = gGuns[id].mBulletImpactBlue;
+				mGuns[id].mBulletImpactFadeTime = gGuns[id].mBulletImpactFadeTime;
 				mGuns[id].mFireSound = gGuns[id].mFireSound;
 				mGuns[id].mReloadSound = gGuns[id].mReloadSound;
 				mGuns[id].mDryFireSound = gGuns[id].mDryFireSound;

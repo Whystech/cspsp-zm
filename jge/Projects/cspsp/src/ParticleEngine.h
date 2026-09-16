@@ -102,6 +102,8 @@ public:
 	void Render(float x, float y);
 
 	void GenerateParticles(int type, float x, float y, int amount);
+	void GenerateParticles(int type, float x, float y, int amount, JQuad* quad, float scale);
+	void GenerateParticles(int type, float x, float y, int amount, JQuad* quad, float scale, int red, int green, int blue, float lifetime);
 
 	void SetPosition(float, float);
 	

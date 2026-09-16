@@ -834,6 +834,14 @@ void Person::SetKnifeForTeam(int team)
 	mKnifeGun->mGroundQuad = gGunGroundQuads[meleeWeaponId];
 	mGuns[KNIFE] = new GunObject(mKnifeGun, 0, 0);
 	mGunIndex = KNIFE;
+	if (mState == ATTACKING || mState == DRYFIRING) {
+		SetAnimation(ANIM_KNIFE_SLASH);
+		mCurrentAnimation->SetSpeed(1000.0f/mGuns[KNIFE]->mGun->mDelay);
+	}
+	else {
+		SetAnimation(ANIM_KNIFE);
+		mCurrentAnimation->SetSpeed(1.0f);
+	}
 }
 
 //------------------------------------------------------------------------------------------------

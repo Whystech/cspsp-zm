@@ -55,6 +55,7 @@ JQuad* gRadarQuad;
 JQuad* gBuyZoneQuad;
 JQuad* gDecalQuads[5];
 std::map<int, std::vector<JQuad*> > gMuzzleFlashQuads;
+JQuad* gBulletImpactQuads[MAX_BULLET_IMPACT_TYPES];
 JQuad* gHealthBorderQuad;
 JQuad* gHealthFillQuad;
 JQuad* gArmorBorderQuad;
@@ -161,6 +162,12 @@ JQuad* GetMuzzleFlashQuad(int type, int frame)
 	if (found != gMuzzleFlashQuads.end() && frame < (int)found->second.size() && found->second[frame] != NULL) return found->second[frame];
 	found = gMuzzleFlashQuads.find(0);
 	return found != gMuzzleFlashQuads.end() && frame < (int)found->second.size() ? found->second[frame] : NULL;
+}
+
+JQuad* GetBulletImpactQuad(int type)
+{
+	if (type >= 0 && type < MAX_BULLET_IMPACT_TYPES && gBulletImpactQuads[type] != NULL) return gBulletImpactQuads[type];
+	return gBulletImpactQuads[0];
 }
 
 void LoadLaserConfigs(const char* filename)

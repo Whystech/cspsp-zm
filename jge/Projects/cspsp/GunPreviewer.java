@@ -2,6 +2,7 @@ import java.awt.* ;
 import java.awt.event.* ;
 import java.awt.geom.AffineTransform ;
 import java.awt.image.BufferedImage ;
+import java.awt.image.RescaleOp ;
 import java.io.* ;
 import java.net.URISyntaxException ;
 import java.util.ArrayList ;
@@ -16,6 +17,7 @@ import javax.swing.filechooser.FileNameExtensionFilter ;
 
 public class GunPreviewer {
 	static final int MAX_MUZZLE_FLASH_TYPES = 128 ;
+	static final int MAX_BULLET_IMPACT_TYPES = 128 ;
 	static final Color BACKGROUND = new Color(20, 23, 27) ;
 	static final Color PANEL = new Color(29, 33, 38) ;
 	static final Color PANEL_LIGHT = new Color(39, 44, 50) ;
@@ -44,8 +46,9 @@ public class GunPreviewer {
 
 	static class WeaponInfo {
 		final int id ;
-		int damage, delay, clip, numClips, reloadDelay, cost, type, fireMode, pellets, scope, category, teams, flashStyle ;
-		float spread, walkingSpeed, bulletSpeed, viewAngle ;
+		int damage, delay, clip, numClips, reloadDelay, cost, type, fireMode, pellets, scope, category, teams, flashStyle, impactStyle ;
+		int impactRed, impactGreen, impactBlue, impactFadeTime ;
+		float spread, walkingSpeed, bulletSpeed, viewAngle, impactScale ;
 		String name ;
 
 		WeaponInfo(String[] fields) {
@@ -68,6 +71,18 @@ public class GunPreviewer {
 			teams = Integer.parseInt(fields[16]) ;
 			flashStyle = fields.length >= 19 ? Integer.parseInt(fields[17]) : 0 ;
 			if (flashStyle < 0 || flashStyle >= MAX_MUZZLE_FLASH_TYPES) flashStyle = 0 ;
+			impactStyle = fields.length >= 21 ? Integer.parseInt(fields[18]) : 0 ;
+			if (impactStyle < 0 || impactStyle >= MAX_BULLET_IMPACT_TYPES) impactStyle = 0 ;
+			impactScale = fields.length >= 21 ? Float.parseFloat(fields[19]) : 1.0f ;
+			if (impactScale < 0.1f || impactScale > 10.0f) impactScale = 1.0f ;
+			impactRed = fields.length >= 25 ? Integer.parseInt(fields[20]) : 255 ;
+			impactGreen = fields.length >= 25 ? Integer.parseInt(fields[21]) : 128 ;
+			impactBlue = fields.length >= 25 ? Integer.parseInt(fields[22]) : 35 ;
+			impactFadeTime = fields.length >= 25 ? Integer.parseInt(fields[23]) : 250 ;
+			if (impactRed < 0 || impactRed > 255) impactRed = 255 ;
+			if (impactGreen < 0 || impactGreen > 255) impactGreen = 128 ;
+			if (impactBlue < 0 || impactBlue > 255) impactBlue = 35 ;
+			if (impactFadeTime < 1 || impactFadeTime > 60000) impactFadeTime = 250 ;
 			name = fields[fields.length - 1] ;
 		}
 
@@ -75,13 +90,15 @@ public class GunPreviewer {
 			return id + " " + damage + " " + delay + " " + decimal(spread) + " " + clip + " " + numClips
 			       + " " + reloadDelay + " " + decimal(walkingSpeed) + " " + decimal(bulletSpeed) + " "
 			       + decimal(viewAngle) + " " + cost + " " + type + " " + fireMode + " " + pellets + " "
-			       + scope + " " + category + " " + teams + " " + flashStyle + " " + name ;
+			       + scope + " " + category + " " + teams + " " + flashStyle + " " + impactStyle + " "
+			       + decimal(impactScale) + " " + impactRed + " " + impactGreen + " " + impactBlue + " "
+			       + impactFadeTime + " " + name ;
 		}
 
 		static String decimal(float value) {return Float.toString(value) ;}
 
 		static WeaponInfo createDefault(int id) {
-			return new WeaponInfo((id + " 20 100 0.3 30 5 2000 1.0 1.0 0.0 1000 0 1 1 0 4 3 0 NEW-GUN").split(" ")) ;
+			return new WeaponInfo((id + " 20 100 0.3 30 5 2000 1.0 1.0 0.0 1000 0 1 1 0 4 3 0 0 1.0 255 128 35 250 NEW-GUN").split(" ")) ;
 		}
 
 		String weaponType() {
@@ -172,6 +189,7 @@ public class GunPreviewer {
 		final List<WeaponInfo> weapons = new ArrayList<WeaponInfo>() ;
 		final BufferedImage[] handPages = new BufferedImage[2] ;
 		final BufferedImage[] groundPages = new BufferedImage[2] ;
+		final BufferedImage[] impactPages = new BufferedImage[2] ;
 		final Map<Integer, BufferedImage> flashes = new HashMap<Integer, BufferedImage>() ;
 		final Map<Integer, TracerConfig> tracers = new HashMap<Integer, TracerConfig>() ;
 		final Map<Integer, LaserConfig> lasers = new HashMap<Integer, LaserConfig>() ;
@@ -203,12 +221,16 @@ public class GunPreviewer {
 			handPages[1] = readOptional("guns2.png") ;
 			groundPages[0] = readRequired("gunsground.png") ;
 			groundPages[1] = readOptional("gunsground2.png") ;
+			impactPages[0] = readRequired("bulletimpacts.png") ;
+			impactPages[1] = readOptional("bulletimpacts2.png") ;
 			players = readRequired("players.png") ;
 			loadMuzzleFlashes() ;
 			validateAtlas(handPages[0], "guns.png") ;
 			validateAtlas(groundPages[0], "gunsground.png") ;
 			if (handPages[1] != null) validateAtlas(handPages[1], "guns2.png") ;
 			if (groundPages[1] != null) validateAtlas(groundPages[1], "gunsground2.png") ;
+			validateAtlas(impactPages[0], "bulletimpacts.png") ;
+			if (impactPages[1] != null) validateAtlas(impactPages[1], "bulletimpacts2.png") ;
 			loadWeapons() ;
 			loadTracers() ;
 			loadLasers() ;
@@ -506,6 +528,41 @@ public class GunPreviewer {
 			pages[id / 64] = updated ;
 		}
 
+		void replaceImpactSprite(int style, File source) throws IOException {
+			if (!source.getName().toLowerCase().endsWith(".png")) throw new IOException("Bullet-impact sprites must be PNG files.") ;
+			BufferedImage replacement = ImageIO.read(source) ;
+			if (replacement == null) throw new IOException("The selected file is not a supported image.") ;
+			if (replacement.getWidth() != 32 || replacement.getHeight() != 32) {
+				throw new IOException("Bullet-impact sprites must be exactly 32x32 pixels.") ;
+			}
+			int pageIndex = style / 64 ;
+			if (pageIndex < 0 || pageIndex >= impactPages.length) throw new IOException("Impact style must be between 0 and 127.") ;
+			BufferedImage atlas = impactPages[pageIndex] ;
+			if (atlas == null) atlas = new BufferedImage(128,512,BufferedImage.TYPE_INT_ARGB) ;
+			Rectangle targetCell = cell(atlas,style) ;
+			if (targetCell == null) throw new IOException("No atlas cell exists for impact style " + style + ".") ;
+			String atlasName = "bulletimpacts" + (pageIndex == 0 ? "" : Integer.toString(pageIndex+1)) + ".png" ;
+			File target = new File(graphicsDirectory,atlasName) ;
+			File temporary = new File(graphicsDirectory,atlasName + ".tmp") ;
+			File backup = new File(graphicsDirectory,atlasName + ".bak") ;
+			BufferedImage updated = new BufferedImage(atlas.getWidth(),atlas.getHeight(),BufferedImage.TYPE_INT_ARGB) ;
+			Graphics2D graphics = updated.createGraphics() ;
+			try {
+				graphics.setComposite(AlphaComposite.Src) ;
+				graphics.drawImage(atlas,0,0,null) ;
+				graphics.drawImage(replacement,targetCell.x,targetCell.y,null) ;
+			} finally {graphics.dispose() ;}
+			if (!ImageIO.write(updated,"png",temporary)) throw new IOException("PNG writing is unavailable.") ;
+			boolean hadTarget = target.isFile() ;
+			if (hadTarget && backup.exists() && !backup.delete()) throw new IOException("Cannot replace " + backup.getAbsolutePath()) ;
+			if (hadTarget && !target.renameTo(backup)) throw new IOException("Cannot back up " + target.getAbsolutePath()) ;
+			if (!temporary.renameTo(target)) {
+				if (hadTarget) backup.renameTo(target) ;
+				throw new IOException("Cannot save " + target.getAbsolutePath()) ;
+			}
+			impactPages[pageIndex] = updated ;
+		}
+
 		String atlasName(boolean hand, int page) {
 			String base = hand ? "guns" : "gunsground" ;
 			return base + (page == 0 ? "" : Integer.toString(page + 1)) + ".png" ;
@@ -518,6 +575,16 @@ public class GunPreviewer {
 
 		BufferedImage handPage(int id) {return page(handPages, id) ;}
 		BufferedImage groundPage(int id) {return page(groundPages, id) ;}
+		BufferedImage impactPage(int style) {
+			BufferedImage selected = page(impactPages, style) ;
+			return selected == null || cell(selected, style) == null ? impactPages[0] : selected ;
+		}
+
+		Rectangle impactCell(int style) {
+			BufferedImage selected = impactPage(style) ;
+			Rectangle selectedCell = cell(selected, style) ;
+			return selectedCell == null ? cell(impactPages[0], 0) : selectedCell ;
+		}
 
 		Rectangle cell(BufferedImage page, int id) {
 			if (page == null) return null ;
@@ -551,6 +618,9 @@ public class GunPreviewer {
 		final JSpinner damage = integer(0, 10000), delay = integer(0, 60000), clip = integer(0, 10000) ;
 		final JSpinner numClips = integer(0, 1000), reloadDelay = integer(0, 60000), cost = integer(0, 100000) ;
 		final JSpinner pellets = integer(1, 1000), flashStyle = integer(0, MAX_MUZZLE_FLASH_TYPES - 1) ;
+		final JSpinner impactStyle = integer(0, MAX_BULLET_IMPACT_TYPES - 1), impactScale = decimal(0.1, 10.0, 0.1) ;
+		final JSpinner impactRed = integer(0, 255), impactGreen = integer(0, 255), impactBlue = integer(0, 255) ;
+		final JSpinner impactFadeTime = integer(1, 60000) ;
 		final JSpinner tracerRed = integer(0, 255), tracerGreen = integer(0, 255), tracerBlue = integer(0, 255), tracerAlpha = integer(0, 255) ;
 		final JSpinner spread = decimal(0.0, 100.0, 0.01), walkingSpeed = decimal(0.0, 100.0, 0.05) ;
 		final JSpinner bulletSpeed = decimal(0.0, 100.0, 0.05), viewAngle = decimal(0.0, 10.0, 0.01) ;
@@ -561,6 +631,8 @@ public class GunPreviewer {
 		final JSpinner laserOffsetX = decimal(-100.0, 100.0, 0.5), laserOffsetY = decimal(-100.0, 100.0, 0.5) ;
 		final JCheckBox laserEnabled = new JCheckBox("Enabled"), laserFalloffEnabled = new JCheckBox("Use intensity falloff") ;
 		final JCheckBox laserEndDot = new JCheckBox("Display endpoint dot") ;
+		final JCheckBox tracerLightBackground = new JCheckBox("Light background") ;
+		final JCheckBox impactLightBackground = new JCheckBox("Light background") ;
 		final JComboBox<String> type = new JComboBox<String>(new String[] {"Primary", "Secondary", "Knife", "Grenade"}) ;
 		final JComboBox<String> fireMode = new JComboBox<String>(new String[] {"Semi-auto", "Automatic"}) ;
 		final JComboBox<String> scope = new JComboBox<String>(new String[] {"None", "Low", "Medium", "High"}) ;
@@ -571,6 +643,8 @@ public class GunPreviewer {
 		final ColorSwatch tracerColorSwatch = new ColorSwatch() ;
 		final LaserPreviewPanel laserPreview = new LaserPreviewPanel() ;
 		final LaserColorSwatch laserColorSwatch = new LaserColorSwatch() ;
+		final ImpactPreviewPanel impactPreview = new ImpactPreviewPanel() ;
+		final ImpactColorSwatch impactColorSwatch = new ImpactColorSwatch() ;
 
 		WeaponEditorDialog(PreviewFrame frame, WeaponInfo weapon) {this(frame, weapon, false) ;}
 
@@ -633,6 +707,7 @@ public class GunPreviewer {
 			JPanel colorPicker = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0)) ;
 			colorPicker.add(tracerColorSwatch) ;
 			colorPicker.add(chooseTracerColor) ;
+			colorPicker.add(tracerLightBackground) ;
 			JPanel tracerPreviewArea = new JPanel(new BorderLayout(12, 0)) ;
 			tracerPreviewArea.setBorder(BorderFactory.createTitledBorder("Live tracer preview")) ;
 			tracerPreviewArea.add(tracerPreview, BorderLayout.CENTER) ;
@@ -641,6 +716,32 @@ public class GunPreviewer {
 			tracerPage.setBorder(new EmptyBorder(10, 10, 10, 10)) ;
 			tracerPage.add(tracerPreviewArea, BorderLayout.NORTH) ;
 			tracerPage.add(scrollable(tracerFields), BorderLayout.CENTER) ;
+
+			JPanel impactFields = formPanel() ;
+			add(impactFields, "Impact style ID", impactStyle) ;
+			add(impactFields, "Impact scale", impactScale) ;
+			add(impactFields, "Red (0-255)", impactRed) ;
+			add(impactFields, "Green (0-255)", impactGreen) ;
+			add(impactFields, "Blue (0-255)", impactBlue) ;
+			add(impactFields, "Fade time (ms)", impactFadeTime) ;
+			JButton chooseImpactColor = new JButton("Choose color...") ;
+			chooseImpactColor.addActionListener(event -> chooseImpactColor()) ;
+			JButton importImpact = new JButton("Import impact PNG") ;
+			importImpact.setToolTipText("Replace the selected impact style with an exact 32x32 PNG; grayscale art works best with tinting") ;
+			importImpact.addActionListener(event -> importImpactSprite()) ;
+			add(impactFields,"Impact artwork",importImpact) ;
+			JPanel impactColorPicker = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0)) ;
+			impactColorPicker.add(impactColorSwatch) ;
+			impactColorPicker.add(chooseImpactColor) ;
+			impactColorPicker.add(impactLightBackground) ;
+			JPanel impactPreviewArea = new JPanel(new BorderLayout(12, 0)) ;
+			impactPreviewArea.setBorder(BorderFactory.createTitledBorder("Live bullet-impact preview")) ;
+			impactPreviewArea.add(impactPreview, BorderLayout.CENTER) ;
+			impactPreviewArea.add(impactColorPicker, BorderLayout.EAST) ;
+			JPanel impactPage = new JPanel(new BorderLayout(0, 10)) ;
+			impactPage.setBorder(new EmptyBorder(10, 10, 10, 10)) ;
+			impactPage.add(impactPreviewArea, BorderLayout.NORTH) ;
+			impactPage.add(scrollable(impactFields), BorderLayout.CENTER) ;
 
 			JPanel laserFields = formPanel() ;
 			add(laserFields, "Laser", laserEnabled) ;
@@ -674,6 +775,7 @@ public class GunPreviewer {
 			pages.addTab("1. Weapon", weaponPage) ;
 			pages.addTab("2. Tracer", tracerPage) ;
 			pages.addTab("3. Laser", laserPage) ;
+			pages.addTab("4. Impact", impactPage) ;
 			content.add(pages, BorderLayout.CENTER) ;
 			JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT)) ;
 			JButton cancel = new JButton("Cancel") ;
@@ -687,6 +789,10 @@ public class GunPreviewer {
 			loadValues() ;
 			installTracerPreviewListeners() ;
 			installLaserPreviewListeners() ;
+			installImpactPreviewListeners() ;
+			final Timer impactTimer = new Timer(16, event -> impactPreview.repaint()) ;
+			impactTimer.start() ;
+			addWindowListener(new WindowAdapter() {public void windowClosed(WindowEvent event) {impactTimer.stop() ;}}) ;
 			setSize(720, 620) ;
 			setMinimumSize(new Dimension(640, 500)) ;
 			setLocationRelativeTo(frame) ;
@@ -731,6 +837,9 @@ public class GunPreviewer {
 			type.setSelectedIndex(weapon.type) ; fireMode.setSelectedIndex(weapon.fireMode) ; pellets.setValue(weapon.pellets) ;
 			scope.setSelectedIndex(weapon.scope) ; category.setSelectedIndex(weapon.category) ; teams.setSelectedIndex(weapon.teams) ;
 			flashStyle.setValue(weapon.flashStyle) ;
+			impactStyle.setValue(weapon.impactStyle) ; impactScale.setValue((double)weapon.impactScale) ;
+			impactRed.setValue(weapon.impactRed) ; impactGreen.setValue(weapon.impactGreen) ; impactBlue.setValue(weapon.impactBlue) ;
+			impactFadeTime.setValue(weapon.impactFadeTime) ;
 			tracerStyle.setSelectedItem(tracer.style) ;
 			tracerRed.setValue(tracer.red) ; tracerGreen.setValue(tracer.green) ; tracerBlue.setValue(tracer.blue) ;
 			tracerAlpha.setValue(tracer.alpha) ; tracerLength.setValue((double)tracer.length) ; tracerWidth.setValue((double)tracer.width) ;
@@ -741,6 +850,68 @@ public class GunPreviewer {
 			laserOffsetX.setValue((double)laser.offsetX) ; laserOffsetY.setValue((double)laser.offsetY) ;
 			refreshTracerPreview() ;
 			refreshLaserPreview() ;
+			impactPreview.repaint() ;
+		}
+
+		void installImpactPreviewListeners() {
+			impactStyle.addChangeListener(event -> impactPreview.repaint()) ;
+			impactScale.addChangeListener(event -> impactPreview.repaint()) ;
+			impactLightBackground.addActionListener(event -> impactPreview.repaint()) ;
+			JSpinner[] controls = {impactRed, impactGreen, impactBlue, impactFadeTime} ;
+			for (JSpinner control : controls) control.addChangeListener(event -> {impactColorSwatch.repaint() ; impactPreview.repaint() ;}) ;
+		}
+
+		Color impactColor() {return new Color(integer(impactRed),integer(impactGreen),integer(impactBlue)) ;}
+
+		void chooseImpactColor() {
+			Color selected = JColorChooser.showDialog(this,"Choose impact color",impactColor()) ;
+			if (selected == null) return ;
+			impactRed.setValue(selected.getRed()) ; impactGreen.setValue(selected.getGreen()) ; impactBlue.setValue(selected.getBlue()) ;
+		}
+
+		class ImpactColorSwatch extends JComponent {
+			ImpactColorSwatch() {setPreferredSize(new Dimension(64,64)) ; setToolTipText("Current impact color") ;}
+			protected void paintComponent(Graphics graphics) {
+				Graphics2D g = (Graphics2D)graphics.create() ;
+				try {g.setColor(impactColor()) ; g.fillOval(4,4,getWidth()-8,getHeight()-8) ;
+					g.setColor(new Color(75,80,86)) ; g.setStroke(new BasicStroke(2.0f)) ; g.drawOval(4,4,getWidth()-8,getHeight()-8) ;}
+				finally {g.dispose() ;}
+			}
+		}
+
+		class ImpactPreviewPanel extends JPanel {
+			ImpactPreviewPanel() {setPreferredSize(new Dimension(430, 180)) ; setBackground(BACKGROUND) ;}
+			protected void paintComponent(Graphics graphics) {
+				super.paintComponent(graphics) ;
+				Graphics2D g = (Graphics2D)graphics.create() ;
+				try {
+					Color checkerDark = impactLightBackground.isSelected() ? new Color(220,224,228) : PANEL ;
+					Color checkerLight = impactLightBackground.isSelected() ? new Color(248,249,250) : PANEL_LIGHT ;
+					int tile = 12 ;
+					for (int y=0; y<getHeight(); y+=tile) for (int x=0; x<getWidth(); x+=tile) {
+						g.setColor(((x/tile+y/tile)&1) == 0 ? checkerDark : checkerLight) ;
+						g.fillRect(x,y,tile,tile) ;
+					}
+					int style = integer(impactStyle) ;
+					BufferedImage atlas = frame.model.impactPage(style) ;
+					Rectangle cell = frame.model.impactCell(style) ;
+					if (atlas == null || cell == null) return ;
+					int fadeTime = integer(impactFadeTime) ;
+					float progress = Math.min(1.0f,(System.currentTimeMillis()%(fadeTime+400))/(float)fadeTime) ;
+					int size = Math.max(3,(int)Math.round(32.0*decimal(impactScale)*(0.3-0.2*progress))) ;
+					int x = (getWidth()-size)/2, y = (getHeight()-size)/2 ;
+					BufferedImage source = new BufferedImage(32,32,BufferedImage.TYPE_INT_ARGB) ;
+					Graphics2D sourceGraphics = source.createGraphics() ;
+					try {sourceGraphics.drawImage(atlas,0,0,32,32,cell.x,cell.y,cell.x+32,cell.y+32,null) ;}
+					finally {sourceGraphics.dispose() ;}
+					Color color = impactColor() ;
+					RescaleOp tint = new RescaleOp(new float[] {color.getRed()/255.0f,color.getGreen()/255.0f,color.getBlue()/255.0f,1.0f},new float[4],null) ;
+					BufferedImage tinted = tint.filter(source,null) ;
+					g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR) ;
+					g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER,1.0f-progress)) ;
+					g.drawImage(tinted,x,y,size,size,null) ;
+				} finally {g.dispose() ;}
+			}
 		}
 
 		void installLaserPreviewListeners() {
@@ -821,6 +992,7 @@ public class GunPreviewer {
 
 		void installTracerPreviewListeners() {
 			tracerStyle.addActionListener(event -> refreshTracerPreview()) ;
+			tracerLightBackground.addActionListener(event -> refreshTracerPreview()) ;
 			JSpinner[] controls = {tracerRed, tracerGreen, tracerBlue, tracerAlpha, tracerLength, tracerWidth} ;
 			for (JSpinner control : controls) control.addChangeListener(event -> refreshTracerPreview()) ;
 		}
@@ -893,7 +1065,9 @@ public class GunPreviewer {
 				Graphics2D g = (Graphics2D)graphics.create() ;
 				try {
 					g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON) ;
-					g.setColor(new Color(25, 28, 32)) ;
+					g.setColor(tracerLightBackground.isSelected() ? new Color(242,244,246) : BACKGROUND) ;
+					g.fillRect(0,0,getWidth(),getHeight()) ;
+					g.setColor(tracerLightBackground.isSelected() ? new Color(210,214,218) : new Color(25,28,32)) ;
 					for (int x = 0 ; x < getWidth() ; x += 20) g.drawLine(x, 0, x, getHeight()) ;
 					for (int y = 0 ; y < getHeight() ; y += 20) g.drawLine(0, y, getWidth(), y) ;
 					Rectangle bounds = new Rectangle(8, 8, Math.max(1, getWidth()-16), Math.max(1, getHeight()-16)) ;
@@ -904,6 +1078,24 @@ public class GunPreviewer {
 
 		int integer(JSpinner spinner) {return ((Number)spinner.getValue()).intValue() ;}
 		float decimal(JSpinner spinner) {return ((Number)spinner.getValue()).floatValue() ;}
+
+		void importImpactSprite() {
+			int style = integer(impactStyle) ;
+			JFileChooser chooser = new JFileChooser() ;
+			chooser.setDialogTitle("Select a 32x32 PNG for impact style " + style) ;
+			chooser.setFileFilter(new FileNameExtensionFilter("PNG image (32x32)","png")) ;
+			chooser.setAcceptAllFileFilterUsed(false) ;
+			if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) return ;
+			try {
+				frame.model.replaceImpactSprite(style,chooser.getSelectedFile()) ;
+				impactPreview.repaint() ;
+				String atlas = "bulletimpacts" + (style < 64 ? "" : "2") + ".png" ;
+				JOptionPane.showMessageDialog(this,"Updated " + atlas + " for impact style " + style + ".\nA .bak copy was created when replacing an existing atlas.",
+				                              "Impact sprite updated",JOptionPane.INFORMATION_MESSAGE) ;
+			} catch (IOException exception) {
+				JOptionPane.showMessageDialog(this,exception.getMessage(),"Impact import failed",JOptionPane.ERROR_MESSAGE) ;
+			}
+		}
 
 		void importSprite(boolean hand) {
 			JFileChooser chooser = new JFileChooser() ;
@@ -951,6 +1143,9 @@ public class GunPreviewer {
 			weapon.type = type.getSelectedIndex() ; weapon.fireMode = fireMode.getSelectedIndex() ; weapon.pellets = integer(pellets) ;
 			weapon.scope = scope.getSelectedIndex() ; weapon.category = category.getSelectedIndex() ;
 			weapon.teams = teams.getSelectedIndex() ; weapon.flashStyle = integer(flashStyle) ;
+			weapon.impactStyle = integer(impactStyle) ; weapon.impactScale = decimal(impactScale) ;
+			weapon.impactRed = integer(impactRed) ; weapon.impactGreen = integer(impactGreen) ; weapon.impactBlue = integer(impactBlue) ;
+			weapon.impactFadeTime = integer(impactFadeTime) ;
 			tracer.style = (String)tracerStyle.getSelectedItem() ;
 			tracer.red = integer(tracerRed) ; tracer.green = integer(tracerGreen) ; tracer.blue = integer(tracerBlue) ;
 			tracer.alpha = integer(tracerAlpha) ; tracer.length = decimal(tracerLength) ; tracer.width = decimal(tracerWidth) ;
