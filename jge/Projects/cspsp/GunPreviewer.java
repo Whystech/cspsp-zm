@@ -18,6 +18,7 @@ import javax.swing.filechooser.FileNameExtensionFilter ;
 public class GunPreviewer {
 	static final int MAX_MUZZLE_FLASH_TYPES = 128 ;
 	static final int MAX_BULLET_IMPACT_TYPES = 128 ;
+	static final int FIRST_CUSTOM_GUN_ID = 67 ;
 	static final Color BACKGROUND = new Color(20, 23, 27) ;
 	static final Color PANEL = new Color(29, 33, 38) ;
 	static final Color PANEL_LIGHT = new Color(39, 44, 50) ;
@@ -354,6 +355,43 @@ public class GunPreviewer {
 				backup.renameTo(target) ;
 				throw new IOException("Cannot save " + target.getAbsolutePath()) ;
 			}
+		}
+
+		void removeLastWeapon() throws IOException {
+			if (weapons.isEmpty()) throw new IOException("There are no weapons to remove.") ;
+			WeaponInfo weapon = weapons.get(weapons.size()-1) ;
+			if (weapon.id < FIRST_CUSTOM_GUN_ID) throw new IOException("Built-in weapons cannot be removed.") ;
+			weapons.remove(weapons.size()-1) ;
+			removeConfigRecord(tracerLines,weapon.id,8) ;
+			removeConfigRecord(laserLines,weapon.id,12,14) ;
+			try {
+				saveWeapons() ;
+				writeLinesWithBackup(new File(dataDirectory,"tracers.txt"),tracerLines) ;
+				if (!laserLines.isEmpty() || new File(dataDirectory,"lasers.txt").isFile()) {
+					writeLinesWithBackup(new File(dataDirectory,"lasers.txt"),laserLines) ;
+				}
+				tracers.remove(Integer.valueOf(weapon.id)) ;
+				lasers.remove(Integer.valueOf(weapon.id)) ;
+			} catch (IOException exception) {
+				try {load() ;}
+				catch (IOException ignored) {}
+				throw exception ;
+			}
+		}
+
+		void removeConfigRecord(List<String> lines, int id, int firstFieldCount, int secondFieldCount) {
+			for (int index=lines.size()-1; index>=0; index--) {
+				String trimmed = lines.get(index).trim() ;
+				if (trimmed.length() == 0 || trimmed.startsWith("#")) continue ;
+				String[] fields = trimmed.split("\\s+") ;
+				if (fields.length != firstFieldCount && fields.length != secondFieldCount) continue ;
+				try {if (Integer.parseInt(fields[0]) == id) lines.remove(index) ;}
+				catch (NumberFormatException ignored) {}
+			}
+		}
+
+		void removeConfigRecord(List<String> lines, int id, int fieldCount) {
+			removeConfigRecord(lines,id,fieldCount,fieldCount) ;
 		}
 
 		void loadTracers() throws IOException {
@@ -1309,6 +1347,11 @@ public class GunPreviewer {
 			addGun.addActionListener(event -> addGun()) ;
 			sidebar.add(addGun) ;
 			sidebar.add(Box.createVerticalStrut(8)) ;
+			JButton removeGun = button("REMOVE SELECTED GUN", new Color(138,45,45)) ;
+			removeGun.setToolTipText("Remove the last appended custom gun; built-in and middle IDs cannot be removed") ;
+			removeGun.addActionListener(event -> removeGun()) ;
+			sidebar.add(removeGun) ;
+			sidebar.add(Box.createVerticalStrut(8)) ;
 			JButton reload = button("RELOAD FILES", PANEL_LIGHT) ;
 			reload.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent event) {reloadResources() ;}
@@ -1425,6 +1468,33 @@ public class GunPreviewer {
 				return ;
 			}
 			new WeaponEditorDialog(this, WeaponInfo.createDefault(id), true).setVisible(true) ;
+		}
+
+		void removeGun() {
+			WeaponInfo weapon = selectedWeapon() ;
+			if (weapon == null) return ;
+			int lastId = model.weapons.isEmpty() ? -1 : model.weapons.get(model.weapons.size()-1).id ;
+			if (weapon.id < FIRST_CUSTOM_GUN_ID) {
+				JOptionPane.showMessageDialog(this,"Weapon IDs 0-66 are built into the game and cannot be removed.",
+				                              "Cannot remove gun",JOptionPane.ERROR_MESSAGE) ;
+				return ;
+			}
+			if (weapon.id != lastId) {
+				JOptionPane.showMessageDialog(this,"Only the highest weapon ID can be removed. Remove ID " + lastId + " first to keep gun IDs contiguous.",
+				                              "Cannot remove gun",JOptionPane.ERROR_MESSAGE) ;
+				return ;
+			}
+			int answer = JOptionPane.showConfirmDialog(this,"Remove weapon " + weapon.id + " (" + weapon.name + ")?\nIts tracer and laser settings will also be removed. Sprite cells remain available for ID reuse.",
+			                                               "Remove gun",JOptionPane.YES_NO_OPTION,JOptionPane.WARNING_MESSAGE) ;
+			if (answer != JOptionPane.YES_OPTION) return ;
+			try {
+				model.removeLastWeapon() ;
+				reloadResources(Math.max(0,weapon.id-1)) ;
+				JOptionPane.showMessageDialog(this,"Removed weapon " + weapon.id + " (" + weapon.name + ").",
+				                              "Gun removed",JOptionPane.INFORMATION_MESSAGE) ;
+			} catch (IOException exception) {
+				JOptionPane.showMessageDialog(this,exception.getMessage(),"Remove failed",JOptionPane.ERROR_MESSAGE) ;
+			}
 		}
 
 		void chooseRootFolder() {
