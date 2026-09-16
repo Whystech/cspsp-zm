@@ -732,7 +732,10 @@ void Game::CheckCollisions()
 
 			if (intersected == 1) {					
 				if (bullet->mType == TYPE_BULLET) {
-					gParticleEngine->GenerateParticles(BULLETIMPACT,d.x,d.y,gEffectsConfig.impactParticleCount);
+					JQuad* impactQuad = GetBulletImpactQuad(bullet->mParentGun->mBulletImpactType);
+					gParticleEngine->GenerateParticles(BULLETIMPACT,d.x,d.y,gEffectsConfig.impactParticleCount,impactQuad,bullet->mParentGun->mBulletImpactScale,
+						bullet->mParentGun->mBulletImpactRed,bullet->mParentGun->mBulletImpactGreen,bullet->mParentGun->mBulletImpactBlue,
+						bullet->mParentGun->mBulletImpactFadeTime);
 					gSfxManager->PlaySample(gRicochetSounds[rand()%4],d.x,d.y);
 					bullet->mEndX = d.x;
 					bullet->mEndY = d.y;

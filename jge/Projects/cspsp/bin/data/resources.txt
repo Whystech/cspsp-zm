@@ -30,6 +30,10 @@ muzzle_flash_4 = gfx/muzzleflash4.png
 muzzle_flash_5 = gfx/muzzleflash5.png
 # Additional styles need no source edit. Add muzzle_flash_N for IDs 1 through
 # 127 and provide a matching 128x32 image. Missing IDs use style 0.
+bullet_impacts = gfx/bulletimpacts.png
+bullet_impacts_page_2 = gfx/bulletimpacts2.png
+# Each bullet-impact page is 128x512: four 32x32 cells per row and 64 styles.
+# Page 2 is optional. Missing impact styles use style 0 from page 1.
 health_hud = gfx/health.png
 armor_hud = gfx/armor.png
 health_ground = gfx/healthground.png

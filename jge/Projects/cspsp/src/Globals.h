@@ -220,6 +220,8 @@ extern JQuad* gBuyZoneQuad;
 extern JQuad* gDecalQuads[5];
 extern std::map<int, std::vector<JQuad*> > gMuzzleFlashQuads;
 extern JQuad* GetMuzzleFlashQuad(int type, int frame);
+extern JQuad* gBulletImpactQuads[MAX_BULLET_IMPACT_TYPES];
+extern JQuad* GetBulletImpactQuad(int type);
 extern JQuad* gHealthBorderQuad;
 extern JQuad* gHealthFillQuad;
 extern JQuad* gArmorBorderQuad;

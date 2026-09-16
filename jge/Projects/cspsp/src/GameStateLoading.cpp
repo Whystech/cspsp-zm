@@ -323,6 +323,23 @@ int GameStateLoading::Load(int stage) {
 				}
 			}
 
+			for (int i=0; i<MAX_BULLET_IMPACT_TYPES; i++) gBulletImpactQuads[i] = NULL;
+			JTexture* bulletImpactTextures[2];
+			bulletImpactTextures[0] = LoadConfiguredTexture(mRenderer,"bullet_impacts","gfx/bulletimpacts.png",true);
+			bulletImpactTextures[1] = LoadOptionalConfiguredTexture(mRenderer,"bullet_impacts_page_2",true);
+			for (int page=0; page<2; page++) {
+				if (bulletImpactTextures[page] == NULL) continue;
+				int localId = 0;
+				for (int row=0; row<bulletImpactTextures[page]->mTexHeight/32 && localId<GUNS_PER_ATLAS; row++) {
+					for (int column=0; column<bulletImpactTextures[page]->mTexWidth/32 && localId<GUNS_PER_ATLAS; column++) {
+						int id = page*GUNS_PER_ATLAS+localId;
+						gBulletImpactQuads[id] = new JQuad(bulletImpactTextures[page],column*32.0f,row*32.0f,32.0f,32.0f);
+						gBulletImpactQuads[id]->SetHotSpot(16.0f,16.0f);
+						localId++;
+					}
+				}
+			}
+
 			JTexture* healthTexture = LoadConfiguredTexture(mRenderer,"health_hud","gfx/health.png",true);
 			gHealthBorderQuad = new JQuad(healthTexture,0,0,48,48);
 			gHealthFillQuad = new JQuad(healthTexture,48,0,48,48);
@@ -446,14 +463,32 @@ int GameStateLoading::Load(int stage) {
 				if (!fgets(line,1024,file)) break; // read error, you should handle this properly 
 				s = line; // This was what the problem was! 
 				Gun gun = {};
-				int fields = sscanf(s,"%d %d %d %f %d %d %d %f %f %f %d %d %d %d %d %d %d %d %14s",&gun.mId,&gun.mDamage,&gun.mDelay,&gun.mSpread,&gun.mClip,&gun.mNumClips,&gun.mReloadDelay,&gun.mSpeed,&gun.mBulletSpeed,&gun.mViewAngle,&gun.mCost,&gun.mType,&gun.mFireMode,&gun.mPellets,&gun.mScope,&gun.mBuyCategory,&gun.mBuyTeams,&gun.mMuzzleFlashType,gun.mName);
-				if (fields != 19) {
-					gun.mMuzzleFlashType = 0;
-					fields = sscanf(s,"%d %d %d %f %d %d %d %f %f %f %d %d %d %d %d %d %d %14s",&gun.mId,&gun.mDamage,&gun.mDelay,&gun.mSpread,&gun.mClip,&gun.mNumClips,&gun.mReloadDelay,&gun.mSpeed,&gun.mBulletSpeed,&gun.mViewAngle,&gun.mCost,&gun.mType,&gun.mFireMode,&gun.mPellets,&gun.mScope,&gun.mBuyCategory,&gun.mBuyTeams,gun.mName);
-					if (fields != 18) continue;
+				gun.mBulletImpactType = 0;
+				gun.mBulletImpactScale = 1.0f;
+				gun.mBulletImpactRed = 255;
+				gun.mBulletImpactGreen = 128;
+				gun.mBulletImpactBlue = 35;
+				gun.mBulletImpactFadeTime = 250.0f;
+				int fields = sscanf(s,"%d %d %d %f %d %d %d %f %f %f %d %d %d %d %d %d %d %d %d %f %d %d %d %f %14s",&gun.mId,&gun.mDamage,&gun.mDelay,&gun.mSpread,&gun.mClip,&gun.mNumClips,&gun.mReloadDelay,&gun.mSpeed,&gun.mBulletSpeed,&gun.mViewAngle,&gun.mCost,&gun.mType,&gun.mFireMode,&gun.mPellets,&gun.mScope,&gun.mBuyCategory,&gun.mBuyTeams,&gun.mMuzzleFlashType,&gun.mBulletImpactType,&gun.mBulletImpactScale,&gun.mBulletImpactRed,&gun.mBulletImpactGreen,&gun.mBulletImpactBlue,&gun.mBulletImpactFadeTime,gun.mName);
+				if (fields != 25) {
+					fields = sscanf(s,"%d %d %d %f %d %d %d %f %f %f %d %d %d %d %d %d %d %d %d %f %14s",&gun.mId,&gun.mDamage,&gun.mDelay,&gun.mSpread,&gun.mClip,&gun.mNumClips,&gun.mReloadDelay,&gun.mSpeed,&gun.mBulletSpeed,&gun.mViewAngle,&gun.mCost,&gun.mType,&gun.mFireMode,&gun.mPellets,&gun.mScope,&gun.mBuyCategory,&gun.mBuyTeams,&gun.mMuzzleFlashType,&gun.mBulletImpactType,&gun.mBulletImpactScale,gun.mName);
+				}
+				if (fields != 25 && fields != 21) {
+					fields = sscanf(s,"%d %d %d %f %d %d %d %f %f %f %d %d %d %d %d %d %d %d %14s",&gun.mId,&gun.mDamage,&gun.mDelay,&gun.mSpread,&gun.mClip,&gun.mNumClips,&gun.mReloadDelay,&gun.mSpeed,&gun.mBulletSpeed,&gun.mViewAngle,&gun.mCost,&gun.mType,&gun.mFireMode,&gun.mPellets,&gun.mScope,&gun.mBuyCategory,&gun.mBuyTeams,&gun.mMuzzleFlashType,gun.mName);
+					if (fields != 19) {
+						gun.mMuzzleFlashType = 0;
+						fields = sscanf(s,"%d %d %d %f %d %d %d %f %f %f %d %d %d %d %d %d %d %14s",&gun.mId,&gun.mDamage,&gun.mDelay,&gun.mSpread,&gun.mClip,&gun.mNumClips,&gun.mReloadDelay,&gun.mSpeed,&gun.mBulletSpeed,&gun.mViewAngle,&gun.mCost,&gun.mType,&gun.mFireMode,&gun.mPellets,&gun.mScope,&gun.mBuyCategory,&gun.mBuyTeams,gun.mName);
+						if (fields != 18) continue;
+					}
 				}
 				if (gun.mId < 0 || gun.mId >= MAX_GUNS) continue;
 				if (gun.mMuzzleFlashType < 0 || gun.mMuzzleFlashType >= MAX_MUZZLE_FLASH_TYPES) gun.mMuzzleFlashType = 0;
+				if (gun.mBulletImpactType < 0 || gun.mBulletImpactType >= MAX_BULLET_IMPACT_TYPES) gun.mBulletImpactType = 0;
+				if (gun.mBulletImpactScale < 0.1f || gun.mBulletImpactScale > 10.0f) gun.mBulletImpactScale = 1.0f;
+				if (gun.mBulletImpactRed < 0 || gun.mBulletImpactRed > 255) gun.mBulletImpactRed = 255;
+				if (gun.mBulletImpactGreen < 0 || gun.mBulletImpactGreen > 255) gun.mBulletImpactGreen = 128;
+				if (gun.mBulletImpactBlue < 0 || gun.mBulletImpactBlue > 255) gun.mBulletImpactBlue = 35;
+				if (gun.mBulletImpactFadeTime < 1.0f || gun.mBulletImpactFadeTime > 60000.0f) gun.mBulletImpactFadeTime = 250.0f;
 				if (gun.mPellets < 1) gun.mPellets = 1;
 				if (gun.mPellets > MAX_PELLETS) gun.mPellets = MAX_PELLETS;
 				if (gun.mScope < SCOPE_NONE || gun.mScope > SCOPE_HIGH) gun.mScope = SCOPE_NONE;
