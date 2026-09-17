@@ -1,14 +1,14 @@
 #include "GameStateLoading.h"
 
-static JTexture* LoadConfiguredTexture(JRenderer* renderer, char* key, char* fallback, bool mipmap)
+static JTexture* LoadConfiguredTexture(JRenderer* renderer, char* key, char* fallback, int textureMode)
 {
 	char* configured = GetConfig("data/resources.txt",key);
-	JTexture* texture = renderer->LoadTexture(configured == NULL ? fallback : configured,mipmap);
+	JTexture* texture = renderer->LoadTexture(configured == NULL ? fallback : configured,textureMode);
 	delete[] configured;
 	return texture;
 }
 
-static JTexture* LoadOptionalConfiguredTexture(JRenderer* renderer, char* key, bool mipmap)
+static JTexture* LoadOptionalConfiguredTexture(JRenderer* renderer, char* key, int textureMode)
 {
 	char* configured = GetConfig("data/resources.txt",key);
 	if (configured == NULL) return NULL;
@@ -18,7 +18,7 @@ static JTexture* LoadOptionalConfiguredTexture(JRenderer* renderer, char* key, b
 		return NULL;
 	}
 	fclose(file);
-	JTexture* texture = renderer->LoadTexture(configured,mipmap);
+	JTexture* texture = renderer->LoadTexture(configured,textureMode);
 	delete[] configured;
 	return texture;
 }
@@ -325,8 +325,8 @@ int GameStateLoading::Load(int stage) {
 
 			for (int i=0; i<MAX_BULLET_IMPACT_TYPES; i++) gBulletImpactQuads[i] = NULL;
 			JTexture* bulletImpactTextures[2];
-			bulletImpactTextures[0] = LoadConfiguredTexture(mRenderer,"bullet_impacts","gfx/bulletimpacts.png",true);
-			bulletImpactTextures[1] = LoadOptionalConfiguredTexture(mRenderer,"bullet_impacts_page_2",true);
+			bulletImpactTextures[0] = LoadConfiguredTexture(mRenderer,"bullet_impacts","gfx/bulletimpacts.png",TEX_TYPE_NORMAL);
+			bulletImpactTextures[1] = LoadOptionalConfiguredTexture(mRenderer,"bullet_impacts_page_2",TEX_TYPE_NORMAL);
 			for (int page=0; page<2; page++) {
 				if (bulletImpactTextures[page] == NULL) continue;
 				int localId = 0;
