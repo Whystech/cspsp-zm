@@ -1,12 +1,14 @@
 import java.awt.* ;
 import java.awt.event.* ;
 import java.awt.geom.AffineTransform ;
+import java.awt.geom.Point2D ;
 import java.awt.image.BufferedImage ;
 import java.awt.image.RescaleOp ;
 import java.io.* ;
 import java.net.URISyntaxException ;
 import java.util.ArrayList ;
 import java.util.HashMap ;
+import java.util.LinkedHashMap ;
 import java.util.List ;
 import java.util.Map ;
 import java.util.prefs.Preferences ;
@@ -14,10 +16,12 @@ import javax.imageio.ImageIO ;
 import javax.swing.* ;
 import javax.swing.border.EmptyBorder ;
 import javax.swing.filechooser.FileNameExtensionFilter ;
+import javax.swing.table.AbstractTableModel ;
 
 public class GunPreviewer {
 	static final int MAX_MUZZLE_FLASH_TYPES = 128 ;
 	static final int MAX_BULLET_IMPACT_TYPES = 128 ;
+	static final int MAX_PROJECTILE_STYLES = 16 ;
 	static final int FIRST_CUSTOM_GUN_ID = 67 ;
 	static final Color BACKGROUND = new Color(20, 23, 27) ;
 	static final Color PANEL = new Color(29, 33, 38) ;
@@ -48,8 +52,9 @@ public class GunPreviewer {
 	static class WeaponInfo {
 		final int id ;
 		int damage, delay, clip, numClips, reloadDelay, cost, type, fireMode, pellets, scope, category, teams, flashStyle, impactStyle ;
+		int projectileType, projectileStyle, explosionStyle ;
 		int impactRed, impactGreen, impactBlue, impactFadeTime ;
-		float spread, walkingSpeed, bulletSpeed, viewAngle, impactScale ;
+		float spread, walkingSpeed, bulletSpeed, viewAngle, impactScale, explosionFrameTime, spriteOffsetX, spriteOffsetY ;
 		String name ;
 
 		WeaponInfo(String[] fields) {
@@ -84,6 +89,18 @@ public class GunPreviewer {
 			if (impactGreen < 0 || impactGreen > 255) impactGreen = 128 ;
 			if (impactBlue < 0 || impactBlue > 255) impactBlue = 35 ;
 			if (impactFadeTime < 1 || impactFadeTime > 60000) impactFadeTime = 250 ;
+			projectileType = fields.length >= 26 ? Integer.parseInt(fields[24]) : 0 ;
+			if (projectileType < 0 || projectileType > 1) projectileType = 0 ;
+			projectileStyle = fields.length >= 27 ? Integer.parseInt(fields[25]) : 0 ;
+			if (projectileStyle < 0 || projectileStyle >= MAX_PROJECTILE_STYLES) projectileStyle = 0 ;
+			explosionStyle = fields.length >= 29 ? Integer.parseInt(fields[26]) : 0 ;
+			if (explosionStyle < 0 || explosionStyle >= MAX_PROJECTILE_STYLES) explosionStyle = 0 ;
+			explosionFrameTime = fields.length >= 29 ? Float.parseFloat(fields[27]) : 50.0f ;
+			if (explosionFrameTime < 1.0f || explosionFrameTime > 60000.0f) explosionFrameTime = 50.0f ;
+			spriteOffsetX = fields.length >= 31 ? Float.parseFloat(fields[28]) : 0.0f ;
+			spriteOffsetY = fields.length >= 31 ? Float.parseFloat(fields[29]) : 0.0f ;
+			if (spriteOffsetX < -100.0f || spriteOffsetX > 100.0f) spriteOffsetX = 0.0f ;
+			if (spriteOffsetY < -100.0f || spriteOffsetY > 100.0f) spriteOffsetY = 0.0f ;
 			name = fields[fields.length - 1] ;
 		}
 
@@ -93,13 +110,14 @@ public class GunPreviewer {
 			       + decimal(viewAngle) + " " + cost + " " + type + " " + fireMode + " " + pellets + " "
 			       + scope + " " + category + " " + teams + " " + flashStyle + " " + impactStyle + " "
 			       + decimal(impactScale) + " " + impactRed + " " + impactGreen + " " + impactBlue + " "
-			       + impactFadeTime + " " + name ;
+			       + impactFadeTime + " " + projectileType + " " + projectileStyle + " " + explosionStyle + " "
+			       + decimal(explosionFrameTime) + " " + decimal(spriteOffsetX) + " " + decimal(spriteOffsetY) + " " + name ;
 		}
 
 		static String decimal(float value) {return Float.toString(value) ;}
 
 		static WeaponInfo createDefault(int id) {
-			return new WeaponInfo((id + " 20 100 0.3 30 5 2000 1.0 1.0 0.0 1000 0 1 1 0 4 3 0 0 1.0 255 128 35 250 NEW-GUN").split(" ")) ;
+			return new WeaponInfo((id + " 20 100 0.3 30 5 2000 1.0 1.0 0.0 1000 0 1 1 0 4 3 0 0 1.0 255 128 35 250 0 0 0 50.0 0.0 0.0 NEW-GUN").split(" ")) ;
 		}
 
 		String weaponType() {
@@ -108,6 +126,7 @@ public class GunPreviewer {
 		}
 
 		String bulletType() {
+			if (projectileType == 1) return "ROCKET " + projectileStyle ;
 			if (type == 2) return "MELEE" ;
 			if (type == 3) return "GRENADE" ;
 			if (pellets > 1) return "PELLETS x" + pellets ;
@@ -175,6 +194,26 @@ public class GunPreviewer {
 		}
 	}
 
+	private static class ScreenShakeConfig {
+		boolean fireEnabled, explosionEnabled ;
+		int fireMagnitude = 4, fireTime = 120, explosionMagnitude = 12, explosionTime = 500 ;
+		float explosionRadius = 500.0f ;
+
+		ScreenShakeConfig copy() {
+			ScreenShakeConfig copy = new ScreenShakeConfig() ;
+			copy.fireEnabled = fireEnabled ; copy.explosionEnabled = explosionEnabled ;
+			copy.fireMagnitude = fireMagnitude ; copy.fireTime = fireTime ;
+			copy.explosionMagnitude = explosionMagnitude ; copy.explosionTime = explosionTime ;
+			copy.explosionRadius = explosionRadius ;
+			return copy ;
+		}
+
+		String record(int id) {
+			return id + " " + (fireEnabled ? fireMagnitude : 0) + " " + fireTime + " "
+			       + (explosionEnabled ? explosionMagnitude : 0) + " " + explosionTime + " " + Float.toString(explosionRadius) ;
+		}
+	}
+
 	private static class TracerShot {
 		final int weaponId ;
 		final long startedAt ;
@@ -185,15 +224,35 @@ public class GunPreviewer {
 		}
 	}
 
+	private static class AnimationFrame {
+		int duration ;
+		final double[] angles ;
+
+		AnimationFrame(int duration, double[] angles) {
+			this.duration = duration ;
+			this.angles = angles ;
+		}
+
+		AnimationFrame copy() {return new AnimationFrame(duration,angles.clone()) ;}
+	}
+
 	static class ResourceModel {
 		static final Preferences PREFERENCES = Preferences.userNodeForPackage(GunPreviewer.class) ;
 		final List<WeaponInfo> weapons = new ArrayList<WeaponInfo>() ;
 		final BufferedImage[] handPages = new BufferedImage[2] ;
 		final BufferedImage[] groundPages = new BufferedImage[2] ;
 		final BufferedImage[] impactPages = new BufferedImage[2] ;
+		BufferedImage projectileAtlas ;
+		final BufferedImage[] explosionAtlases = new BufferedImage[MAX_PROJECTILE_STYLES] ;
 		final Map<Integer, BufferedImage> flashes = new HashMap<Integer, BufferedImage>() ;
 		final Map<Integer, TracerConfig> tracers = new HashMap<Integer, TracerConfig>() ;
 		final Map<Integer, LaserConfig> lasers = new HashMap<Integer, LaserConfig>() ;
+		final Map<Integer, ScreenShakeConfig> screenShakes = new HashMap<Integer, ScreenShakeConfig>() ;
+		final Map<Integer, String> weaponAnimationProfiles = new HashMap<Integer, String>() ;
+		final Map<Integer, Float> projectileExplosionRadii = new HashMap<Integer, Float>() ;
+		final Map<Integer, Integer> projectileLaunchOrigins = new HashMap<Integer, Integer>() ;
+		final Map<Integer, float[]> muzzlePositions = new HashMap<Integer, float[]>() ;
+		final Map<String, List<AnimationFrame>> animations = new LinkedHashMap<String, List<AnimationFrame>>() ;
 		BufferedImage players ;
 		File directory ;
 		File graphicsDirectory ;
@@ -202,6 +261,11 @@ public class GunPreviewer {
 		final List<String> trailingLines = new ArrayList<String>() ;
 		final List<String> tracerLines = new ArrayList<String>() ;
 		final List<String> laserLines = new ArrayList<String>() ;
+		final List<String> screenShakeLines = new ArrayList<String>() ;
+		final List<String> weaponAnimationLines = new ArrayList<String>() ;
+		final List<String> projectileExplosionLines = new ArrayList<String>() ;
+		final List<String> projectileLaunchOriginLines = new ArrayList<String>() ;
+		final List<String> muzzlePositionLines = new ArrayList<String>() ;
 
 		void load() throws IOException {
 			if (requestedRoot == null) {
@@ -215,15 +279,29 @@ public class GunPreviewer {
 			flashes.clear() ;
 			tracers.clear() ;
 			lasers.clear() ;
+			screenShakes.clear() ;
+			weaponAnimationProfiles.clear() ;
+			projectileExplosionRadii.clear() ;
+			projectileLaunchOrigins.clear() ;
+			muzzlePositions.clear() ;
+			animations.clear() ;
 			trailingLines.clear() ;
 			tracerLines.clear() ;
 			laserLines.clear() ;
+			screenShakeLines.clear() ;
+			weaponAnimationLines.clear() ;
+			projectileExplosionLines.clear() ;
+			projectileLaunchOriginLines.clear() ;
+			muzzlePositionLines.clear() ;
 			handPages[0] = readRequired("guns.png") ;
 			handPages[1] = readOptional("guns2.png") ;
 			groundPages[0] = readRequired("gunsground.png") ;
 			groundPages[1] = readOptional("gunsground2.png") ;
 			impactPages[0] = readRequired("bulletimpacts.png") ;
 			impactPages[1] = readOptional("bulletimpacts2.png") ;
+			projectileAtlas = readRequired("rocketprojectile.png") ;
+			explosionAtlases[0] = readRequired("explosionsprites.png") ;
+			for (int style=1; style<MAX_PROJECTILE_STYLES; style++) explosionAtlases[style] = readOptional("explosionsprites" + style + ".png") ;
 			players = readRequired("players.png") ;
 			loadMuzzleFlashes() ;
 			validateAtlas(handPages[0], "guns.png") ;
@@ -232,9 +310,19 @@ public class GunPreviewer {
 			if (groundPages[1] != null) validateAtlas(groundPages[1], "gunsground2.png") ;
 			validateAtlas(impactPages[0], "bulletimpacts.png") ;
 			if (impactPages[1] != null) validateAtlas(impactPages[1], "bulletimpacts2.png") ;
+			validateFourByFourAtlas(projectileAtlas,"rocketprojectile.png") ;
+			for (int style=0; style<MAX_PROJECTILE_STYLES; style++) {
+				if (explosionAtlases[style] != null) validateFourByFourAtlas(explosionAtlases[style],style == 0 ? "explosionsprites.png" : "explosionsprites" + style + ".png") ;
+			}
 			loadWeapons() ;
+			loadAnimations() ;
 			loadTracers() ;
 			loadLasers() ;
+			loadScreenShakes() ;
+			loadWeaponAnimationProfiles() ;
+			loadProjectileExplosionRadii() ;
+			loadProjectileLaunchOrigins() ;
+			loadMuzzlePositions() ;
 		}
 
 		File resolveContentRoot(File root) throws IOException {
@@ -316,6 +404,19 @@ public class GunPreviewer {
 			if (image.getWidth() % 32 != 0 || image.getHeight() % 32 != 0) throw new IOException(name + " must contain 32x32 cells") ;
 		}
 
+		void validateFourByFourAtlas(BufferedImage image, String name) throws IOException {
+			if (image.getWidth() != 128 || image.getHeight() != 128) throw new IOException(name + " must be a 4x4 atlas of 32x32 cells") ;
+		}
+
+		BufferedImage explosionAtlas(int style) {
+			if (style >= 0 && style < explosionAtlases.length && explosionAtlases[style] != null) return explosionAtlases[style] ;
+			return null ;
+		}
+
+		String explosionAtlasName(int style) {
+			return style == 0 ? "explosionsprites.png" : "explosionsprites" + style + ".png" ;
+		}
+
 		void loadWeapons() throws IOException {
 			File file = new File(dataDirectory, "guns.txt") ;
 			if (!file.isFile()) throw new IOException("Missing guns data: " + file.getAbsolutePath()) ;
@@ -339,12 +440,143 @@ public class GunPreviewer {
 			} finally {reader.close() ;}
 		}
 
+		void loadAnimations() throws IOException {
+			File file = new File(dataDirectory,"animations.txt") ;
+			if (!file.isFile()) throw new IOException("Missing animation data: " + file.getAbsolutePath()) ;
+			BufferedReader reader = new BufferedReader(new FileReader(file)) ;
+			String currentName = null ;
+			int lineNumber = 0 ;
+			try {
+				String line ;
+				while ((line = reader.readLine()) != null) {
+					lineNumber++ ;
+					int comment = line.indexOf('#') ;
+					if (comment >= 0) line = line.substring(0,comment) ;
+					line = line.trim() ;
+					if (line.length() == 0) continue ;
+					if (line.endsWith("{")) {
+						currentName = line.substring(0,line.length()-1).trim().toUpperCase() ;
+						if (currentName.length() == 0) throw new IOException("Missing animation name at animations.txt line " + lineNumber) ;
+						animations.put(currentName,new ArrayList<AnimationFrame>()) ;
+						continue ;
+					}
+					if (line.equals("}")) {currentName = null ; continue ;}
+					if (currentName == null) throw new IOException("Animation keyframe outside a block at animations.txt line " + lineNumber) ;
+					String[] fields = line.split("\\s+") ;
+					if (fields.length != 7) throw new IOException("Expected duration and six angles at animations.txt line " + lineNumber) ;
+					int duration = Integer.parseInt(fields[0]) ;
+					double[] angles = new double[6] ;
+					for (int index=0; index<angles.length; index++) angles[index] = Double.parseDouble(fields[index+1]) ;
+					animations.get(currentName).add(new AnimationFrame(duration,angles)) ;
+				}
+			} catch (NumberFormatException exception) {
+				throw new IOException("Invalid number at animations.txt line " + lineNumber,exception) ;
+			} finally {reader.close() ;}
+			String[] required = {"PRIMARY","PRIMARY_FIRE","PRIMARY_RELOAD","SECONDARY","SECONDARY_FIRE","SECONDARY_RELOAD","KNIFE","KNIFE_SLASH","GRENADE","GRENADE_PULLBACK"} ;
+			for (String name : required) {
+				List<AnimationFrame> frames = animations.get(name) ;
+				if (frames == null || frames.isEmpty()) throw new IOException("animations.txt is missing the " + name + " pose") ;
+			}
+		}
+
+		AnimationFrame animationFrame(String name, int index) {
+			List<AnimationFrame> frames = animations.get(name) ;
+			if (frames == null || frames.isEmpty()) frames = animations.get("PRIMARY") ;
+			if (frames == null || frames.isEmpty()) return new AnimationFrame(1,new double[6]) ;
+			return frames.get(Math.max(0,Math.min(frames.size()-1,index))) ;
+		}
+
+		String idleAnimationName(WeaponInfo weapon) {
+			String assigned = weaponAnimationProfile(weapon.id) ;
+			List<AnimationFrame> assignedFrames = assigned == null ? null : animations.get(assigned) ;
+			if (assignedFrames != null && !assignedFrames.isEmpty()) return assigned ;
+			String[] names = {"PRIMARY","SECONDARY","KNIFE","GRENADE"} ;
+			return names[Math.max(0,Math.min(names.length-1,weapon.type))] ;
+		}
+
+		List<String> animationProfiles() {
+			List<String> profiles = new ArrayList<String>() ;
+			for (String name : animations.keySet()) {
+				if (!name.endsWith("_FIRE") && !name.endsWith("_RELOAD") && animations.containsKey(name+"_FIRE") && animations.containsKey(name+"_RELOAD")) profiles.add(name) ;
+			}
+			return profiles ;
+		}
+
+		void addAnimationProfile(String name) throws IOException {duplicateAnimationProfile("PRIMARY",name) ;}
+
+		void duplicateAnimationProfile(String sourceName, String name) throws IOException {
+			String profile = name.trim().toUpperCase() ;
+			if (!profile.matches("[A-Z][A-Z0-9_]{0,31}") || profile.endsWith("_FIRE") || profile.endsWith("_RELOAD")) {
+				throw new IOException("Profile names must use 1-32 letters, numbers, or underscores and cannot end in _FIRE or _RELOAD.") ;
+			}
+			if (animations.containsKey(profile)) throw new IOException("Animation profile already exists: " + profile) ;
+			String[] targets = {profile,profile+"_FIRE",profile+"_RELOAD"} ;
+			String[] sources = {sourceName,sourceName+"_FIRE",sourceName+"_RELOAD"} ;
+			for (int action=0; action<targets.length; action++) {
+				if (!animations.containsKey(sources[action])) throw new IOException("Animation block is missing: " + sources[action]) ;
+				List<AnimationFrame> frames = new ArrayList<AnimationFrame>() ;
+				for (AnimationFrame frame : animations.get(sources[action])) frames.add(frame.copy()) ;
+				animations.put(targets[action],frames) ;
+			}
+		}
+
+		void deleteAnimationProfile(String name) throws IOException {
+			if ("PRIMARY".equals(name) || "SECONDARY".equals(name)) throw new IOException("Built-in animation profiles cannot be removed.") ;
+			animations.remove(name) ;
+			animations.remove(name+"_FIRE") ;
+			animations.remove(name+"_RELOAD") ;
+			List<Integer> clearedIds = new ArrayList<Integer>() ;
+			for (Map.Entry<Integer,String> entry : weaponAnimationProfiles.entrySet()) {
+				if (name.equals(entry.getValue())) clearedIds.add(entry.getKey()) ;
+			}
+			for (Integer id : clearedIds) {
+				weaponAnimationProfiles.remove(id) ;
+				removeConfigRecord(weaponAnimationLines,id.intValue(),2) ;
+			}
+			saveAnimations() ;
+			writeLinesWithBackup(new File(dataDirectory,"weaponanimations.txt"),weaponAnimationLines) ;
+		}
+
+		void saveAnimations() throws IOException {
+			File target = new File(dataDirectory,"animations.txt") ;
+			File temporary = new File(dataDirectory,"animations.txt.tmp") ;
+			PrintWriter writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(temporary),"UTF-8")) ;
+			try {
+				writer.println("# WEAPON POSE KEYFRAMES") ;
+				writer.println("# Format: duration_ms body right_arm right_hand left_arm left_hand gun") ;
+				writer.println("# Profile triplets use NAME, NAME_FIRE, and NAME_RELOAD blocks.") ;
+				for (Map.Entry<String,List<AnimationFrame>> entry : animations.entrySet()) {
+					writer.println(entry.getKey() + " {") ;
+					for (AnimationFrame frame : entry.getValue()) {
+						writer.print("\t" + frame.duration) ;
+						for (double angle : frame.angles) writer.print(" " + formatAnimationNumber(angle)) ;
+						writer.println() ;
+					}
+					writer.println("}") ;
+				}
+			} finally {writer.close() ;}
+			File backup = new File(dataDirectory,"animations.txt.bak") ;
+			if (backup.exists() && !backup.delete()) throw new IOException("Cannot replace " + backup.getAbsolutePath()) ;
+			if (!target.renameTo(backup)) throw new IOException("Cannot back up " + target.getAbsolutePath()) ;
+			if (!temporary.renameTo(target)) {backup.renameTo(target) ; throw new IOException("Cannot save " + target.getAbsolutePath()) ;}
+		}
+
+		String formatAnimationNumber(double value) {
+			if (value == Math.rint(value)) return Integer.toString((int)value) ;
+			return Double.toString(value) ;
+		}
+
 		void saveWeapons() throws IOException {
 			File target = new File(dataDirectory, "guns.txt") ;
 			File temporary = new File(dataDirectory, "guns.txt.tmp") ;
 			PrintWriter writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(temporary), "UTF-8")) ;
 			try {
 				writer.println(weapons.size()) ;
+				writer.println("# WEAPONS: the first line is the record count and must remain first.") ;
+				writer.println("# Format: id damage delay spread clip magazines reload_ms speed bullet_speed view_angle cost inventory_type fire_mode pellets scope buy_category buy_teams muzzle_flash impact_style impact_scale impact_r impact_g impact_b impact_fade_ms projectile_type projectile_style explosion_style explosion_frame_ms sprite_x sprite_y name") ;
+				writer.println("# inventory_type: 0=primary 1=secondary 2=knife 3=grenade. fire_mode: 0=semi 1=automatic.") ;
+				writer.println("# scope: 0=none 1=low 2=medium 3=high. buy_category: 0=hidden 1=pistols 2=shotguns 3=SMG 4=rifles 5=machine_guns 6=equipment 7=special.") ;
+				writer.println("# buy_teams is a bitmask: 0=none 1=T 2=CT 3=both. projectile_type: 0=bullet 1=rocket.") ;
 				for (WeaponInfo weapon : weapons) writer.println(weapon.record()) ;
 				for (String line : trailingLines) writer.println(line) ;
 			} finally {writer.close() ;}
@@ -364,14 +596,39 @@ public class GunPreviewer {
 			weapons.remove(weapons.size()-1) ;
 			removeConfigRecord(tracerLines,weapon.id,8) ;
 			removeConfigRecord(laserLines,weapon.id,12,14) ;
+			removeConfigRecord(screenShakeLines,weapon.id,6) ;
+			removeConfigRecord(weaponAnimationLines,weapon.id,2) ;
+			removeConfigRecord(projectileExplosionLines,weapon.id,2) ;
+			removeConfigRecord(projectileLaunchOriginLines,weapon.id,2) ;
+			removeConfigRecord(muzzlePositionLines,weapon.id,3) ;
 			try {
 				saveWeapons() ;
 				writeLinesWithBackup(new File(dataDirectory,"tracers.txt"),tracerLines) ;
 				if (!laserLines.isEmpty() || new File(dataDirectory,"lasers.txt").isFile()) {
 					writeLinesWithBackup(new File(dataDirectory,"lasers.txt"),laserLines) ;
 				}
+				if (!screenShakeLines.isEmpty() || new File(dataDirectory,"screenshakes.txt").isFile()) {
+					writeLinesWithBackup(new File(dataDirectory,"screenshakes.txt"),screenShakeLines) ;
+				}
+				if (!weaponAnimationLines.isEmpty() || new File(dataDirectory,"weaponanimations.txt").isFile()) {
+					writeLinesWithBackup(new File(dataDirectory,"weaponanimations.txt"),weaponAnimationLines) ;
+				}
+				if (!projectileExplosionLines.isEmpty() || new File(dataDirectory,"projectileexplosions.txt").isFile()) {
+					writeLinesWithBackup(new File(dataDirectory,"projectileexplosions.txt"),projectileExplosionLines) ;
+				}
+				if (!projectileLaunchOriginLines.isEmpty() || new File(dataDirectory,"projectileorigins.txt").isFile()) {
+					writeLinesWithBackup(new File(dataDirectory,"projectileorigins.txt"),projectileLaunchOriginLines) ;
+				}
+				if (!muzzlePositionLines.isEmpty() || new File(dataDirectory,"muzzlepositions.txt").isFile()) {
+					writeLinesWithBackup(new File(dataDirectory,"muzzlepositions.txt"),muzzlePositionLines) ;
+				}
 				tracers.remove(Integer.valueOf(weapon.id)) ;
 				lasers.remove(Integer.valueOf(weapon.id)) ;
+				screenShakes.remove(Integer.valueOf(weapon.id)) ;
+				weaponAnimationProfiles.remove(Integer.valueOf(weapon.id)) ;
+				projectileExplosionRadii.remove(Integer.valueOf(weapon.id)) ;
+				projectileLaunchOrigins.remove(Integer.valueOf(weapon.id)) ;
+				muzzlePositions.remove(Integer.valueOf(weapon.id)) ;
 			} catch (IOException exception) {
 				try {load() ;}
 				catch (IOException ignored) {}
@@ -514,6 +771,204 @@ public class GunPreviewer {
 			lasers.put(Integer.valueOf(id), laser.copy()) ;
 		}
 
+		void loadScreenShakes() throws IOException {
+			File file = new File(dataDirectory, "screenshakes.txt") ;
+			if (!file.isFile()) return ;
+			BufferedReader reader = new BufferedReader(new FileReader(file)) ;
+			try {
+				String line ;
+				while ((line = reader.readLine()) != null) {
+					screenShakeLines.add(line) ;
+					String trimmed = line.trim() ;
+					if (trimmed.length() == 0 || trimmed.startsWith("#")) continue ;
+					String[] fields = trimmed.split("\\s+") ;
+					if (fields.length != 6) continue ;
+					int id = Integer.parseInt(fields[0]) ;
+					ScreenShakeConfig config = new ScreenShakeConfig() ;
+					config.fireMagnitude = clamp(Integer.parseInt(fields[1]),0,100) ;
+					config.fireEnabled = config.fireMagnitude > 0 ;
+					config.fireTime = clamp(Integer.parseInt(fields[2]),0,5000) ;
+					config.explosionMagnitude = clamp(Integer.parseInt(fields[3]),0,100) ;
+					config.explosionEnabled = config.explosionMagnitude > 0 ;
+					config.explosionTime = clamp(Integer.parseInt(fields[4]),0,5000) ;
+					config.explosionRadius = clamp(Float.parseFloat(fields[5]),0.0f,5000.0f) ;
+					if (id >= 0 && id < 128) screenShakes.put(Integer.valueOf(id),config) ;
+				}
+			} catch (NumberFormatException exception) {
+				throw new IOException("Invalid number in screenshakes.txt",exception) ;
+			} finally {reader.close() ;}
+		}
+
+		ScreenShakeConfig screenShake(int id) {
+			ScreenShakeConfig config = screenShakes.get(Integer.valueOf(id)) ;
+			return config == null ? new ScreenShakeConfig() : config.copy() ;
+		}
+
+		void saveScreenShake(int id, ScreenShakeConfig config) throws IOException {
+			String record = config.record(id) ;
+			boolean replaced = false ;
+			for (int index=0; index<screenShakeLines.size(); index++) {
+				String[] fields = screenShakeLines.get(index).trim().split("\\s+") ;
+				try {
+					if (fields.length == 6 && Integer.parseInt(fields[0]) == id) {
+						screenShakeLines.set(index,record) ; replaced = true ; break ;
+					}
+				} catch (NumberFormatException ignored) {}
+			}
+			if (screenShakeLines.isEmpty()) screenShakeLines.add("# id fire_magnitude fire_time_ms explosion_magnitude explosion_time_ms explosion_radius") ;
+			if (!replaced) screenShakeLines.add(record) ;
+			writeLinesWithBackup(new File(dataDirectory,"screenshakes.txt"),screenShakeLines) ;
+			screenShakes.put(Integer.valueOf(id),config.copy()) ;
+		}
+
+		void loadWeaponAnimationProfiles() throws IOException {
+			File file = new File(dataDirectory,"weaponanimations.txt") ;
+			if (!file.isFile()) return ;
+			BufferedReader reader = new BufferedReader(new FileReader(file)) ;
+			try {
+				String line ;
+				while ((line = reader.readLine()) != null) {
+					weaponAnimationLines.add(line) ;
+					String trimmed = line.trim() ;
+					if (trimmed.length() == 0 || trimmed.startsWith("#")) continue ;
+					String[] fields = trimmed.split("\\s+") ;
+					if (fields.length != 2) continue ;
+					int id = Integer.parseInt(fields[0]) ;
+					String profile = fields[1].toUpperCase() ;
+					if ("0".equals(profile)) continue ;
+					if ("1".equals(profile)) profile = "SPECIAL" ;
+					if (id >= 0 && id < 128) weaponAnimationProfiles.put(Integer.valueOf(id),profile) ;
+				}
+			} catch (NumberFormatException exception) {
+				throw new IOException("Invalid weapon ID in weaponanimations.txt",exception) ;
+			} finally {reader.close() ;}
+		}
+
+		String weaponAnimationProfile(int id) {
+			return weaponAnimationProfiles.get(Integer.valueOf(id)) ;
+		}
+
+		void saveWeaponAnimationProfile(int id, String profile) throws IOException {
+			removeConfigRecord(weaponAnimationLines,id,2) ;
+			if (weaponAnimationLines.isEmpty()) weaponAnimationLines.add("# id profile_name. Missing IDs use their inventory animation.") ;
+			if (profile != null) weaponAnimationLines.add(id + " " + profile) ;
+			writeLinesWithBackup(new File(dataDirectory,"weaponanimations.txt"),weaponAnimationLines) ;
+			if (profile == null) weaponAnimationProfiles.remove(Integer.valueOf(id)) ;
+			else weaponAnimationProfiles.put(Integer.valueOf(id),profile) ;
+		}
+
+		void loadProjectileExplosionRadii() throws IOException {
+			File file = new File(dataDirectory,"projectileexplosions.txt") ;
+			if (!file.isFile()) return ;
+			BufferedReader reader = new BufferedReader(new FileReader(file)) ;
+			try {
+				String line ;
+				while ((line = reader.readLine()) != null) {
+					projectileExplosionLines.add(line) ;
+					String trimmed = line.trim() ;
+					if (trimmed.length() == 0 || trimmed.startsWith("#")) continue ;
+					String[] fields = trimmed.split("\\s+") ;
+					if (fields.length != 2) continue ;
+					int id = Integer.parseInt(fields[0]) ;
+					float radius = clamp(Float.parseFloat(fields[1]),0.0f,5000.0f) ;
+					if (id >= 0 && id < 128) projectileExplosionRadii.put(Integer.valueOf(id),Float.valueOf(radius)) ;
+				}
+			} catch (NumberFormatException exception) {
+				throw new IOException("Invalid number in projectileexplosions.txt",exception) ;
+			} finally {reader.close() ;}
+		}
+
+		Float projectileExplosionRadius(int id) {
+			return projectileExplosionRadii.get(Integer.valueOf(id)) ;
+		}
+
+		void saveProjectileExplosionRadius(int id, Float radius) throws IOException {
+			removeConfigRecord(projectileExplosionLines,id,2) ;
+			if (projectileExplosionLines.isEmpty()) {
+				projectileExplosionLines.add("# PROJECTILE SPLASH RADII") ;
+				projectileExplosionLines.add("# Format: id radius. Missing IDs use the global HE radius; zero disables splash.") ;
+			}
+			if (radius != null) projectileExplosionLines.add(id + " " + WeaponInfo.decimal(radius.floatValue())) ;
+			writeLinesWithBackup(new File(dataDirectory,"projectileexplosions.txt"),projectileExplosionLines) ;
+			if (radius == null) projectileExplosionRadii.remove(Integer.valueOf(id)) ;
+			else projectileExplosionRadii.put(Integer.valueOf(id),radius) ;
+		}
+
+		void loadProjectileLaunchOrigins() throws IOException {
+			File file = new File(dataDirectory,"projectileorigins.txt") ;
+			if (!file.isFile()) return ;
+			BufferedReader reader = new BufferedReader(new FileReader(file)) ;
+			try {
+				String line ;
+				while ((line = reader.readLine()) != null) {
+					projectileLaunchOriginLines.add(line) ;
+					String trimmed = line.trim() ;
+					if (trimmed.length() == 0 || trimmed.startsWith("#")) continue ;
+					String[] fields = trimmed.split("\\s+") ;
+					if (fields.length != 2) continue ;
+					int id = Integer.parseInt(fields[0]) ;
+					int origin = Integer.parseInt(fields[1]) == 1 ? 1 : 0 ;
+					if (id >= 0 && id < 128) projectileLaunchOrigins.put(Integer.valueOf(id),Integer.valueOf(origin)) ;
+				}
+			} catch (NumberFormatException exception) {
+				throw new IOException("Invalid number in projectileorigins.txt",exception) ;
+			} finally {reader.close() ;}
+		}
+
+		int projectileLaunchOrigin(WeaponInfo weapon) {
+			Integer origin = projectileLaunchOrigins.get(Integer.valueOf(weapon.id)) ;
+			return origin == null ? (weapon.projectileType == 1 ? 1 : 0) : origin.intValue() ;
+		}
+
+		void saveProjectileLaunchOrigin(int id, int origin) throws IOException {
+			removeConfigRecord(projectileLaunchOriginLines,id,2) ;
+			if (projectileLaunchOriginLines.isEmpty()) {
+				projectileLaunchOriginLines.add("# PROJECTILE LAUNCH ORIGINS") ;
+				projectileLaunchOriginLines.add("# Format: id origin. 0 = standard, 1 = shoulder.") ;
+			}
+			projectileLaunchOriginLines.add(id + " " + (origin == 1 ? 1 : 0)) ;
+			writeLinesWithBackup(new File(dataDirectory,"projectileorigins.txt"),projectileLaunchOriginLines) ;
+			projectileLaunchOrigins.put(Integer.valueOf(id),Integer.valueOf(origin == 1 ? 1 : 0)) ;
+		}
+
+		void loadMuzzlePositions() throws IOException {
+			File file = new File(dataDirectory,"muzzlepositions.txt") ;
+			if (!file.isFile()) return ;
+			BufferedReader reader = new BufferedReader(new FileReader(file)) ;
+			try {
+				String line ;
+				while ((line = reader.readLine()) != null) {
+					muzzlePositionLines.add(line) ;
+					String trimmed = line.trim() ;
+					if (trimmed.length() == 0 || trimmed.startsWith("#")) continue ;
+					String[] fields = trimmed.split("\\s+") ;
+					if (fields.length != 3) continue ;
+					int id = Integer.parseInt(fields[0]) ;
+					float forward = clamp(Float.parseFloat(fields[1]),-100.0f,100.0f) ;
+					float sideways = clamp(Float.parseFloat(fields[2]),-100.0f,100.0f) ;
+					if (id >= 0 && id < 128) muzzlePositions.put(Integer.valueOf(id),new float[] {forward,sideways}) ;
+				}
+			} catch (NumberFormatException exception) {
+				throw new IOException("Invalid number in muzzlepositions.txt",exception) ;
+			} finally {reader.close() ;}
+		}
+
+		float[] muzzlePosition(int id) {
+			float[] position = muzzlePositions.get(Integer.valueOf(id)) ;
+			return position == null ? new float[] {0.0f,0.0f} : new float[] {position[0],position[1]} ;
+		}
+
+		void saveMuzzlePosition(int id, float forward, float sideways) throws IOException {
+			removeConfigRecord(muzzlePositionLines,id,3) ;
+			if (muzzlePositionLines.isEmpty()) {
+				muzzlePositionLines.add("# MUZZLE FLASH POSITIONS") ;
+				muzzlePositionLines.add("# Format: id forward sideways. Offsets are relative to the animated gun anchor.") ;
+			}
+			muzzlePositionLines.add(id + " " + WeaponInfo.decimal(forward) + " " + WeaponInfo.decimal(sideways)) ;
+			writeLinesWithBackup(new File(dataDirectory,"muzzlepositions.txt"),muzzlePositionLines) ;
+			muzzlePositions.put(Integer.valueOf(id),new float[] {forward,sideways}) ;
+		}
+
 		void writeLinesWithBackup(File target, List<String> lines) throws IOException {
 			File temporary = new File(target.getParentFile(), target.getName() + ".tmp") ;
 			PrintWriter writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(temporary), "UTF-8")) ;
@@ -651,6 +1106,7 @@ public class GunPreviewer {
 		final boolean newWeapon ;
 		final TracerConfig tracer ;
 		final LaserConfig laser ;
+		final ScreenShakeConfig screenShake ;
 		File pendingHandSprite, pendingGroundSprite ;
 		final JTextField name = new JTextField() ;
 		final JSpinner damage = integer(0, 10000), delay = integer(0, 60000), clip = integer(0, 10000) ;
@@ -659,9 +1115,18 @@ public class GunPreviewer {
 		final JSpinner impactStyle = integer(0, MAX_BULLET_IMPACT_TYPES - 1), impactScale = decimal(0.1, 10.0, 0.1) ;
 		final JSpinner impactRed = integer(0, 255), impactGreen = integer(0, 255), impactBlue = integer(0, 255) ;
 		final JSpinner impactFadeTime = integer(1, 60000) ;
+		final JSpinner projectileStyle = integer(0, MAX_PROJECTILE_STYLES - 1) ;
+		final JSpinner explosionStyle = integer(0, MAX_PROJECTILE_STYLES - 1), explosionFrameTime = integer(1, 60000) ;
+		final JSpinner projectileExplosionRadius = decimal(0.0,5000.0,10.0) ;
+		final JLabel explosionDuration = new JLabel() ;
 		final JSpinner tracerRed = integer(0, 255), tracerGreen = integer(0, 255), tracerBlue = integer(0, 255), tracerAlpha = integer(0, 255) ;
 		final JSpinner spread = decimal(0.0, 100.0, 0.01), walkingSpeed = decimal(0.0, 100.0, 0.05) ;
 		final JSpinner bulletSpeed = decimal(0.0, 100.0, 0.05), viewAngle = decimal(0.0, 10.0, 0.01) ;
+		final JSpinner spriteOffsetX = decimal(-100.0, 100.0, 0.5), spriteOffsetY = decimal(-100.0, 100.0, 0.5) ;
+		final JSpinner muzzleForward = decimal(-100.0,100.0,0.5), muzzleSideways = decimal(-100.0,100.0,0.5) ;
+		final JSpinner fireShakeMagnitude = integer(1,100), fireShakeTime = integer(1,5000) ;
+		final JSpinner explosionShakeMagnitude = integer(1,100), explosionShakeTime = integer(1,5000) ;
+		final JSpinner explosionShakeRadius = decimal(1.0,5000.0,10.0) ;
 		final JSpinner tracerLength = decimal(0.0, 5000.0, 1.0), tracerWidth = decimal(0.1, 20.0, 0.1) ;
 		final JSpinner laserRed = integer(0, 255), laserGreen = integer(0, 255), laserBlue = integer(0, 255), laserAlpha = integer(0, 255) ;
 		final JSpinner laserWidth = decimal(0.1, 20.0, 0.1), laserRange = decimal(1.0, 5000.0, 10.0) ;
@@ -671,18 +1136,29 @@ public class GunPreviewer {
 		final JCheckBox laserEndDot = new JCheckBox("Display endpoint dot") ;
 		final JCheckBox tracerLightBackground = new JCheckBox("Light background") ;
 		final JCheckBox impactLightBackground = new JCheckBox("Light background") ;
+		final JCheckBox fireShakeEnabled = new JCheckBox("Enabled on successful shot") ;
+		final JCheckBox explosionShakeEnabled = new JCheckBox("Enabled on explosion impact") ;
+		final JCheckBox overrideProjectileExplosionRadius = new JCheckBox("Override global HE radius") ;
 		final JComboBox<String> type = new JComboBox<String>(new String[] {"Primary", "Secondary", "Knife", "Grenade"}) ;
+		final JComboBox<String> animationType = new JComboBox<String>() ;
+		final JComboBox<String> projectileType = new JComboBox<String>(new String[] {"Bullet", "Rocket"}) ;
+		final JComboBox<String> projectileLaunchOrigin = new JComboBox<String>(new String[] {"Standard", "Shoulder"}) ;
 		final JComboBox<String> fireMode = new JComboBox<String>(new String[] {"Semi-auto", "Automatic"}) ;
 		final JComboBox<String> scope = new JComboBox<String>(new String[] {"None", "Low", "Medium", "High"}) ;
-		final JComboBox<String> category = new JComboBox<String>(new String[] {"Hidden", "Pistols", "Shotguns", "SMG", "Rifles", "Machine guns", "Equipment"}) ;
+		final JComboBox<String> category = new JComboBox<String>(new String[] {"Hidden", "Pistols", "Shotguns", "SMG", "Rifles", "Machine guns", "Equipment", "Special"}) ;
 		final JComboBox<String> teams = new JComboBox<String>(new String[] {"None", "Terrorist", "Counter-Terrorist", "Both"}) ;
 		final JComboBox<String> tracerStyle = new JComboBox<String>(TRACER_STYLES) ;
+		final JSpinner tracerPreviewZoom = new JSpinner(new SpinnerNumberModel(2, 1, 8, 1)) ;
 		final TracerPreviewPanel tracerPreview = new TracerPreviewPanel() ;
 		final ColorSwatch tracerColorSwatch = new ColorSwatch() ;
+		final JSpinner laserPreviewZoom = new JSpinner(new SpinnerNumberModel(2, 1, 8, 1)) ;
 		final LaserPreviewPanel laserPreview = new LaserPreviewPanel() ;
 		final LaserColorSwatch laserColorSwatch = new LaserColorSwatch() ;
 		final ImpactPreviewPanel impactPreview = new ImpactPreviewPanel() ;
 		final ImpactColorSwatch impactColorSwatch = new ImpactColorSwatch() ;
+		final ProjectilePreviewPanel projectilePreview = new ProjectilePreviewPanel() ;
+		final WeaponPosePreviewPanel weaponPosePreview = new WeaponPosePreviewPanel() ;
+		final AnimationEditorPanel animationEditor ;
 
 		WeaponEditorDialog(PreviewFrame frame, WeaponInfo weapon) {this(frame, weapon, false) ;}
 
@@ -693,6 +1169,8 @@ public class GunPreviewer {
 			this.newWeapon = newWeapon ;
 			this.tracer = frame.model.tracer(weapon.id) ;
 			this.laser = frame.model.laser(weapon.id) ;
+			this.screenShake = frame.model.screenShake(weapon.id) ;
+			this.animationEditor = new AnimationEditorPanel() ;
 			setDefaultCloseOperation(DISPOSE_ON_CLOSE) ;
 			JPanel content = new JPanel(new BorderLayout(12, 12)) ;
 			content.setBorder(new EmptyBorder(16, 16, 16, 16)) ;
@@ -716,6 +1194,9 @@ public class GunPreviewer {
 			add(weaponFields, "Buy category", category) ;
 			add(weaponFields, "Available teams", teams) ;
 			add(weaponFields, "Muzzle flash ID", flashStyle) ;
+			add(weaponFields, "Projectile type", projectileType) ;
+			add(weaponFields, "Launch origin", projectileLaunchOrigin) ;
+			add(weaponFields, "Projectile style (0-15)", projectileStyle) ;
 			JPanel sprites = new JPanel(new FlowLayout(FlowLayout.LEFT)) ;
 			sprites.setBorder(BorderFactory.createTitledBorder(newWeapon ? "Required 32x32 sprites" : "32x32 sprite replacement")) ;
 			JButton importHand = new JButton("Import hand PNG") ;
@@ -731,6 +1212,17 @@ public class GunPreviewer {
 			weaponPage.setBorder(new EmptyBorder(10, 10, 10, 10)) ;
 			weaponPage.add(scrollable(weaponFields), BorderLayout.CENTER) ;
 			weaponPage.add(sprites, BorderLayout.SOUTH) ;
+
+			JPanel poseFields = formPanel() ;
+			add(poseFields, "Animation type", animationType) ;
+			add(poseFields, "Sprite X (forward)", spriteOffsetX) ;
+			add(poseFields, "Sprite Y (sideways)", spriteOffsetY) ;
+			add(poseFields, "Muzzle forward", muzzleForward) ;
+			add(poseFields, "Muzzle sideways", muzzleSideways) ;
+			JPanel posePage = new JPanel(new BorderLayout(0, 10)) ;
+			posePage.setBorder(new EmptyBorder(10, 10, 10, 10)) ;
+			posePage.add(weaponPosePreview, BorderLayout.CENTER) ;
+			posePage.add(poseFields, BorderLayout.SOUTH) ;
 
 			JPanel tracerFields = formPanel() ;
 			add(tracerFields, "Tracer type", tracerStyle) ;
@@ -750,6 +1242,7 @@ public class GunPreviewer {
 			tracerPreviewArea.setBorder(BorderFactory.createTitledBorder("Live tracer preview")) ;
 			tracerPreviewArea.add(tracerPreview, BorderLayout.CENTER) ;
 			tracerPreviewArea.add(colorPicker, BorderLayout.EAST) ;
+			tracerPreviewArea.add(previewZoomBar(tracerPreviewZoom,tracerPreview), BorderLayout.SOUTH) ;
 			JPanel tracerPage = new JPanel(new BorderLayout(0, 10)) ;
 			tracerPage.setBorder(new EmptyBorder(10, 10, 10, 10)) ;
 			tracerPage.add(tracerPreviewArea, BorderLayout.NORTH) ;
@@ -781,6 +1274,17 @@ public class GunPreviewer {
 			impactPage.add(impactPreviewArea, BorderLayout.NORTH) ;
 			impactPage.add(scrollable(impactFields), BorderLayout.CENTER) ;
 
+			JPanel projectileFields = formPanel() ;
+			add(projectileFields,"Explosion style (0-15)",explosionStyle) ;
+			add(projectileFields,"Explosion frame time (ms)",explosionFrameTime) ;
+			add(projectileFields,"Total animation duration",explosionDuration) ;
+			add(projectileFields,"Damage radius override",overrideProjectileExplosionRadius) ;
+			add(projectileFields,"Explosion damage radius",projectileExplosionRadius) ;
+			JPanel projectilePage = new JPanel(new BorderLayout(0,10)) ;
+			projectilePage.setBorder(new EmptyBorder(10,10,10,10)) ;
+			projectilePage.add(projectilePreview,BorderLayout.NORTH) ;
+			projectilePage.add(projectileFields,BorderLayout.CENTER) ;
+
 			JPanel laserFields = formPanel() ;
 			add(laserFields, "Laser", laserEnabled) ;
 			add(laserFields, "Use falloff", laserFalloffEnabled) ;
@@ -804,21 +1308,38 @@ public class GunPreviewer {
 			laserPreviewArea.setBorder(BorderFactory.createTitledBorder("Live laser preview")) ;
 			laserPreviewArea.add(laserPreview, BorderLayout.CENTER) ;
 			laserPreviewArea.add(laserColorPicker, BorderLayout.EAST) ;
+			laserPreviewArea.add(previewZoomBar(laserPreviewZoom,laserPreview), BorderLayout.SOUTH) ;
 			JPanel laserPage = new JPanel(new BorderLayout(0, 10)) ;
 			laserPage.setBorder(new EmptyBorder(10, 10, 10, 10)) ;
 			laserPage.add(laserPreviewArea, BorderLayout.NORTH) ;
 			laserPage.add(scrollable(laserFields), BorderLayout.CENTER) ;
 
-			JTabbedPane pages = new JTabbedPane() ;
-			pages.addTab("1. Weapon", weaponPage) ;
-			pages.addTab("2. Tracer", tracerPage) ;
-			pages.addTab("3. Laser", laserPage) ;
-			pages.addTab("4. Impact", impactPage) ;
+			JPanel shakeFields = formPanel() ;
+			add(shakeFields,"Launch shake",fireShakeEnabled) ;
+			add(shakeFields,"Launch magnitude",fireShakeMagnitude) ;
+			add(shakeFields,"Launch duration (ms)",fireShakeTime) ;
+			add(shakeFields,"Explosion shake",explosionShakeEnabled) ;
+			add(shakeFields,"Explosion magnitude",explosionShakeMagnitude) ;
+			add(shakeFields,"Explosion duration (ms)",explosionShakeTime) ;
+			add(shakeFields,"Explosion radius",explosionShakeRadius) ;
+			JPanel shakePage = new JPanel(new BorderLayout()) ;
+			shakePage.setBorder(new EmptyBorder(10,10,10,10)) ;
+			shakePage.add(shakeFields,BorderLayout.NORTH) ;
+
+			JTabbedPane pages = new JTabbedPane(JTabbedPane.LEFT,JTabbedPane.SCROLL_TAB_LAYOUT) ;
+			pages.addTab("Weapon", weaponPage) ;
+			pages.addTab("Pose & Muzzle", posePage) ;
+			pages.addTab("Animations", animationEditor) ;
+			pages.addTab("Tracer", tracerPage) ;
+			pages.addTab("Laser", laserPage) ;
+			pages.addTab("Impact", impactPage) ;
+			pages.addTab("Projectile", projectilePage) ;
+			pages.addTab("Screen Shake", shakePage) ;
 			content.add(pages, BorderLayout.CENTER) ;
 			JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT)) ;
 			JButton cancel = new JButton("Cancel") ;
 			cancel.addActionListener(event -> dispose()) ;
-			JButton save = new JButton(newWeapon ? "Add gun" : "Save guns.txt") ;
+			JButton save = new JButton(newWeapon ? "Add gun" : "Save weapon") ;
 			save.addActionListener(event -> save()) ;
 			actions.add(cancel) ;
 			actions.add(save) ;
@@ -828,16 +1349,266 @@ public class GunPreviewer {
 			installTracerPreviewListeners() ;
 			installLaserPreviewListeners() ;
 			installImpactPreviewListeners() ;
-			final Timer impactTimer = new Timer(16, event -> impactPreview.repaint()) ;
+			projectileType.addActionListener(event -> {refreshProjectileControls() ; projectilePreview.repaint() ;}) ;
+			overrideProjectileExplosionRadius.addActionListener(event -> refreshProjectileControls()) ;
+			type.addActionListener(event -> weaponPosePreview.repaint()) ;
+			animationType.addActionListener(event -> weaponPosePreview.repaint()) ;
+			spriteOffsetX.addChangeListener(event -> weaponPosePreview.repaint()) ;
+			spriteOffsetY.addChangeListener(event -> weaponPosePreview.repaint()) ;
+			muzzleForward.addChangeListener(event -> weaponPosePreview.repaint()) ;
+			muzzleSideways.addChangeListener(event -> weaponPosePreview.repaint()) ;
+			projectileStyle.addChangeListener(event -> projectilePreview.repaint()) ;
+			explosionStyle.addChangeListener(event -> {refreshProjectileControls() ; projectilePreview.repaint() ;}) ;
+			explosionFrameTime.addChangeListener(event -> {refreshProjectileControls() ; projectilePreview.repaint() ;}) ;
+			final Timer impactTimer = new Timer(16, event -> {impactPreview.repaint() ; projectilePreview.repaint() ;}) ;
 			impactTimer.start() ;
-			addWindowListener(new WindowAdapter() {public void windowClosed(WindowEvent event) {impactTimer.stop() ;}}) ;
-			setSize(720, 620) ;
-			setMinimumSize(new Dimension(640, 500)) ;
+			addWindowListener(new WindowAdapter() {public void windowClosed(WindowEvent event) {impactTimer.stop() ; animationEditor.stop() ;}}) ;
+			setSize(920, 680) ;
+			setMinimumSize(new Dimension(780, 560)) ;
 			setLocationRelativeTo(frame) ;
 		}
 
 		static JSpinner integer(int minimum, int maximum) {return new JSpinner(new SpinnerNumberModel(minimum, minimum, maximum, 1)) ;}
 		static JSpinner decimal(double minimum, double maximum, double step) {return new JSpinner(new SpinnerNumberModel(minimum, minimum, maximum, step)) ;}
+
+		class AnimationEditorPanel extends JPanel {
+			final JComboBox<String> profile = new JComboBox<String>() ;
+			final JComboBox<String> action = new JComboBox<String>(new String[] {"Idle","Fire","Reload"}) ;
+			final AnimationTableModel tableModel = new AnimationTableModel() ;
+			final JTable table = new JTable(tableModel) ;
+			final AnimationPreviewPanel preview = new AnimationPreviewPanel() ;
+			final JButton play = new JButton("Pause") ;
+			final Timer previewTimer ;
+			AnimationFrame copiedFrame ;
+			boolean playing = true ;
+			long lastTick = System.currentTimeMillis() ;
+			int animationFrame ;
+			double frameTime ;
+
+			AnimationEditorPanel() {
+				super(new BorderLayout(8,8)) ;
+				setBorder(new EmptyBorder(10,10,10,10)) ;
+				JPanel toolbar = new JPanel(new GridLayout(2,1,0,5)) ;
+				JPanel profileTools = new JPanel(new FlowLayout(FlowLayout.LEFT,8,0)) ;
+				JPanel keyframeTools = new JPanel(new FlowLayout(FlowLayout.LEFT,8,0)) ;
+				profileTools.add(new JLabel("Profile")) ; profileTools.add(profile) ;
+				profileTools.add(new JLabel("Action")) ; profileTools.add(action) ;
+				JButton addProfile = new JButton("Add profile") ;
+				addProfile.addActionListener(event -> addProfile()) ;
+				JButton duplicateProfile = new JButton("Duplicate profile") ;
+				duplicateProfile.addActionListener(event -> duplicateProfile()) ;
+				JButton deleteProfile = new JButton("Delete profile") ;
+				deleteProfile.addActionListener(event -> deleteProfile()) ;
+				JButton addFrame = new JButton("Add keyframe") ;
+				addFrame.addActionListener(event -> tableModel.addFrame()) ;
+				JButton removeFrame = new JButton("Remove keyframe") ;
+				removeFrame.addActionListener(event -> tableModel.removeFrame(table.getSelectedRow())) ;
+				JButton copyFrame = new JButton("Copy keyframe") ;
+				copyFrame.addActionListener(event -> tableModel.copyFrame(table.getSelectedRow())) ;
+				JButton pasteFrame = new JButton("Paste keyframe") ;
+				pasteFrame.addActionListener(event -> tableModel.pasteFrame(table.getSelectedRow())) ;
+				JButton saveAnimations = new JButton("Save animations") ;
+				saveAnimations.addActionListener(event -> saveAnimations()) ;
+				play.addActionListener(event -> {
+					playing = !playing ; play.setText(playing ? "Pause" : "Play") ;
+					lastTick = System.currentTimeMillis() ; preview.repaint() ;
+				}) ;
+				profileTools.add(addProfile) ; profileTools.add(duplicateProfile) ; profileTools.add(deleteProfile) ;
+				keyframeTools.add(play) ; keyframeTools.add(addFrame) ; keyframeTools.add(removeFrame) ;
+				keyframeTools.add(copyFrame) ; keyframeTools.add(pasteFrame) ; keyframeTools.add(saveAnimations) ;
+				toolbar.add(profileTools) ; toolbar.add(keyframeTools) ;
+				add(toolbar,BorderLayout.NORTH) ;
+				table.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS) ;
+				table.setRowHeight(24) ;
+				JScrollPane tableScroll = new JScrollPane(table) ;
+				JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT,preview,tableScroll) ;
+				split.setResizeWeight(0.55) ; split.setDividerLocation(250) ;
+				add(split,BorderLayout.CENTER) ;
+				for (String name : frame.model.animationProfiles()) profile.addItem(name) ;
+				profile.addActionListener(event -> {tableModel.selectBlock() ; restartPreview() ;}) ;
+				action.addActionListener(event -> {tableModel.selectBlock() ; restartPreview() ;}) ;
+				table.getSelectionModel().addListSelectionListener(event -> {
+					if (!event.getValueIsAdjusting() && table.getSelectedRow() >= 0) {
+						playing = false ; play.setText("Play") ; animationFrame = table.getSelectedRow() ; frameTime = 0.0 ; preview.repaint() ;
+					}
+				}) ;
+				tableModel.selectBlock() ;
+				previewTimer = new Timer(16,event -> updatePreview()) ;
+				previewTimer.start() ;
+			}
+
+			void stop() {previewTimer.stop() ;}
+
+			void restartPreview() {
+				animationFrame = 0 ; frameTime = 0.0 ; lastTick = System.currentTimeMillis() ;
+				table.clearSelection() ; preview.repaint() ;
+			}
+
+			void updatePreview() {
+				long now = System.currentTimeMillis() ;
+				double elapsed = Math.min(100.0,now-lastTick) ; lastTick = now ;
+				if (playing && !tableModel.frames.isEmpty()) {
+					frameTime += elapsed ;
+					while (frameTime >= tableModel.frames.get(animationFrame).duration) {
+						frameTime -= tableModel.frames.get(animationFrame).duration ;
+						animationFrame = (animationFrame+1)%tableModel.frames.size() ;
+					}
+				}
+				preview.repaint() ;
+			}
+
+			double[] previewAngles() {
+				if (tableModel.frames.isEmpty()) return new double[6] ;
+				int targetIndex = Math.max(0,Math.min(animationFrame,tableModel.frames.size()-1)) ;
+				AnimationFrame target = tableModel.frames.get(targetIndex) ;
+				if (!playing) return target.angles ;
+				double[] source ;
+				if (targetIndex > 0) source = tableModel.frames.get(targetIndex-1).angles ;
+				else if (action.getSelectedIndex() > 0) source = frame.model.animationFrame((String)profile.getSelectedItem(),0).angles ;
+				else source = tableModel.frames.get(tableModel.frames.size()-1).angles ;
+				double amount = Math.min(1.0,frameTime/Math.max(1.0,target.duration)) ;
+				double[] result = new double[6] ;
+				for (int index=0; index<result.length; index++) {
+					double difference = target.angles[index]-source[index] ;
+					while (difference > 180.0) difference -= 360.0 ;
+					while (difference < -180.0) difference += 360.0 ;
+					result[index] = source[index]+difference*amount ;
+				}
+				return result ;
+			}
+
+			class AnimationPreviewPanel extends JPanel {
+				AnimationPreviewPanel() {setPreferredSize(new Dimension(700,250)); setBackground(new Color(232,235,236));}
+				protected void paintComponent(Graphics graphics) {
+					super.paintComponent(graphics) ;
+					Graphics2D previewGraphics = (Graphics2D)graphics.create() ;
+					try {
+						previewGraphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_ON) ;
+						previewGraphics.setColor(new Color(215,219,221)) ;
+						for (int x=0; x<getWidth(); x+=32) previewGraphics.drawLine(x,0,x,getHeight()) ;
+						for (int y=0; y<getHeight(); y+=32) previewGraphics.drawLine(0,y,getWidth(),y) ;
+						frame.canvas.drawPosedWeapon(previewGraphics,weapon,previewAngles(),decimal(spriteOffsetX),decimal(spriteOffsetY),getWidth()/2.0,getHeight()/2.0+25.0,5.0,false) ;
+						String status = tableModel.frames.isEmpty() ? "NO KEYFRAMES" : ((playing ? "PLAYING" : "KEYFRAME")+"  "+(animationFrame+1)+" / "+tableModel.frames.size()+"  "+(int)frameTime+" ms") ;
+						frame.canvas.drawCentered(previewGraphics,blockName()+"  |  "+status,getWidth()/2,24,new Color(70,76,82)) ;
+					} finally {previewGraphics.dispose() ;}
+				}
+			}
+
+			String blockName() {
+				String selected = (String)profile.getSelectedItem() ;
+				if (selected == null) return null ;
+				return selected + (action.getSelectedIndex() == 1 ? "_FIRE" : action.getSelectedIndex() == 2 ? "_RELOAD" : "") ;
+			}
+
+			void addProfile() {
+				String name = JOptionPane.showInputDialog(this,"New animation profile name:","Add animation profile",JOptionPane.PLAIN_MESSAGE) ;
+				if (name == null) return ;
+				try {
+					frame.model.addAnimationProfile(name) ;
+					String added = name.trim().toUpperCase() ;
+					profile.addItem(added) ; animationType.addItem(added) ; profile.setSelectedItem(added) ;
+				} catch (IOException exception) {JOptionPane.showMessageDialog(this,exception.getMessage(),"Cannot add profile",JOptionPane.ERROR_MESSAGE) ;}
+			}
+
+			void duplicateProfile() {
+				String source = (String)profile.getSelectedItem() ;
+				if (source == null) return ;
+				String name = JOptionPane.showInputDialog(this,"Name for the copy of " + source + ":","Duplicate animation profile",JOptionPane.PLAIN_MESSAGE) ;
+				if (name == null) return ;
+				try {
+					frame.model.duplicateAnimationProfile(source,name) ;
+					String added = name.trim().toUpperCase() ;
+					profile.addItem(added) ; animationType.addItem(added) ; profile.setSelectedItem(added) ;
+				} catch (IOException exception) {JOptionPane.showMessageDialog(this,exception.getMessage(),"Cannot duplicate profile",JOptionPane.ERROR_MESSAGE) ;}
+			}
+
+			void deleteProfile() {
+				String selected = (String)profile.getSelectedItem() ;
+				if (selected == null) return ;
+				if ("PRIMARY".equals(selected) || "SECONDARY".equals(selected)) {
+					JOptionPane.showMessageDialog(this,"Built-in animation profiles cannot be removed.","Cannot delete profile",JOptionPane.ERROR_MESSAGE) ; return ;
+				}
+				if (JOptionPane.showConfirmDialog(this,"Delete "+selected+" and clear every weapon assignment using it?","Delete animation profile",JOptionPane.YES_NO_OPTION,JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION) return ;
+				try {
+					frame.model.deleteAnimationProfile(selected) ;
+					profile.removeItem(selected) ; animationType.removeItem(selected) ;
+					String assigned = frame.model.weaponAnimationProfile(weapon.id) ;
+					animationType.setSelectedItem(assigned == null ? "Inventory default" : assigned) ;
+					tableModel.selectBlock() ; restartPreview() ; weaponPosePreview.repaint() ; frame.canvas.repaint() ;
+				} catch (IOException exception) {JOptionPane.showMessageDialog(this,exception.getMessage(),"Cannot delete profile",JOptionPane.ERROR_MESSAGE) ;}
+			}
+
+			void saveAnimations() {
+				if (table.isEditing()) table.getCellEditor().stopCellEditing() ;
+				try {
+					frame.model.saveAnimations() ;
+					weaponPosePreview.repaint() ; frame.canvas.repaint() ;
+					JOptionPane.showMessageDialog(this,"Saved animations.txt. Restart the game to load animation changes.","Animations saved",JOptionPane.INFORMATION_MESSAGE) ;
+				} catch (IOException exception) {JOptionPane.showMessageDialog(this,exception.getMessage(),"Save failed",JOptionPane.ERROR_MESSAGE) ;}
+			}
+
+			class AnimationTableModel extends AbstractTableModel {
+				final String[] columns = {"Duration ms","Body","Right arm","Right hand","Left arm","Left hand","Gun"} ;
+				List<AnimationFrame> frames = new ArrayList<AnimationFrame>() ;
+				void selectBlock() {
+					String block = blockName() ;
+					frames = block == null ? new ArrayList<AnimationFrame>() : frame.model.animations.get(block) ;
+					if (frames == null) frames = new ArrayList<AnimationFrame>() ;
+					fireTableDataChanged() ;
+				}
+				public int getRowCount() {return frames.size() ;}
+				public int getColumnCount() {return columns.length ;}
+				public String getColumnName(int column) {return columns[column] ;}
+				public Class<?> getColumnClass(int column) {return column == 0 ? Integer.class : Double.class ;}
+				public boolean isCellEditable(int row, int column) {return true ;}
+				public Object getValueAt(int row, int column) {AnimationFrame value=frames.get(row); return column == 0 ? Integer.valueOf(value.duration) : Double.valueOf(value.angles[column-1]) ;}
+				public void setValueAt(Object value, int row, int column) {
+					try {
+						AnimationFrame target=frames.get(row) ;
+						if (column == 0) target.duration=Math.max(1,Integer.parseInt(value.toString())) ;
+						else target.angles[column-1]=Double.parseDouble(value.toString()) ;
+						fireTableCellUpdated(row,column) ; weaponPosePreview.repaint() ; preview.repaint() ;
+					} catch (NumberFormatException ignored) {fireTableCellUpdated(row,column) ;}
+				}
+				void addFrame() {
+					AnimationFrame added = frames.isEmpty() ? new AnimationFrame(150,new double[6]) : frames.get(frames.size()-1).copy() ;
+					frames.add(added) ; fireTableRowsInserted(frames.size()-1,frames.size()-1) ; restartPreview() ;
+				}
+				void removeFrame(int row) {
+					if (row < 0 || frames.size() <= 1) return ;
+					frames.remove(row) ; fireTableRowsDeleted(row,row) ; restartPreview() ;
+				}
+				void copyFrame(int row) {
+					if (row < 0 || row >= frames.size()) return ;
+					copiedFrame = frames.get(row).copy() ;
+				}
+				void pasteFrame(int row) {
+					if (copiedFrame == null) return ;
+					int insertion = row < 0 ? frames.size() : Math.min(frames.size(),row+1) ;
+					frames.add(insertion,copiedFrame.copy()) ; fireTableRowsInserted(insertion,insertion) ;
+					table.setRowSelectionInterval(insertion,insertion) ;
+				}
+			}
+		}
+
+		JPanel previewZoomBar(final JSpinner zoom, final JComponent preview) {
+			JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2)) ;
+			bar.add(new JLabel("Zoom")) ;
+			zoom.setPreferredSize(new Dimension(54, 24)) ;
+			zoom.setToolTipText("Preview zoom from 1x to 8x") ;
+			bar.add(zoom) ;
+			bar.add(new JLabel("x")) ;
+			JLabel hint = new JLabel("Scroll over preview") ;
+			hint.setForeground(MUTED) ;
+			bar.add(hint) ;
+			zoom.addChangeListener(event -> preview.repaint()) ;
+			preview.addMouseWheelListener(event -> {
+				int value = integer(zoom)-event.getWheelRotation() ;
+				zoom.setValue(Integer.valueOf(Math.max(1,Math.min(8,value)))) ;
+				event.consume() ;
+			}) ;
+			return bar ;
+		}
 
 		JPanel formPanel() {
 			JPanel panel = new JPanel(new GridLayout(0, 2, 14, 9)) ;
@@ -864,6 +1635,11 @@ public class GunPreviewer {
 			if (label.startsWith("Magazine count")) return "Total magazines, including the loaded magazine" ;
 			if (label.startsWith("Shot delay")) return "Minimum milliseconds between shots; lower is faster" ;
 			if (label.startsWith("View angle")) return "View-cone half-angle; 0 disables the effect" ;
+			if (label.startsWith("Launch origin")) return "Standard fires from the normal weapon position; Shoulder uses the shoulder-mounted position" ;
+			if (label.startsWith("Sprite X")) return "Moves the weapon along its aiming direction; also moves its muzzle and shot origin" ;
+			if (label.startsWith("Sprite Y")) return "Moves the weapon sideways from the player; also moves its muzzle and shot origin" ;
+			if (label.startsWith("Muzzle forward")) return "Moves the muzzle flash from the animated gun anchor along the barrel" ;
+			if (label.startsWith("Muzzle sideways")) return "Moves the muzzle flash perpendicular to the barrel" ;
 			return label ;
 		}
 
@@ -872,9 +1648,23 @@ public class GunPreviewer {
 			spread.setValue((double)weapon.spread) ; clip.setValue(weapon.clip) ; numClips.setValue(weapon.numClips) ;
 			reloadDelay.setValue(weapon.reloadDelay) ; walkingSpeed.setValue((double)weapon.walkingSpeed) ;
 			bulletSpeed.setValue((double)weapon.bulletSpeed) ; viewAngle.setValue((double)weapon.viewAngle) ; cost.setValue(weapon.cost) ;
-			type.setSelectedIndex(weapon.type) ; fireMode.setSelectedIndex(weapon.fireMode) ; pellets.setValue(weapon.pellets) ;
-			scope.setSelectedIndex(weapon.scope) ; category.setSelectedIndex(weapon.category) ; teams.setSelectedIndex(weapon.teams) ;
+			selectIndex(type,weapon.type) ; selectIndex(fireMode,weapon.fireMode) ; pellets.setValue(weapon.pellets) ;
+			animationType.removeAllItems() ;
+			animationType.addItem("Inventory default") ;
+			for (String profile : frame.model.animationProfiles()) animationType.addItem(profile) ;
+			String assignedProfile = frame.model.weaponAnimationProfile(weapon.id) ;
+			if (assignedProfile != null) animationType.setSelectedItem(assignedProfile) ;
+			selectIndex(scope,weapon.scope) ; selectIndex(category,weapon.category) ; selectIndex(teams,weapon.teams) ;
 			flashStyle.setValue(weapon.flashStyle) ;
+			selectIndex(projectileType,weapon.projectileType) ; projectileStyle.setValue(weapon.projectileStyle) ;
+			selectIndex(projectileLaunchOrigin,frame.model.projectileLaunchOrigin(weapon)) ;
+			explosionStyle.setValue(weapon.explosionStyle) ; explosionFrameTime.setValue((int)weapon.explosionFrameTime) ;
+			Float radius = frame.model.projectileExplosionRadius(weapon.id) ;
+			overrideProjectileExplosionRadius.setSelected(radius != null) ;
+			projectileExplosionRadius.setValue(Double.valueOf(radius == null ? 200.0 : radius.doubleValue())) ;
+			spriteOffsetX.setValue((double)weapon.spriteOffsetX) ; spriteOffsetY.setValue((double)weapon.spriteOffsetY) ;
+			float[] muzzle = frame.model.muzzlePosition(weapon.id) ;
+			muzzleForward.setValue(Double.valueOf(muzzle[0])) ; muzzleSideways.setValue(Double.valueOf(muzzle[1])) ;
 			impactStyle.setValue(weapon.impactStyle) ; impactScale.setValue((double)weapon.impactScale) ;
 			impactRed.setValue(weapon.impactRed) ; impactGreen.setValue(weapon.impactGreen) ; impactBlue.setValue(weapon.impactBlue) ;
 			impactFadeTime.setValue(weapon.impactFadeTime) ;
@@ -886,9 +1676,106 @@ public class GunPreviewer {
 			laserWidth.setValue((double)laser.width) ; laserRange.setValue((double)laser.range) ; laserFalloff.setValue((double)laser.falloff) ;
 			laserEndDot.setSelected(laser.endDot) ; laserEndDotScale.setValue((double)laser.endDotScale) ;
 			laserOffsetX.setValue((double)laser.offsetX) ; laserOffsetY.setValue((double)laser.offsetY) ;
+			fireShakeEnabled.setSelected(screenShake.fireEnabled) ; fireShakeMagnitude.setValue(screenShake.fireMagnitude) ;
+			fireShakeTime.setValue(screenShake.fireTime) ; explosionShakeEnabled.setSelected(screenShake.explosionEnabled) ;
+			explosionShakeMagnitude.setValue(screenShake.explosionMagnitude) ; explosionShakeTime.setValue(screenShake.explosionTime) ;
+			explosionShakeRadius.setValue((double)screenShake.explosionRadius) ;
 			refreshTracerPreview() ;
 			refreshLaserPreview() ;
 			impactPreview.repaint() ;
+			refreshProjectileControls() ;
+		}
+
+		class WeaponPosePreviewPanel extends JPanel {
+			double[] gunAnchor = {0.0,0.0,0.0} ;
+			double muzzleX, muzzleY ;
+			boolean draggingMuzzle ;
+			WeaponPosePreviewPanel() {
+				setPreferredSize(new Dimension(560, 190)) ; setBackground(new Color(232, 235, 236)) ;
+				setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR)) ;
+				MouseAdapter drag = new MouseAdapter() {
+					public void mousePressed(MouseEvent event) {
+						draggingMuzzle = Point2D.distance(event.getX(),event.getY(),muzzleX,muzzleY) <= 18.0 ;
+						if (draggingMuzzle) updateMuzzle(event) ;
+					}
+					public void mouseDragged(MouseEvent event) {if (draggingMuzzle) updateMuzzle(event) ;}
+					public void mouseReleased(MouseEvent event) {draggingMuzzle = false ;}
+				} ;
+				addMouseListener(drag) ; addMouseMotionListener(drag) ;
+			}
+			void updateMuzzle(MouseEvent event) {
+				double dx = (event.getX()-gunAnchor[0])/4.0, dy = (event.getY()-gunAnchor[1])/4.0 ;
+				double directionX = Math.cos(gunAnchor[2]), directionY = Math.sin(gunAnchor[2]) ;
+				muzzleForward.setValue(Double.valueOf(Math.max(-100.0,Math.min(100.0,dx*directionX+dy*directionY)))) ;
+				muzzleSideways.setValue(Double.valueOf(Math.max(-100.0,Math.min(100.0,-dx*directionY+dy*directionX)))) ;
+			}
+			protected void paintComponent(Graphics graphics) {
+				super.paintComponent(graphics) ;
+				Graphics2D g = (Graphics2D)graphics.create() ;
+				try {
+					g.setColor(new Color(215, 219, 221)) ;
+					for (int x=0 ; x<getWidth() ; x+=32) g.drawLine(x,0,x,getHeight()) ;
+					for (int y=0 ; y<getHeight() ; y+=32) g.drawLine(0,y,getWidth(),y) ;
+					g.setColor(new Color(184, 190, 194)) ;
+					g.drawOval(getWidth()/2-48,getHeight()/2-36,96,96) ;
+					String poseName = animationType.getSelectedIndex() <= 0 ? new String[] {"PRIMARY","SECONDARY","KNIFE","GRENADE"}[type.getSelectedIndex()] : (String)animationType.getSelectedItem() ;
+					double zoom = 4.0 ;
+					gunAnchor = frame.canvas.drawPosedWeapon(g, weapon, poseName, decimal(spriteOffsetX), decimal(spriteOffsetY), getWidth()/2.0, getHeight()/2.0+12.0, zoom) ;
+					double directionX = Math.cos(gunAnchor[2]), directionY = Math.sin(gunAnchor[2]) ;
+					muzzleX = gunAnchor[0]+(directionX*decimal(muzzleForward)-directionY*decimal(muzzleSideways))*zoom ;
+					muzzleY = gunAnchor[1]+(directionY*decimal(muzzleForward)+directionX*decimal(muzzleSideways))*zoom ;
+					if (frame.canvas.hasMuzzleFlash(weapon)) {
+						BufferedImage flash = frame.model.flash(integer(flashStyle)) ;
+						frame.canvas.drawQuad(g,flash,frame.flashFrame()*32,0,32,32,muzzleX,muzzleY,16,-16,gunAnchor[2]-Math.PI/2.0,zoom,false) ;
+					}
+					g.setColor(new Color(225,83,52)) ;
+					g.drawLine((int)muzzleX-7,(int)muzzleY,(int)muzzleX+7,(int)muzzleY) ;
+					g.drawLine((int)muzzleX,(int)muzzleY-7,(int)muzzleX,(int)muzzleY+7) ;
+					g.drawOval((int)muzzleX-4,(int)muzzleY-4,8,8) ;
+					frame.canvas.drawCentered(g, "POSE: " + poseName + "  |  MUZZLE " + decimal(muzzleForward) + ", " + decimal(muzzleSideways), getWidth()/2, 20, new Color(70,76,82)) ;
+				} finally {g.dispose() ;}
+			}
+		}
+
+		void selectIndex(JComboBox<String> comboBox, int index) {
+			comboBox.setSelectedIndex(index >= 0 && index < comboBox.getItemCount() ? index : 0) ;
+		}
+
+		void refreshProjectileControls() {
+			boolean rocket = projectileType.getSelectedIndex() == 1 ;
+			projectileStyle.setEnabled(rocket) ; explosionStyle.setEnabled(rocket) ; explosionFrameTime.setEnabled(rocket) ;
+			overrideProjectileExplosionRadius.setEnabled(rocket) ;
+			projectileExplosionRadius.setEnabled(rocket && overrideProjectileExplosionRadius.isSelected()) ;
+			int style = integer(explosionStyle) ;
+			boolean available = frame.model.explosionAtlas(style) != null ;
+			explosionDuration.setText((integer(explosionFrameTime)*16) + " ms" + (available ? "" : " - MISSING " + frame.model.explosionAtlasName(style))) ;
+			explosionDuration.setForeground(available ? UIManager.getColor("Label.foreground") : new Color(220,70,60)) ;
+		}
+
+		class ProjectilePreviewPanel extends JPanel {
+			ProjectilePreviewPanel() {setPreferredSize(new Dimension(560,300)) ; setBackground(BACKGROUND) ;}
+			protected void paintComponent(Graphics graphics) {
+				super.paintComponent(graphics) ;
+				Graphics2D g=(Graphics2D)graphics.create() ;
+				try {
+					g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR) ;
+					if (projectileType.getSelectedIndex() != 1) {frame.canvas.drawCentered(g,"Bullet projectile",getWidth()/2,getHeight()/2,MUTED) ; return ;}
+					int style=integer(projectileStyle), column=style%4, row=style/4 ;
+					int scale=Math.max(2,Math.min(6,getWidth()/150)) ;
+					g.drawImage(frame.model.projectileAtlas,getWidth()/4-16*scale,getHeight()/2-16*scale,getWidth()/4+16*scale,getHeight()/2+16*scale,column*32,row*32,column*32+32,row*32+32,null) ;
+					int explosionFrame=(int)((System.currentTimeMillis()/integer(explosionFrameTime))%16) ;
+					int explosionColumn=explosionFrame%4, explosionRow=explosionFrame/4 ;
+					BufferedImage explosion=frame.model.explosionAtlas(integer(explosionStyle)) ;
+					if (explosion == null) {
+						frame.canvas.drawCentered(g,"MISSING",getWidth()*3/4,getHeight()/2-8,new Color(220,70,60)) ;
+						frame.canvas.drawCentered(g,frame.model.explosionAtlasName(integer(explosionStyle)),getWidth()*3/4,getHeight()/2+18,MUTED) ;
+						return ;
+					}
+					g.drawImage(explosion,getWidth()*3/4-16*scale,getHeight()/2-16*scale,getWidth()*3/4+16*scale,getHeight()/2+16*scale,explosionColumn*32,explosionRow*32,explosionColumn*32+32,explosionRow*32+32,null) ;
+					frame.canvas.drawCentered(g,"PROJECTILE " + style,getWidth()/4,32,MUTED) ;
+					frame.canvas.drawCentered(g,"EXPLOSION FRAMES",getWidth()*3/4,32,MUTED) ;
+				} finally {g.dispose() ;}
+			}
 		}
 
 		void installImpactPreviewListeners() {
@@ -995,7 +1882,26 @@ public class GunPreviewer {
 		}
 
 		class LaserPreviewPanel extends JPanel {
-			LaserPreviewPanel() {setPreferredSize(new Dimension(430, 110)) ; setBackground(BACKGROUND) ;}
+			double emitterX, emitterY ;
+			boolean draggingEmitter ;
+			LaserPreviewPanel() {
+				setPreferredSize(new Dimension(430, 110)) ; setBackground(BACKGROUND) ;
+				setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR)) ;
+				MouseAdapter drag = new MouseAdapter() {
+					public void mousePressed(MouseEvent event) {
+						draggingEmitter = Point2D.distance(event.getX(),event.getY(),emitterX,emitterY) <= 18.0 ;
+						if (draggingEmitter) updateEmitter(event) ;
+					}
+					public void mouseDragged(MouseEvent event) {if (draggingEmitter) updateEmitter(event) ;}
+					public void mouseReleased(MouseEvent event) {draggingEmitter = false ;}
+				} ;
+				addMouseListener(drag) ; addMouseMotionListener(drag) ;
+			}
+			void updateEmitter(MouseEvent event) {
+				double zoom = integer(laserPreviewZoom) ;
+				laserOffsetX.setValue(Double.valueOf(Math.max(-100.0,Math.min(100.0,(event.getX()-42.0)/zoom)))) ;
+				laserOffsetY.setValue(Double.valueOf(Math.max(-100.0,Math.min(100.0,(event.getY()-getHeight()/2.0)/zoom)))) ;
+			}
 			protected void paintComponent(Graphics graphics) {
 				super.paintComponent(graphics) ;
 				Graphics2D g = (Graphics2D)graphics.create() ;
@@ -1003,27 +1909,30 @@ public class GunPreviewer {
 					g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON) ;
 					LaserConfig preview = previewLaser() ;
 					if (!preview.enabled) {frame.canvas.drawCentered(g, "disabled", getWidth()/2, getHeight()/2, MUTED) ; return ;}
+					double zoom = integer(laserPreviewZoom) ;
 					double originX = 42.0, originY = getHeight()/2.0 ;
 					g.setColor(new Color(110, 116, 124)) ;
 					g.drawLine((int)originX-5, (int)originY, (int)originX+5, (int)originY) ;
 					g.drawLine((int)originX, (int)originY-5, (int)originX, (int)originY+5) ;
-					double startX = originX+preview.offsetX*2.0, y = originY+preview.offsetY*2.0 ;
-					double endX = Math.min(getWidth()-18.0, startX+Math.max(20.0, preview.range*0.45)) ;
+					emitterX = originX+preview.offsetX*zoom ; emitterY = originY+preview.offsetY*zoom ;
+					double endX = Math.min(getWidth()-18.0, emitterX+Math.max(20.0, preview.range*0.225*zoom)) ;
 					int segments = preview.falloffEnabled && preview.falloff > 0.0f ? 12 : 1 ;
 					for (int index=0 ; index<segments ; index++) {
 						double from = index/(double)segments, to = (index+1)/(double)segments ;
 						double intensity = segments == 1 ? 1.0 : Math.pow(Math.max(0.0, 1.0-(from+to)*0.5), preview.falloff) ;
 						Color color = new Color(preview.red, preview.green, preview.blue, (int)(preview.alpha*intensity)) ;
-						frame.canvas.drawTracerLine(g,startX+(endX-startX)*from,y,startX+(endX-startX)*to,y,preview.width,color) ;
+						frame.canvas.drawTracerLine(g,emitterX+(endX-emitterX)*from,emitterY,emitterX+(endX-emitterX)*to,emitterY,preview.width*(float)zoom/2.0f,color) ;
 					}
 					if (preview.endDot) {
 						double intensity = preview.falloffEnabled && preview.falloff > 0.0f ? 0.15 : 1.0 ;
-						frame.canvas.drawTracerPoint(g,endX,y,preview.endDotScale,new Color(preview.red,preview.green,preview.blue,(int)(preview.alpha*intensity))) ;
+						frame.canvas.drawTracerPoint(g,endX,emitterY,preview.endDotScale*(float)zoom/2.0f,new Color(preview.red,preview.green,preview.blue,(int)(preview.alpha*intensity))) ;
 					}
+					g.setColor(ACCENT) ; g.fillOval((int)emitterX-5,(int)emitterY-5,10,10) ;
+					g.setColor(Color.WHITE) ; g.drawOval((int)emitterX-7,(int)emitterY-7,14,14) ;
 					double[] gunAnchor = frame.canvas.idleGunAnchor(weapon) ;
 					frame.canvas.drawWeaponCell(g,frame.model.handPage(weapon.id),weapon.id,
-					                            originX+gunAnchor[0]*2.0,originY+gunAnchor[1]*2.0,
-					                            16,8,-Math.PI/2.0,2.0) ;
+					                            originX+gunAnchor[0]*zoom,originY+gunAnchor[1]*zoom,
+					                            16,8,-Math.PI/2.0,zoom) ;
 				} finally {g.dispose() ;}
 			}
 		}
@@ -1109,7 +2018,7 @@ public class GunPreviewer {
 					for (int x = 0 ; x < getWidth() ; x += 20) g.drawLine(x, 0, x, getHeight()) ;
 					for (int y = 0 ; y < getHeight() ; y += 20) g.drawLine(0, y, getWidth(), y) ;
 					Rectangle bounds = new Rectangle(8, 8, Math.max(1, getWidth()-16), Math.max(1, getHeight()-16)) ;
-					frame.canvas.drawTracerCentered(g, previewTracer(), weapon, bounds, 0.0, 2) ;
+					frame.canvas.drawTracerCentered(g, previewTracer(), weapon, bounds, 0.0, integer(tracerPreviewZoom)) ;
 				} finally {g.dispose() ;}
 			}
 		}
@@ -1181,6 +2090,9 @@ public class GunPreviewer {
 			weapon.type = type.getSelectedIndex() ; weapon.fireMode = fireMode.getSelectedIndex() ; weapon.pellets = integer(pellets) ;
 			weapon.scope = scope.getSelectedIndex() ; weapon.category = category.getSelectedIndex() ;
 			weapon.teams = teams.getSelectedIndex() ; weapon.flashStyle = integer(flashStyle) ;
+			weapon.projectileType = projectileType.getSelectedIndex() ; weapon.projectileStyle = integer(projectileStyle) ;
+			weapon.explosionStyle = integer(explosionStyle) ; weapon.explosionFrameTime = integer(explosionFrameTime) ;
+			weapon.spriteOffsetX = decimal(spriteOffsetX) ; weapon.spriteOffsetY = decimal(spriteOffsetY) ;
 			weapon.impactStyle = integer(impactStyle) ; weapon.impactScale = decimal(impactScale) ;
 			weapon.impactRed = integer(impactRed) ; weapon.impactGreen = integer(impactGreen) ; weapon.impactBlue = integer(impactBlue) ;
 			weapon.impactFadeTime = integer(impactFadeTime) ;
@@ -1192,6 +2104,10 @@ public class GunPreviewer {
 			laser.width = decimal(laserWidth) ; laser.range = decimal(laserRange) ; laser.falloff = decimal(laserFalloff) ;
 			laser.endDot = laserEndDot.isSelected() ; laser.endDotScale = decimal(laserEndDotScale) ;
 			laser.offsetX = decimal(laserOffsetX) ; laser.offsetY = decimal(laserOffsetY) ;
+			screenShake.fireEnabled = fireShakeEnabled.isSelected() ; screenShake.fireMagnitude = integer(fireShakeMagnitude) ;
+			screenShake.fireTime = integer(fireShakeTime) ; screenShake.explosionEnabled = explosionShakeEnabled.isSelected() ;
+			screenShake.explosionMagnitude = integer(explosionShakeMagnitude) ; screenShake.explosionTime = integer(explosionShakeTime) ;
+			screenShake.explosionRadius = decimal(explosionShakeRadius) ;
 			boolean appended = false ;
 			boolean dataSaved = false ;
 			try {
@@ -1207,6 +2123,13 @@ public class GunPreviewer {
 				}
 				frame.model.saveTracer(weapon.id, tracer) ;
 				frame.model.saveLaser(weapon.id, laser) ;
+				frame.model.saveScreenShake(weapon.id, screenShake) ;
+				String selectedProfile = animationType.getSelectedIndex() <= 0 ? null : (String)animationType.getSelectedItem() ;
+				frame.model.saveWeaponAnimationProfile(weapon.id,selectedProfile) ;
+				Float radius = overrideProjectileExplosionRadius.isSelected() ? Float.valueOf(decimal(projectileExplosionRadius)) : null ;
+				frame.model.saveProjectileExplosionRadius(weapon.id,radius) ;
+				frame.model.saveProjectileLaunchOrigin(weapon.id,projectileLaunchOrigin.getSelectedIndex()) ;
+				frame.model.saveMuzzlePosition(weapon.id,decimal(muzzleForward),decimal(muzzleSideways)) ;
 				frame.reloadResources(weapon.id) ;
 				dispose() ;
 			} catch (IOException exception) {
@@ -1219,7 +2142,9 @@ public class GunPreviewer {
 	static class PreviewFrame extends JFrame {
 		final ResourceModel model = new ResourceModel() ;
 		final JComboBox<String> previewBox = new JComboBox<String>(new String[] {"Guns", "Players"}) ;
-		final JComboBox<WeaponInfo> weaponBox = new JComboBox<WeaponInfo>() ;
+		final JTextField weaponSearch = new JTextField() ;
+		final DefaultListModel<WeaponInfo> weaponListModel = new DefaultListModel<WeaponInfo>() ;
+		final JList<WeaponInfo> weaponList = new JList<WeaponInfo>(weaponListModel) ;
 		final JComboBox<String> teamBox = new JComboBox<String>(new String[] {"Counter-Terrorist", "Terrorist"}) ;
 		final JComboBox<String> modelBox = new JComboBox<String>(new String[] {"Model 1", "Model 2", "Model 3", "Model 4"}) ;
 		final JSlider angleSlider = new JSlider(0, 359, 90) ;
@@ -1237,6 +2162,7 @@ public class GunPreviewer {
 		long flashUntil ;
 		int animatedFrame ;
 		int simulatedWeaponId = -1, magazineAmmo, reserveAmmo, shotsFired ;
+		WeaponInfo activeWeapon ;
 		long nextShotAt, reloadStartedAt, reloadUntil ;
 		boolean triggerHeld, reloading ;
 		final List<TracerShot> tracerShots = new ArrayList<TracerShot>() ;
@@ -1244,8 +2170,8 @@ public class GunPreviewer {
 		PreviewFrame() {
 			super("CSPSP Weapon Configurator & Previewer") ;
 			setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE) ;
-			setMinimumSize(new Dimension(960, 640)) ;
-			setSize(1120, 720) ;
+			setMinimumSize(new Dimension(1100, 700)) ;
+			setSize(1280, 800) ;
 			setLocationRelativeTo(null) ;
 			getContentPane().setBackground(BACKGROUND) ;
 			getContentPane().setLayout(new BorderLayout()) ;
@@ -1275,8 +2201,8 @@ public class GunPreviewer {
 		JComponent buildSidebar() {
 			JPanel sidebar = new JPanel() ;
 			sidebar.setBackground(PANEL) ;
-			sidebar.setBorder(new EmptyBorder(20, 18, 20, 18)) ;
-			sidebar.setPreferredSize(new Dimension(270, 950)) ;
+			sidebar.setBorder(new EmptyBorder(24, 22, 24, 22)) ;
+			sidebar.setPreferredSize(new Dimension(340, 1080)) ;
 			sidebar.setLayout(new BoxLayout(sidebar, BoxLayout.Y_AXIS)) ;
 			JLabel title = new JLabel("Gun Configurator & Previewer") ;
 			title.setForeground(TEXT) ;
@@ -1291,7 +2217,8 @@ public class GunPreviewer {
 			sidebar.add(sectionLabel("PREVIEW")) ;
 			sidebar.add(Box.createVerticalStrut(8)) ;
 			addControl(sidebar, "PREVIEW", previewBox) ;
-			addControl(sidebar, "WEAPON", weaponBox) ;
+			sidebar.add(buildWeaponSelector()) ;
+			sidebar.add(Box.createVerticalStrut(15)) ;
 			addControl(sidebar, "TEAM", teamBox) ;
 			addControl(sidebar, "PLAYER", modelBox) ;
 			configureSlider(angleSlider, 90, 45) ;
@@ -1337,8 +2264,7 @@ public class GunPreviewer {
 			JButton configure = button("CONFIGURE WEAPON", PANEL_LIGHT) ;
 			configure.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent event) {
-					WeaponInfo weapon = selectedWeapon() ;
-					if (weapon != null) new WeaponEditorDialog(PreviewFrame.this, weapon).setVisible(true) ;
+					openSelectedWeaponEditor() ;
 				}
 			}) ;
 			sidebar.add(configure) ;
@@ -1369,9 +2295,31 @@ public class GunPreviewer {
 			sidebar.add(hint) ;
 			JScrollPane scroll = new JScrollPane(sidebar, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER) ;
 			scroll.setBorder(null) ;
-			scroll.setPreferredSize(new Dimension(290, 620)) ;
+			scroll.setPreferredSize(new Dimension(330, 700)) ;
 			scroll.getViewport().setBackground(PANEL) ;
 			return scroll ;
+		}
+
+		JComponent buildWeaponSelector() {
+			JPanel panel = new JPanel(new BorderLayout(0,6)) ;
+			panel.setOpaque(false) ;
+			panel.setAlignmentX(Component.LEFT_ALIGNMENT) ;
+			panel.setMaximumSize(new Dimension(Integer.MAX_VALUE,180)) ;
+			JLabel label = new JLabel("WEAPON SEARCH") ;
+			label.setForeground(MUTED) ;
+			label.setFont(new Font("Dialog",Font.BOLD,10)) ;
+			panel.add(label,BorderLayout.NORTH) ;
+			JPanel selection = new JPanel(new BorderLayout(0,6)) ;
+			selection.setOpaque(false) ;
+			weaponSearch.setToolTipText("Filter by weapon ID or name") ;
+			selection.add(weaponSearch,BorderLayout.NORTH) ;
+			weaponList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION) ;
+			weaponList.setVisibleRowCount(6) ;
+			weaponList.setFixedCellHeight(24) ;
+			JScrollPane listScroll = new JScrollPane(weaponList,JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,JScrollPane.HORIZONTAL_SCROLLBAR_NEVER) ;
+			selection.add(listScroll,BorderLayout.CENTER) ;
+			panel.add(selection,BorderLayout.CENTER) ;
+			return panel ;
 		}
 
 		JLabel sectionLabel(String text) {
@@ -1388,9 +2336,10 @@ public class GunPreviewer {
 			label.setFont(new Font("Dialog", Font.BOLD, 10)) ;
 			label.setAlignmentX(Component.LEFT_ALIGNMENT) ;
 			control.setAlignmentX(Component.LEFT_ALIGNMENT) ;
-			control.setMinimumSize(new Dimension(180, 28)) ;
-			control.setPreferredSize(new Dimension(214, 28)) ;
-			control.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28)) ;
+			int controlHeight = control instanceof JSlider ? 56 : 28 ;
+			control.setMinimumSize(new Dimension(210, controlHeight)) ;
+			control.setPreferredSize(new Dimension(244, controlHeight)) ;
+			control.setMaximumSize(new Dimension(Integer.MAX_VALUE, controlHeight)) ;
 			panel.add(label) ;
 			panel.add(Box.createVerticalStrut(4)) ;
 			panel.add(control) ;
@@ -1427,7 +2376,12 @@ public class GunPreviewer {
 				public void actionPerformed(ActionEvent event) {selectionChanged() ;}
 			} ;
 			previewBox.addActionListener(action) ;
-			weaponBox.addActionListener(action) ;
+			weaponList.addListSelectionListener(event -> {if (!event.getValueIsAdjusting()) selectionChanged() ;}) ;
+			weaponSearch.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+				public void insertUpdate(javax.swing.event.DocumentEvent event) {filterWeapons() ;}
+				public void removeUpdate(javax.swing.event.DocumentEvent event) {filterWeapons() ;}
+				public void changedUpdate(javax.swing.event.DocumentEvent event) {filterWeapons() ;}
+			}) ;
 			teamBox.addActionListener(action) ;
 			modelBox.addActionListener(action) ;
 			frameBox.addActionListener(action) ;
@@ -1445,20 +2399,32 @@ public class GunPreviewer {
 		void reloadResources(int selectedId) {
 			try {
 				model.load() ;
-				weaponBox.removeAllItems() ;
-				int selection = 0 ;
-				for (int index = 0 ; index < model.weapons.size() ; index++) {
-					WeaponInfo weapon = model.weapons.get(index) ;
-					weaponBox.addItem(weapon) ;
-					if (weapon.id == selectedId) selection = index ;
-				}
-				if (weaponBox.getItemCount() > 0) weaponBox.setSelectedIndex(selection) ;
+				filterWeapons(selectedId) ;
 				resetSimulation() ;
 				selectionChanged() ;
 			} catch (Exception exception) {
 				status.setText("File error: " + exception.getMessage()) ;
 				JOptionPane.showMessageDialog(this, exception.getMessage(), "File error", JOptionPane.ERROR_MESSAGE) ;
 			}
+		}
+
+		void filterWeapons() {
+			WeaponInfo selected = selectedWeapon() ;
+			filterWeapons(selected == null ? -1 : selected.id) ;
+		}
+
+		void filterWeapons(int selectedId) {
+			String query = weaponSearch.getText().trim().toLowerCase() ;
+			weaponListModel.clear() ;
+			int selection = -1 ;
+			for (WeaponInfo weapon : model.weapons) {
+				String id = Integer.toString(weapon.id) ;
+				if (query.length() > 0 && !id.contains(query) && !weapon.name.toLowerCase().contains(query)) continue ;
+				if (weapon.id == selectedId) selection = weaponListModel.size() ;
+				weaponListModel.addElement(weapon) ;
+			}
+			if (selection < 0 && !weaponListModel.isEmpty()) selection = 0 ;
+			if (selection >= 0) weaponList.setSelectedIndex(selection) ;
 		}
 
 		void addGun() {
@@ -1518,9 +2484,11 @@ public class GunPreviewer {
 
 		void selectionChanged() {
 			WeaponInfo weapon = selectedWeapon() ;
+			if (weapon != null) activeWeapon = weapon ;
 			if (weapon != null && weapon.id != simulatedWeaponId) resetSimulation() ;
 			boolean guns = previewBox.getSelectedIndex() == 0 ;
-			weaponBox.setEnabled(guns) ;
+			weaponSearch.setEnabled(guns) ;
+			weaponList.setEnabled(guns) ;
 			frameBox.setEnabled(guns) ;
 			animateBox.setEnabled(guns) ;
 			if (fireButton != null) fireButton.setEnabled(guns) ;
@@ -1541,6 +2509,24 @@ public class GunPreviewer {
 				status.setText(teamBox.getSelectedItem() + "  |  " + modelBox.getSelectedItem() + "  |  players.png") ;
 			}
 			canvas.repaint() ;
+		}
+
+		void openSelectedWeaponEditor() {
+			WeaponInfo weapon = selectedWeapon() ;
+			if (weapon == null) weapon = activeWeapon ;
+			if (weapon == null) {
+				JOptionPane.showMessageDialog(this,"No weapon is selected.","Cannot configure weapon",JOptionPane.ERROR_MESSAGE) ;
+				return ;
+			}
+			try {
+				WeaponEditorDialog dialog = new WeaponEditorDialog(this,weapon) ;
+				dialog.setLocationRelativeTo(this) ;
+				dialog.setVisible(true) ;
+			}
+			catch (RuntimeException exception) {
+				String message = exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage() ;
+				JOptionPane.showMessageDialog(this,message,"Cannot configure weapon",JOptionPane.ERROR_MESSAGE) ;
+			}
 		}
 
 		void resetSimulation() {
@@ -1579,7 +2565,7 @@ public class GunPreviewer {
 		}
 
 		void addTracerShots(WeaponInfo weapon, long now) {
-			if (weapon.type == 2 || weapon.type == 3 || "none".equals(model.tracer(weapon.id).style)) return ;
+			if (weapon.type == 2 || weapon.type == 3 || (weapon.projectileType != 1 && "none".equals(model.tracer(weapon.id).style))) return ;
 			double aim = Math.toRadians(angleSlider.getValue()) ;
 			if (weapon.pellets <= 1) {
 				tracerShots.add(new TracerShot(weapon.id, now, aim)) ;
@@ -1634,7 +2620,7 @@ public class GunPreviewer {
 			simulationStatus.setText(state + "   " + ammo + "   shots " + shotsFired) ;
 		}
 
-		WeaponInfo selectedWeapon() {return (WeaponInfo)weaponBox.getSelectedItem() ;}
+		WeaponInfo selectedWeapon() {return weaponList.getSelectedValue() ;}
 		int flashFrame() {return animateBox.isSelected() ? animatedFrame : frameBox.getSelectedIndex() ;}
 		boolean flashVisible() {return animateBox.isSelected() || System.currentTimeMillis() < flashUntil ;}
 	}
@@ -1717,7 +2703,10 @@ public class GunPreviewer {
 			drawWeaponCell(g, frame.model.handPage(weapon.id), weapon.id, gunX, gunY, 16, 8, spriteAngle, gunZoom[0]) ;
 			if (hasMuzzleFlash(weapon) && frame.flashVisible()) {
 				BufferedImage flash = frame.model.flash(weapon.flashStyle) ;
-				drawQuad(g, flash, frame.flashFrame() * 32, 0, 32, 32, gunX, gunY, 16, -16, spriteAngle, gunZoom[0], false) ;
+				float[] muzzle = frame.model.muzzlePosition(weapon.id) ;
+				double muzzleX = gunX+(directionX*muzzle[0]-directionY*muzzle[1])*gunZoom[0] ;
+				double muzzleY = gunY+(directionY*muzzle[0]+directionX*muzzle[1])*gunZoom[0] ;
+				drawQuad(g, flash, frame.flashFrame() * 32, 0, 32, 32, muzzleX, muzzleY, 16, -16, spriteAngle, gunZoom[0], false) ;
 			}
 			drawLiveTracers(g, weapon, centerX, centerY) ;
 			String metadata = weapon.weaponType() + " / " + weapon.bulletType() + " / SPEED " + weapon.bulletSpeed ;
@@ -1728,18 +2717,51 @@ public class GunPreviewer {
 		}
 
 		double[] idleGunAnchor(WeaponInfo weapon) {
-			double body, rightArm, rightHand ;
-			if (weapon.type == 0) {body=30.0 ; rightArm=15.0 ; rightHand=-60.0 ;}
-			else if (weapon.type == 1) {body=5.0 ; rightArm=-10.0 ; rightHand=-40.0 ;}
-			else if (weapon.type == 2) {body=0.0 ; rightArm=20.0 ; rightHand=-40.0 ;}
-			else {body=0.0 ; rightArm=20.0 ; rightHand=-30.0 ;}
-			body = Math.toRadians(body) ;
-			rightArm = Math.toRadians(rightArm) ;
-			rightHand = Math.toRadians(rightHand) ;
+			double[] pose = frame.model.animationFrame(frame.model.idleAnimationName(weapon),0).angles ;
+			double body = Math.toRadians(pose[0]) ;
+			double rightArm = Math.toRadians(pose[1]) ;
+			double rightHand = Math.toRadians(pose[2]) ;
 			return new double[] {
-				-5.0-10.0*Math.sin(body)+8.0*Math.cos(rightArm)+10.0*Math.cos(rightHand),
-				10.0*Math.cos(body)+8.0*Math.sin(rightArm)+10.0*Math.sin(rightHand)
+				-5.0-10.0*Math.sin(body)+8.0*Math.cos(rightArm)+10.0*Math.cos(rightHand)+weapon.spriteOffsetX,
+				10.0*Math.cos(body)+8.0*Math.sin(rightArm)+10.0*Math.sin(rightHand)+weapon.spriteOffsetY
 			} ;
+		}
+
+		double[] drawPosedWeapon(Graphics2D g, WeaponInfo weapon, String poseName, double offsetX, double offsetY, double originX, double originY, double zoom) {
+			if (frame.model.players == null) return new double[] {originX,originY,0.0} ;
+			double[] pose = frame.model.animationFrame(poseName,0).angles ;
+			return drawPosedWeapon(g,weapon,pose,offsetX,offsetY,originX,originY,zoom) ;
+		}
+
+		double[] drawPosedWeapon(Graphics2D g, WeaponInfo weapon, double[] pose, double offsetX, double offsetY, double originX, double originY, double zoom) {
+			return drawPosedWeapon(g,weapon,pose,offsetX,offsetY,originX,originY,zoom,true) ;
+		}
+
+		double[] drawPosedWeapon(Graphics2D g, WeaponInfo weapon, double[] pose, double offsetX, double offsetY, double originX, double originY, double zoom, boolean drawLegs) {
+			if (frame.model.players == null) return new double[] {originX,originY,0.0} ;
+			double rotation = -Math.PI/2.0, chainRotation = 0.0, body = Math.toRadians(pose[0]) ;
+			double rightArm = Math.toRadians(pose[1]), rightHand = Math.toRadians(pose[2]) ;
+			double leftArm = Math.toRadians(pose[3]), leftHand = Math.toRadians(pose[4]) ;
+			int atlasTeam = frame.teamBox.getSelectedIndex() == 0 ? 1 : 0 ;
+			int playerOffset = (frame.modelBox.getSelectedIndex()+atlasTeam*4)*32 ;
+			BufferedImage players = frame.model.players ;
+			if (drawLegs) drawQuad(g,players,playerOffset,32,32,32,originX,originY,16,16,rotation,zoom,false) ;
+			double centerX=originX-5*Math.cos(chainRotation)*zoom, centerY=originY-5*Math.sin(chainRotation)*zoom ;
+			drawQuad(g,players,playerOffset,0,32,16,centerX,centerY,16,8,rotation+body,zoom,false) ;
+			double bodyDx=10*Math.cos(rotation+body)*zoom, bodyDy=10*Math.sin(rotation+body)*zoom ;
+			double leftX=centerX+bodyDx, leftY=centerY+bodyDy ;
+			drawQuad(g,players,playerOffset+8,16,8,16,leftX,leftY,4,4,rotation+leftArm,zoom,true) ;
+			leftX+=8*Math.cos(chainRotation+leftArm)*zoom ; leftY+=8*Math.sin(chainRotation+leftArm)*zoom ;
+			drawQuad(g,players,playerOffset,16,8,16,leftX,leftY,4,3,rotation+leftHand,zoom,true) ;
+			double rightX=centerX-bodyDx, rightY=centerY-bodyDy ;
+			drawQuad(g,players,playerOffset+8,16,8,16,rightX,rightY,4,4,rotation+rightArm,zoom,false) ;
+			rightX+=8*Math.cos(chainRotation+rightArm)*zoom ; rightY+=8*Math.sin(chainRotation+rightArm)*zoom ;
+			drawQuad(g,players,playerOffset,16,8,16,rightX,rightY,4,3,rotation+rightHand,zoom,false) ;
+			double gunX=rightX+10*Math.cos(chainRotation+rightHand)*zoom+offsetX*zoom ;
+			double gunY=rightY+10*Math.sin(chainRotation+rightHand)*zoom+offsetY*zoom ;
+			drawWeaponCell(g,frame.model.handPage(weapon.id),weapon.id,gunX,gunY,16,8,rotation+Math.toRadians(pose[5]),zoom) ;
+			drawQuad(g,players,playerOffset+16,16,16,16,centerX,centerY,8,7,rotation,zoom,false) ;
+			return new double[] {gunX,gunY,Math.toRadians(pose[5])} ;
 		}
 
 		void drawWeaponLaser(Graphics2D g, WeaponInfo weapon, double centerX, double centerY, double aimAngle, double zoom) {
@@ -1828,18 +2850,26 @@ public class GunPreviewer {
 
 		void drawLiveTracers(Graphics2D g, WeaponInfo weapon, double centerX, double centerY) {
 			TracerConfig tracer = frame.model.tracer(weapon.id) ;
-			if ("none".equals(tracer.style)) return ;
+			if (weapon.projectileType != 1 && "none".equals(tracer.style)) return ;
 			long now = System.currentTimeMillis() ;
 			Shape oldClip = g.getClip() ;
 			g.clip(gunPanels[0]) ;
 			for (TracerShot shot : frame.tracerShots) {
 				if (shot.weaponId != weapon.id) continue ;
 				double elapsed = now - shot.startedAt ;
-				double distance = (24.0 + 0.3 * weapon.bulletSpeed * elapsed) * gunZoom[0] ;
-				double tipX = centerX + Math.cos(shot.angle) * distance ;
-				double tipY = centerY + Math.sin(shot.angle) * distance ;
-				double distanceFromMuzzle = Math.max(0.0, distance - 24.0 * gunZoom[0]) ;
-				drawTracer(g, tracer, tipX, tipY, shot.angle, gunZoom[0], weapon, distanceFromMuzzle) ;
+				double travel = 0.3 * weapon.bulletSpeed * elapsed * gunZoom[0] ;
+				boolean shoulder = frame.model.projectileLaunchOrigin(weapon) == 1 ;
+				double muzzleForward = shoulder ? 28.0 : 24.0 ;
+				double muzzleSide = shoulder ? 8.0 : 0.0 ;
+				double muzzleX = centerX + (Math.cos(shot.angle)*muzzleForward-Math.sin(shot.angle)*muzzleSide)*gunZoom[0] ;
+				double muzzleY = centerY + (Math.sin(shot.angle)*muzzleForward+Math.cos(shot.angle)*muzzleSide)*gunZoom[0] ;
+				double tipX = muzzleX + Math.cos(shot.angle)*travel ;
+				double tipY = muzzleY + Math.sin(shot.angle)*travel ;
+				if (!"none".equals(tracer.style)) drawTracer(g,tracer,tipX,tipY,shot.angle,gunZoom[0],weapon,travel) ;
+				if (weapon.projectileType == 1 && frame.model.projectileAtlas != null) {
+					int style=weapon.projectileStyle, column=style%4, row=style/4 ;
+					drawQuad(g,frame.model.projectileAtlas,column*32,row*32,32,32,tipX,tipY,16,16,shot.angle,gunZoom[0],false) ;
+				}
 			}
 			g.setClip(oldClip) ;
 		}

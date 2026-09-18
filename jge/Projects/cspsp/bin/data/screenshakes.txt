@@ -1,0 +1,7 @@
+# id fire_magnitude fire_time_ms explosion_magnitude explosion_time_ms explosion_radius
+67 0 120 0 500 500.0
+65 0 120 0 500 500.0
+31 0 120 0 500 500.0
+1 0 120 0 500 500.0
+68 0 120 0 500 500.0
+17 0 120 0 500 500.0

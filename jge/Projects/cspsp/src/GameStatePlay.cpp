@@ -412,7 +412,8 @@ void GameStatePlay::CheckInput(float dt)
 			std::vector<Bullet*> bullets = mPlayer->Fire();
 			mSwitchTimer = 0;
 			if (bullets.size() > 0) {
-				//mCamera->Recoil(mPlayer->mFacingAngle,mPlayer->GetCurrentGun()->mGun->mDelay/80.0f,mPlayer->GetCurrentGun()->mGun->mDelay);
+				ScreenShakeConfig& shake = gScreenShakeConfigs[gun->mId];
+				if (shake.fireMagnitude > 0 && shake.fireTime > 0.0f) mCamera->Shake(shake.fireMagnitude,shake.fireTime);
 			}
 		}
 	}
@@ -569,7 +570,8 @@ void GameStatePlay::CheckCollisions()
 				if (LineCircleIntersect(l1,circle,d,l,false)) {
 					gParticleEngine->GenerateParticles(BLOOD,mBullets[i]->mX,mBullets[i]->mY,gEffectsConfig.bloodParticleCount);
 					mMap->AddDecal(mBullets[i]->mX,mBullets[i]->mY,DECAL_BLOOD);
-					gSfxManager->PlaySample(gHitSounds[rand()%3],mBullets[i]->mX,mBullets[i]->mY);
+					JSample* impactSound = mBullets[i]->mType == TYPE_BULLET && mBullets[i]->mParentGun != NULL ? gWeaponImpactSounds[mBullets[i]->mParentGun->mId] : NULL;
+					gSfxManager->PlaySample(impactSound == NULL ? gHitSounds[rand()%3] : impactSound,mBullets[i]->mX,mBullets[i]->mY);
 					mPeople[j]->TakeDamage(mBullets[i]->mDamage);
 					mBullets[i]->mState = 1;
 					if (mPeople[j]->mState == DEAD) {
@@ -1394,8 +1396,20 @@ void GameStatePlay::Explode(Grenade* grenade) {
 			else if (grenade->mGrenadeType == HE) {
 				if (grenade->mParent == NULL) return;
 				if (mGameType != FFA && mFriendlyFire == OFF && mPeople[i] != grenade->mParent && mPeople[i]->mTeam == grenade->mParent->mTeam) continue;
+				float maxDistance = gGrenadeConfig.heMaxDistance;
+				if (grenade->mType == TYPE_ROCKET && grenade->mParentGun != NULL) {
+					float configuredRadius = gProjectileExplosionRadii[grenade->mParentGun->mId];
+					if (configuredRadius >= 0.0f) maxDistance = configuredRadius;
+				}
+				if (maxDistance <= 0.0f) continue;
 
-				if (!mGrid->LineOfSight(grenade->mX,grenade->mY,mPeople[i]->mX,mPeople[i]->mY)) continue;
+				float blastX = grenade->mX;
+				float blastY = grenade->mY;
+				if (grenade->mType == TYPE_ROCKET) {
+					blastX -= 2.0f*cosf(grenade->mAngle);
+					blastY -= 2.0f*sinf(grenade->mAngle);
+				}
+				if (!mGrid->LineOfSight(blastX,blastY,mPeople[i]->mX,mPeople[i]->mY)) continue;
 				
 				float dx = grenade->mX-mPeople[i]->mX;
 				float dy = grenade->mY-mPeople[i]->mY;
@@ -1403,11 +1417,9 @@ void GameStatePlay::Explode(Grenade* grenade) {
 				if (fabs(dx) >= EPSILON || fabs(dy) >= EPSILON) {
 					 distance = sqrtf(dx*dx+dy*dy);
 				}
+				if (distance > maxDistance) continue;
 				if (distance < gGrenadeConfig.heMinDistance) {
 					distance = gGrenadeConfig.heMinDistance;
-				}
-				else if (distance > gGrenadeConfig.heMaxDistance) {
-					continue;
 				}
 
 				int damage = (int)((gGrenadeConfig.heFalloff/distance)*grenade->mParentGun->mDamage);

@@ -164,6 +164,19 @@ struct LaserConfig {
 	float offsetY;
 };
 
+struct ScreenShakeConfig {
+	int fireMagnitude;
+	float fireTime;
+	int explosionMagnitude;
+	float explosionTime;
+	float explosionRadius;
+};
+
+struct MuzzlePositionConfig {
+	float forward;
+	float sideways;
+};
+
 extern PlayerConfig gPlayerConfig;
 extern GrenadeConfig gGrenadeConfig;
 extern CameraConfig gCameraConfig;
@@ -175,6 +188,19 @@ extern BotConfig gBotConfig;
 extern LimitsConfig gLimitsConfig;
 extern LaserConfig gLaserConfigs[MAX_GUNS];
 void LoadLaserConfigs(const char* filename);
+extern ScreenShakeConfig gScreenShakeConfigs[MAX_GUNS];
+void LoadScreenShakeConfigs(const char* filename);
+extern float gProjectileExplosionRadii[MAX_GUNS];
+void LoadProjectileExplosionConfigs(const char* filename);
+extern int gProjectileLaunchOrigins[MAX_GUNS];
+void LoadProjectileLaunchOrigins(const char* filename);
+extern JSample* gWeaponExplosionSounds[MAX_GUNS];
+extern JSample* gWeaponImpactSounds[MAX_GUNS];
+extern char gWeaponAnimationProfileNames[MAX_GUNS][64];
+extern KeyFrameAnim* gWeaponAnimationKeyFrames[MAX_GUNS][3];
+void LoadWeaponAnimationProfiles(const char* filename);
+extern MuzzlePositionConfig gMuzzlePositionConfigs[MAX_GUNS];
+void LoadMuzzlePositionConfigs(const char* filename);
 
 #define SINGLEPLAYER_INFECTION 0
 #define SINGLEPLAYER_ELIMINATION 1
@@ -222,6 +248,8 @@ extern std::map<int, std::vector<JQuad*> > gMuzzleFlashQuads;
 extern JQuad* GetMuzzleFlashQuad(int type, int frame);
 extern JQuad* gBulletImpactQuads[MAX_BULLET_IMPACT_TYPES];
 extern JQuad* GetBulletImpactQuad(int type);
+extern JQuad* gRocketProjectileQuads[MAX_PROJECTILE_STYLES];
+extern std::vector<JQuad*> gRocketExplosionQuads[MAX_EXPLOSION_STYLES];
 extern JQuad* gHealthBorderQuad;
 extern JQuad* gHealthFillQuad;
 extern JQuad* gArmorBorderQuad;
@@ -263,7 +291,7 @@ extern JSample* gSmokeGrenadeSound;
 extern JSample* gGrenadeBounceSound;
 extern JSample* gHitIndicatorSound;
 
-extern KeyFrameAnim* gKeyFrameAnims[11];
+extern KeyFrameAnim* gKeyFrameAnims[ANIM_COUNT];
 
 extern ParticleEngine* gParticleEngine;
 extern hgeParticleSystem* gParticleSystems[3];

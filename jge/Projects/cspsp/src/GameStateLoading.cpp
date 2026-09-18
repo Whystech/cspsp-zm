@@ -23,6 +23,21 @@ static JTexture* LoadOptionalConfiguredTexture(JRenderer* renderer, char* key, i
 	return texture;
 }
 
+static JTexture* LoadOptionalConfiguredTextureWithFallback(JRenderer* renderer, char* key, char* fallback, int textureMode)
+{
+	char* configured = GetConfig("data/resources.txt",key);
+	char* path = configured == NULL ? fallback : configured;
+	FILE* file = fopen(path,"rb");
+	if (file == NULL) {
+		delete[] configured;
+		return NULL;
+	}
+	fclose(file);
+	JTexture* texture = renderer->LoadTexture(path,textureMode);
+	delete[] configured;
+	return texture;
+}
+
 static JSample* LoadConfiguredSample(JSoundSystem* soundSystem, char* key, char* fallback)
 {
 	char* configured = GetConfig("data/audio.txt",key);
@@ -446,6 +461,10 @@ int GameStateLoading::Load(int stage) {
 			break;
 		}		
 		case 5: {
+			for (int i=0; i<MAX_GUNS; i++) {
+				gWeaponExplosionSounds[i] = NULL;
+				gWeaponImpactSounds[i] = NULL;
+			}
 			int mNumGuns = 0;
 			FILE *file;
 			file = fopen("data/guns.txt", "r"); 
@@ -469,11 +488,32 @@ int GameStateLoading::Load(int stage) {
 				gun.mBulletImpactGreen = 128;
 				gun.mBulletImpactBlue = 35;
 				gun.mBulletImpactFadeTime = 250.0f;
-				int fields = sscanf(s,"%d %d %d %f %d %d %d %f %f %f %d %d %d %d %d %d %d %d %d %f %d %d %d %f %14s",&gun.mId,&gun.mDamage,&gun.mDelay,&gun.mSpread,&gun.mClip,&gun.mNumClips,&gun.mReloadDelay,&gun.mSpeed,&gun.mBulletSpeed,&gun.mViewAngle,&gun.mCost,&gun.mType,&gun.mFireMode,&gun.mPellets,&gun.mScope,&gun.mBuyCategory,&gun.mBuyTeams,&gun.mMuzzleFlashType,&gun.mBulletImpactType,&gun.mBulletImpactScale,&gun.mBulletImpactRed,&gun.mBulletImpactGreen,&gun.mBulletImpactBlue,&gun.mBulletImpactFadeTime,gun.mName);
-				if (fields != 25) {
+				gun.mProjectileType = PROJECTILE_BULLET;
+				gun.mProjectileStyle = 0;
+				gun.mExplosionStyle = 0;
+				gun.mExplosionFrameTime = 50.0f;
+				gun.mSpriteOffsetX = 0.0f;
+				gun.mSpriteOffsetY = 0.0f;
+				int fields = sscanf(s,"%d %d %d %f %d %d %d %f %f %f %d %d %d %d %d %d %d %d %d %f %d %d %d %f %d %d %d %f %f %f %14s",&gun.mId,&gun.mDamage,&gun.mDelay,&gun.mSpread,&gun.mClip,&gun.mNumClips,&gun.mReloadDelay,&gun.mSpeed,&gun.mBulletSpeed,&gun.mViewAngle,&gun.mCost,&gun.mType,&gun.mFireMode,&gun.mPellets,&gun.mScope,&gun.mBuyCategory,&gun.mBuyTeams,&gun.mMuzzleFlashType,&gun.mBulletImpactType,&gun.mBulletImpactScale,&gun.mBulletImpactRed,&gun.mBulletImpactGreen,&gun.mBulletImpactBlue,&gun.mBulletImpactFadeTime,&gun.mProjectileType,&gun.mProjectileStyle,&gun.mExplosionStyle,&gun.mExplosionFrameTime,&gun.mSpriteOffsetX,&gun.mSpriteOffsetY,gun.mName);
+				if (fields != 31) {
+					fields = sscanf(s,"%d %d %d %f %d %d %d %f %f %f %d %d %d %d %d %d %d %d %d %f %d %d %d %f %d %d %d %f %14s",&gun.mId,&gun.mDamage,&gun.mDelay,&gun.mSpread,&gun.mClip,&gun.mNumClips,&gun.mReloadDelay,&gun.mSpeed,&gun.mBulletSpeed,&gun.mViewAngle,&gun.mCost,&gun.mType,&gun.mFireMode,&gun.mPellets,&gun.mScope,&gun.mBuyCategory,&gun.mBuyTeams,&gun.mMuzzleFlashType,&gun.mBulletImpactType,&gun.mBulletImpactScale,&gun.mBulletImpactRed,&gun.mBulletImpactGreen,&gun.mBulletImpactBlue,&gun.mBulletImpactFadeTime,&gun.mProjectileType,&gun.mProjectileStyle,&gun.mExplosionStyle,&gun.mExplosionFrameTime,gun.mName);
+				}
+				else {
+					fields = 29;
+				}
+				if (fields != 29) {
+					fields = sscanf(s,"%d %d %d %f %d %d %d %f %f %f %d %d %d %d %d %d %d %d %d %f %d %d %d %f %d %d %14s",&gun.mId,&gun.mDamage,&gun.mDelay,&gun.mSpread,&gun.mClip,&gun.mNumClips,&gun.mReloadDelay,&gun.mSpeed,&gun.mBulletSpeed,&gun.mViewAngle,&gun.mCost,&gun.mType,&gun.mFireMode,&gun.mPellets,&gun.mScope,&gun.mBuyCategory,&gun.mBuyTeams,&gun.mMuzzleFlashType,&gun.mBulletImpactType,&gun.mBulletImpactScale,&gun.mBulletImpactRed,&gun.mBulletImpactGreen,&gun.mBulletImpactBlue,&gun.mBulletImpactFadeTime,&gun.mProjectileType,&gun.mProjectileStyle,gun.mName);
+				}
+				if (fields != 29 && fields != 27) {
+					fields = sscanf(s,"%d %d %d %f %d %d %d %f %f %f %d %d %d %d %d %d %d %d %d %f %d %d %d %f %d %14s",&gun.mId,&gun.mDamage,&gun.mDelay,&gun.mSpread,&gun.mClip,&gun.mNumClips,&gun.mReloadDelay,&gun.mSpeed,&gun.mBulletSpeed,&gun.mViewAngle,&gun.mCost,&gun.mType,&gun.mFireMode,&gun.mPellets,&gun.mScope,&gun.mBuyCategory,&gun.mBuyTeams,&gun.mMuzzleFlashType,&gun.mBulletImpactType,&gun.mBulletImpactScale,&gun.mBulletImpactRed,&gun.mBulletImpactGreen,&gun.mBulletImpactBlue,&gun.mBulletImpactFadeTime,&gun.mProjectileType,gun.mName);
+				}
+				if (fields != 29 && fields != 27 && fields != 26) {
+					fields = sscanf(s,"%d %d %d %f %d %d %d %f %f %f %d %d %d %d %d %d %d %d %d %f %d %d %d %f %14s",&gun.mId,&gun.mDamage,&gun.mDelay,&gun.mSpread,&gun.mClip,&gun.mNumClips,&gun.mReloadDelay,&gun.mSpeed,&gun.mBulletSpeed,&gun.mViewAngle,&gun.mCost,&gun.mType,&gun.mFireMode,&gun.mPellets,&gun.mScope,&gun.mBuyCategory,&gun.mBuyTeams,&gun.mMuzzleFlashType,&gun.mBulletImpactType,&gun.mBulletImpactScale,&gun.mBulletImpactRed,&gun.mBulletImpactGreen,&gun.mBulletImpactBlue,&gun.mBulletImpactFadeTime,gun.mName);
+				}
+				if (fields != 29 && fields != 27 && fields != 26 && fields != 25) {
 					fields = sscanf(s,"%d %d %d %f %d %d %d %f %f %f %d %d %d %d %d %d %d %d %d %f %14s",&gun.mId,&gun.mDamage,&gun.mDelay,&gun.mSpread,&gun.mClip,&gun.mNumClips,&gun.mReloadDelay,&gun.mSpeed,&gun.mBulletSpeed,&gun.mViewAngle,&gun.mCost,&gun.mType,&gun.mFireMode,&gun.mPellets,&gun.mScope,&gun.mBuyCategory,&gun.mBuyTeams,&gun.mMuzzleFlashType,&gun.mBulletImpactType,&gun.mBulletImpactScale,gun.mName);
 				}
-				if (fields != 25 && fields != 21) {
+				if (fields != 29 && fields != 27 && fields != 26 && fields != 25 && fields != 21) {
 					fields = sscanf(s,"%d %d %d %f %d %d %d %f %f %f %d %d %d %d %d %d %d %d %14s",&gun.mId,&gun.mDamage,&gun.mDelay,&gun.mSpread,&gun.mClip,&gun.mNumClips,&gun.mReloadDelay,&gun.mSpeed,&gun.mBulletSpeed,&gun.mViewAngle,&gun.mCost,&gun.mType,&gun.mFireMode,&gun.mPellets,&gun.mScope,&gun.mBuyCategory,&gun.mBuyTeams,&gun.mMuzzleFlashType,gun.mName);
 					if (fields != 19) {
 						gun.mMuzzleFlashType = 0;
@@ -492,8 +532,14 @@ int GameStateLoading::Load(int stage) {
 				if (gun.mPellets < 1) gun.mPellets = 1;
 				if (gun.mPellets > MAX_PELLETS) gun.mPellets = MAX_PELLETS;
 				if (gun.mScope < SCOPE_NONE || gun.mScope > SCOPE_HIGH) gun.mScope = SCOPE_NONE;
-				if (gun.mBuyCategory < BUY_CATEGORY_NONE || gun.mBuyCategory > BUY_CATEGORY_EQUIPMENT) gun.mBuyCategory = BUY_CATEGORY_NONE;
+				if (gun.mBuyCategory < BUY_CATEGORY_NONE || gun.mBuyCategory > BUY_CATEGORY_SPECIAL) gun.mBuyCategory = BUY_CATEGORY_NONE;
 				if (gun.mBuyTeams < 0 || gun.mBuyTeams > (BUY_TEAM_T | BUY_TEAM_CT)) gun.mBuyTeams = 0;
+				if (gun.mProjectileType < PROJECTILE_BULLET || gun.mProjectileType > PROJECTILE_ROCKET) gun.mProjectileType = PROJECTILE_BULLET;
+				if (gun.mProjectileStyle < 0 || gun.mProjectileStyle >= MAX_PROJECTILE_STYLES) gun.mProjectileStyle = 0;
+				if (gun.mExplosionStyle < 0 || gun.mExplosionStyle >= MAX_EXPLOSION_STYLES) gun.mExplosionStyle = 0;
+				if (gun.mExplosionFrameTime < 1.0f || gun.mExplosionFrameTime > 60000.0f) gun.mExplosionFrameTime = 50.0f;
+				if (gun.mSpriteOffsetX < -100.0f || gun.mSpriteOffsetX > 100.0f) gun.mSpriteOffsetX = 0.0f;
+				if (gun.mSpriteOffsetY < -100.0f || gun.mSpriteOffsetY > 100.0f) gun.mSpriteOffsetY = 0.0f;
 				gun.mHandQuad = gGunHandQuads[gun.mId];
 				gun.mGroundQuad = gGunGroundQuads[gun.mId];
 				gGuns[i] = gun;
@@ -569,6 +615,27 @@ int GameStateLoading::Load(int stage) {
 					gGuns[i].mDryFireSound = gDryFirePistolSound;
 				}
 
+				if (gGuns[i].mProjectileType == PROJECTILE_ROCKET) {
+					sprintf(buffer,"sfx/%sexplosion.wav",gGuns[i].mName);
+					JSample* explosionSound = mSoundSystem->LoadSample(buffer);
+					if (explosionSound != NULL && explosionSound->mSample != NULL) {
+						gWeaponExplosionSounds[gGuns[i].mId] = explosionSound;
+					}
+					else {
+						delete explosionSound;
+					}
+				}
+				else {
+					sprintf(buffer,"sfx/%simpact.wav",gGuns[i].mName);
+					JSample* impactSound = mSoundSystem->LoadSample(buffer);
+					if (impactSound != NULL && impactSound->mSample != NULL) {
+						gWeaponImpactSounds[gGuns[i].mId] = impactSound;
+					}
+					else {
+						delete impactSound;
+					}
+				}
+
 				int clip = gGuns[i].mClip;
 				int space = 120-clip;
 				int w = 0; 
@@ -614,6 +681,11 @@ int GameStateLoading::Load(int stage) {
 			fclose(file);
 			Bullet::LoadTracerConfig("data/tracers.txt");
 			LoadLaserConfigs("data/lasers.txt");
+			LoadScreenShakeConfigs("data/screenshakes.txt");
+			LoadProjectileExplosionConfigs("data/projectileexplosions.txt");
+			LoadProjectileLaunchOrigins("data/projectileorigins.txt");
+			LoadWeaponAnimationProfiles("data/weaponanimations.txt");
+			LoadMuzzlePositionConfigs("data/muzzlepositions.txt");
 
 			break;
 		}
@@ -631,6 +703,37 @@ int GameStateLoading::Load(int stage) {
 			//gHudFont->SetBlendMode(BLEND_COLORADD);
 
 			JTexture* particlesTexture = LoadConfiguredTexture(mRenderer,"particles","gfx/particles.png",true);
+			JTexture* rocketProjectileTexture = LoadOptionalConfiguredTexture(mRenderer,"rocket_projectile",true);
+			for (int i=0; i<MAX_PROJECTILE_STYLES; i++) gRocketProjectileQuads[i] = NULL;
+			if (rocketProjectileTexture != NULL && rocketProjectileTexture->mTexWidth == 128 && rocketProjectileTexture->mTexHeight == 128) {
+				for (int i=0; i<MAX_PROJECTILE_STYLES; i++) {
+					gRocketProjectileQuads[i] = new JQuad(rocketProjectileTexture,(i%4)*32,(i/4)*32,32,32);
+					gRocketProjectileQuads[i]->SetHotSpot(16.0f,16.0f);
+				}
+			}
+
+			for (int style=0; style<MAX_EXPLOSION_STYLES; style++) {
+				gRocketExplosionQuads[style].clear();
+				char key[32];
+				char fallback[64];
+				if (style == 0) {
+					strcpy(key,"explosion_sprites");
+					strcpy(fallback,"gfx/explosionsprites.png");
+				}
+				else {
+					sprintf(key,"explosion_sprites_%d",style);
+					sprintf(fallback,"gfx/explosionsprites%d.png",style);
+				}
+				JTexture* explosionTexture = LoadOptionalConfiguredTextureWithFallback(mRenderer,key,fallback,true);
+				if (explosionTexture != NULL && explosionTexture->mTexWidth == 128 && explosionTexture->mTexHeight == 128) {
+					for (int frame=0; frame<16; frame++) {
+						JQuad* explosionQuad = new JQuad(explosionTexture,(frame%4)*32,(frame/4)*32,32,32);
+						explosionQuad->SetHotSpot(16.0f,16.0f);
+						gRocketExplosionQuads[style].push_back(explosionQuad);
+					}
+				}
+				if (style > 0 && gRocketExplosionQuads[style].empty()) gRocketExplosionQuads[style] = gRocketExplosionQuads[0];
+			}
 
 			JQuad* quad = new JQuad(particlesTexture,32,0,32,32);
 			quad->SetHotSpot(16.0f, 16.0f);

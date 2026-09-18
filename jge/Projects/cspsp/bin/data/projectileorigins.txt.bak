@@ -1,0 +1,4 @@
+# PROJECTILE LAUNCH ORIGINS
+# Format: id origin. 0 = standard, 1 = shoulder.
+# Missing IDs preserve legacy behavior: rockets use shoulder; other weapons use standard.
+17 1

@@ -17,8 +17,9 @@
 #define RIFLES 4
 #define MACHINEGUNS 5
 #define EQUIPMENT 6
-#define PRIMARYAMMO 7
-#define SECONDARYAMMO 8
+#define SPECIAL 7
+#define PRIMARYAMMO 8
+#define SECONDARYAMMO 9
 
 
 //------------------------------------------------------------------------------------------------
@@ -28,7 +29,7 @@ private:
 	static JGE* mEngine;
 	static JRenderer* mRenderer;
 
-	Category mCategories[2][EQUIPMENT+1];	
+	Category mCategories[2][SPECIAL+1];
 	int mCategoryIndex;
 	int mSelectedIndex;
 	int mScrollOffset;

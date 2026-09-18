@@ -1,3 +1,5 @@
+# USER SETTINGS: written by the in-game menus. Hand-edited defaults belong in the topic config files.
+# Format: key = value
 movement = absolute
 music = off
 ff = off

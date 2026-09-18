@@ -1,12 +1,6 @@
-4 1 1 255 32 24 180 1.0 420.0 5.0 1 1.0 12.5 0.5
-63 0 0 255 32 24 180 1.0 700.0 1.0 1 1.0 12.0 0.0
-35 0 0 255 32 24 180 1.0 700.0 1.0 1 1.0 12.0 0.0
+67 1 0 51 255 51 180 1.0 700.0 1.0 1 1.0 2.5 9.5
+65 0 0 255 32 24 180 1.0 700.0 1.0 1 1.0 12.0 0.0
+31 1 1 51 255 255 180 1.0 700.0 5.0 1 1.0 7.0 1.0
+1 0 0 255 32 24 180 1.0 700.0 1.0 1 1.0 12.0 0.0
+68 0 0 255 32 24 180 1.0 700.0 1.0 1 1.0 12.0 0.0
 17 0 0 255 32 24 180 1.0 700.0 1.0 1 1.0 12.0 0.0
-# CLIENT-SIDE WEAPON LASERS
-# One optional record per weapon ID. Missing IDs have lasers disabled.
-# Format: id enabled falloff_enabled red green blue alpha width range falloff end_dot end_dot_scale offset_x offset_y
-# Booleans use 0=no and 1=yes. The endpoint always matches the laser RGBA color.
-# falloff=0 is solid even when falloff_enabled is 1.
-# offset_x moves along the aim direction; offset_y moves sideways from it.
-# Older 12-field records default to offset_x=12 and offset_y=0.
-# Example: 17 1 1 255 32 24 180 1.0 700.0 1.25 1 2.0 12.0 0.0

@@ -1,0 +1,8 @@
+# MUZZLE FLASH POSITIONS
+# Format: id forward sideways. Offsets are relative to the animated gun anchor.
+65 -8.1024065 0.55444765
+1 -11.042349 -1.2698854
+31 -0.79234904 -0.7698855
+68 0.0 0.0
+67 0.0 0.0
+17 0.0 0.0

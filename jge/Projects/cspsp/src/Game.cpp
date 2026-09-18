@@ -16,10 +16,12 @@ static void RenderWeaponLaser(JRenderer* renderer, TileMap* map, Person* person,
 	LaserConfig config = gLaserConfigs[gunId];
 	if (!config.enabled || config.alpha <= 0 || config.width <= 0.0f || config.range <= 0.0f) return;
 
-	float directionX = cosf(person->mFacingAngle);
-	float directionY = sinf(person->mFacingAngle);
-	float startX = person->mX+directionX*config.offsetX-directionY*config.offsetY;
-	float startY = person->mY+directionY*config.offsetX+directionX*config.offsetY;
+	float animationOffsetX, animationOffsetY, laserAngle;
+	person->GetWeaponAnimationTransform(config.offsetX,config.offsetY,animationOffsetX,animationOffsetY,laserAngle);
+	float directionX = cosf(laserAngle);
+	float directionY = sinf(laserAngle);
+	float startX = person->mX+animationOffsetX;
+	float startY = person->mY+animationOffsetY;
 	float endX = startX+directionX*config.range;
 	float endY = startY+directionY*config.range;
 	Line laserLine(startX,startY,endX,endY);
@@ -687,7 +689,7 @@ void Game::CheckCollisions()
 
 			Person *p = NULL;
 
-			if (bullet->mType == TYPE_BULLET) {
+			if (bullet->mType == TYPE_BULLET || bullet->mType == TYPE_ROCKET) {
 				for (unsigned int j=0; j<mGrid->mCells[cell].mPeople.size(); j++) {
 					Person *person = mGrid->mCells[cell].mPeople[j];
 
@@ -731,12 +733,22 @@ void Game::CheckCollisions()
 
 
 			if (intersected == 1) {					
-				if (bullet->mType == TYPE_BULLET) {
+				if (bullet->mType == TYPE_ROCKET) {
 					JQuad* impactQuad = GetBulletImpactQuad(bullet->mParentGun->mBulletImpactType);
 					gParticleEngine->GenerateParticles(BULLETIMPACT,d.x,d.y,gEffectsConfig.impactParticleCount,impactQuad,bullet->mParentGun->mBulletImpactScale,
 						bullet->mParentGun->mBulletImpactRed,bullet->mParentGun->mBulletImpactGreen,bullet->mParentGun->mBulletImpactBlue,
 						bullet->mParentGun->mBulletImpactFadeTime);
-					gSfxManager->PlaySample(gRicochetSounds[rand()%4],d.x,d.y);
+					Rocket* rocket = (Rocket*)bullet;
+					rocket->Detonate(d.x,d.y);
+					Explode(rocket);
+				}
+				else if (bullet->mType == TYPE_BULLET) {
+					JQuad* impactQuad = GetBulletImpactQuad(bullet->mParentGun->mBulletImpactType);
+					gParticleEngine->GenerateParticles(BULLETIMPACT,d.x,d.y,gEffectsConfig.impactParticleCount,impactQuad,bullet->mParentGun->mBulletImpactScale,
+						bullet->mParentGun->mBulletImpactRed,bullet->mParentGun->mBulletImpactGreen,bullet->mParentGun->mBulletImpactBlue,
+						bullet->mParentGun->mBulletImpactFadeTime);
+					JSample* impactSound = bullet->mParentGun == NULL ? NULL : gWeaponImpactSounds[bullet->mParentGun->mId];
+					gSfxManager->PlaySample(impactSound == NULL ? gRicochetSounds[rand()%4] : impactSound,d.x,d.y);
 					bullet->mEndX = d.x;
 					bullet->mEndY = d.y;
 					bullet->mState = 1;	
@@ -770,9 +782,20 @@ void Game::CheckCollisions()
 				break;
 			}
 			else if (intersected == 2) {
+				if (bullet->mType == TYPE_ROCKET) {
+					JQuad* impactQuad = GetBulletImpactQuad(bullet->mParentGun->mBulletImpactType);
+					gParticleEngine->GenerateParticles(BULLETIMPACT,d.x,d.y,gEffectsConfig.impactParticleCount,impactQuad,bullet->mParentGun->mBulletImpactScale,
+						bullet->mParentGun->mBulletImpactRed,bullet->mParentGun->mBulletImpactGreen,bullet->mParentGun->mBulletImpactBlue,
+						bullet->mParentGun->mBulletImpactFadeTime);
+					Rocket* rocket = (Rocket*)bullet;
+					rocket->Detonate(d.x,d.y);
+					Explode(rocket);
+					break;
+				}
 				gParticleEngine->GenerateParticles(BLOOD,d.x,d.y,gEffectsConfig.bloodParticleCount);
 				mMap->AddDecal(d.x+20*vX,d.y+20*vY,DECAL_BLOOD);
-				gSfxManager->PlaySample(gHitSounds[rand()%3],bullet->mX,bullet->mY);
+				JSample* impactSound = bullet->mParentGun == NULL ? NULL : gWeaponImpactSounds[bullet->mParentGun->mId];
+				gSfxManager->PlaySample(impactSound == NULL ? gHitSounds[rand()%3] : impactSound,bullet->mX,bullet->mY);
 				bullet->mEndX = d.x;
 				bullet->mEndY = d.y;
 				bullet->mState = 1;
@@ -3326,14 +3349,20 @@ void Game::Explode(Grenade* grenade) {
 		gSfxManager->PlaySample(gFlashbangSound,grenade->mX,grenade->mY);
 	}
 	else if (grenade->mGrenadeType == HE) { //HE
-		gParticleSystems[PARTICLE_EXPLOSION]->FireAt(grenade->mX,grenade->mY);
+		if (grenade->mType != TYPE_ROCKET) gParticleSystems[PARTICLE_EXPLOSION]->FireAt(grenade->mX,grenade->mY);
 		mMap->AddDecal(grenade->mX,grenade->mY,DECAL_EXPLOSION);
-		gSfxManager->PlaySample(gHEGrenadeSounds[rand()%3],grenade->mX,grenade->mY);
-		float dx = mCamera->GetX()-grenade->mX;
-		float dy = mCamera->GetY()-grenade->mY;
-		float dist = dx*dx+dy*dy;
-		if (dist < 1000.0f) dist = 1000.0f;
-		mCamera->Shake(100*1000.0f/dist,500);
+		JSample* explosionSound = grenade->mParentGun == NULL ? NULL : gWeaponExplosionSounds[grenade->mParentGun->mId];
+		gSfxManager->PlaySample(explosionSound == NULL ? gHEGrenadeSounds[rand()%3] : explosionSound,grenade->mX,grenade->mY);
+		if (grenade->mParentGun != NULL) {
+			ScreenShakeConfig& shake = gScreenShakeConfigs[grenade->mParentGun->mId];
+			float dx = mCamera->GetX()-grenade->mX;
+			float dy = mCamera->GetY()-grenade->mY;
+			float distance = sqrtf(dx*dx+dy*dy);
+			if (shake.explosionMagnitude > 0 && shake.explosionTime > 0.0f && shake.explosionRadius > 0.0f && distance < shake.explosionRadius) {
+				int magnitude = (int)(shake.explosionMagnitude*(1.0f-distance/shake.explosionRadius));
+				if (magnitude > 0) mCamera->Shake(magnitude,shake.explosionTime);
+			}
+		}
 	}
 	else if (grenade->mGrenadeType == SMOKE) { //SMOKE
 		gParticleSystems[PARTICLE_SMOKE]->FireAt(grenade->mX,grenade->mY);

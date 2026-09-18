@@ -96,6 +96,36 @@ void Animation::SetSpeed(float speed) {
 	mSpeed = speed;
 }
 
+void Animation::SetKeyFrameAnim(KeyFrameAnim* keyFrameAnim) {
+	if (mKeyFrameAnim == keyFrameAnim) return;
+	mKeyFrameAnim = keyFrameAnim;
+	Reset();
+}
+
+bool Animation::HasKeyFrames(char* name) {
+	FILE* file = fopen("data/animations.txt", "r");
+	if (file == NULL) return false;
+	char buffer[256];
+	char line[4096];
+	float duration;
+	float angles[6];
+	bool isReading = false;
+	while (fgets(line,sizeof(line),file) != NULL) {
+		if (sscanf(line,"%255s %*s",buffer) != EOF && strcmp(buffer,name) == 0) {
+			isReading = true;
+			continue;
+		}
+		if (!isReading) continue;
+		if (sscanf(line,"%255s",buffer) != EOF && strncmp(buffer,"}",1) == 0) break;
+		if (sscanf(line,"%f %f %f %f %f %f %f",&duration,&angles[0],&angles[1],&angles[2],&angles[3],&angles[4],&angles[5]) == 7 && duration > 0.0f) {
+			fclose(file);
+			return true;
+		}
+	}
+	fclose(file);
+	return false;
+}
+
 KeyFrameAnim* Animation::LoadKeyFrames(char* name) {
 	KeyFrameAnim* anim = new KeyFrameAnim();
 

@@ -26,4 +26,17 @@ public:
 	void Render(float x, float y);
 
 };
+
+class Rocket : public Grenade
+{
+public:
+	float mExplosionTime;
+
+	Rocket(float x, float y, float px, float py, float angle, float speed, Person *parent);
+	~Rocket();
+
+	void Detonate(float x, float y);
+	void Update(float dt);
+	void Render(float x, float y);
+};
 #endif

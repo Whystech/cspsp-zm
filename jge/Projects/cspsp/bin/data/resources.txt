@@ -45,3 +45,9 @@ damage_indicator = gfx/damageindicator.png
 score_icons = gfx/scoreicons.png
 ctf = gfx/ctf.png
 particles = gfx/particles.png
+# Required 4x4 atlases of 32x32 projectile cells and explosion frames.
+# Numbered explosion styles load gfx/explosionsprites1.png through
+# gfx/explosionsprites15.png by convention. Optional overrides use keys
+# explosion_sprites_1 through explosion_sprites_15.
+rocket_projectile = gfx/rocketprojectile.png
+explosion_sprites = gfx/explosionsprites.png
