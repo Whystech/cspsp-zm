@@ -78,13 +78,14 @@ Person::Person(JQuad* quads[], JQuad* deadquad, std::vector<Bullet*>* bullets, s
 	mNode = NULL;
 	mTargetNode = NULL;
 
-	for (int i=0; i<10; i++) {
+	for (int i=0; i<ANIM_COUNT; i++) {
 		mAnimations[i] = NULL;
 	}
 
-	for (int i=ANIM_PRIMARY; i<=ANIM_SECONDARY_RELOAD; i++) {
+	for (int i=ANIM_PRIMARY; i<ANIM_COUNT; i++) {
 		mAnimations[i] = new Animation(gKeyFrameAnims[i],true,false);
 	}
+	for (int i=0; i<3; i++) mWeaponAnimations[i] = new Animation(gKeyFrameAnims[ANIM_PRIMARY],true,false);
 
 	mCurrentAnimation = mAnimations[1];
 
@@ -157,11 +158,12 @@ Person::~Person()
 		delete mKnifeGun;
 		mKnifeGun = NULL;
 	}
-	for (int i=0; i<10; i++) {
+	for (int i=0; i<ANIM_COUNT; i++) {
 		if (mAnimations[i] != NULL) {
 			delete mAnimations[i];
 		}
 	}
+	for (int i=0; i<3; i++) delete mWeaponAnimations[i];
 
 	//delete mKeyFrame;
 
@@ -528,6 +530,8 @@ void Person::Render(float x, float y)
 		//mRenderer->DrawLine(x,y,x2,y2,ARGB(255,255,255,255));
 		x = x2;
 		y = y2;
+		x += scale*(mGuns[mGunIndex]->mGun->mSpriteOffsetX*cosf(mFacingAngle)-mGuns[mGunIndex]->mGun->mSpriteOffsetY*sinf(mFacingAngle));
+		y += scale*(mGuns[mGunIndex]->mGun->mSpriteOffsetX*sinf(mFacingAngle)+mGuns[mGunIndex]->mGun->mSpriteOffsetY*cosf(mFacingAngle));
 		//x2 = x+11*cosf(mRotation+mKeyFrame.angles[GUN]);
 		//y2 = y+11*sinf(mRotation+mKeyFrame.angles[GUN]);
 		if (mTeam != T || mGunIndex != KNIFE || mGuns[mGunIndex]->mGun->mId == ZOMBIECLAWS) {
@@ -541,7 +545,12 @@ void Person::Render(float x, float y)
 			y = y2;*/
 			//int alpha = mMuzzleFlashTime/100.0f*255;
 			JQuad* muzzleFlash = GetMuzzleFlashQuad(mMuzzleFlashType,mMuzzleFlashFrame);
-			if (muzzleFlash != NULL) mRenderer->RenderQuad(muzzleFlash,x,y,mMuzzleFlashAngle-M_PI_2,scale,scale);
+			float animationOffsetX, animationOffsetY, weaponAngle;
+			GetWeaponAnimationTransform(0.0f,0.0f,animationOffsetX,animationOffsetY,weaponAngle);
+			MuzzlePositionConfig muzzle = gMuzzlePositionConfigs[mGuns[mGunIndex]->mGun->mId];
+			x += scale*(muzzle.forward*cosf(weaponAngle)-muzzle.sideways*sinf(weaponAngle));
+			y += scale*(muzzle.forward*sinf(weaponAngle)+muzzle.sideways*cosf(weaponAngle));
+			if (muzzleFlash != NULL) mRenderer->RenderQuad(muzzleFlash,x,y,weaponAngle-M_PI_2,scale,scale);
 		}
 
 		mRenderer->RenderQuad(mQuads[5],centerx,centery,mRotation,scale,scale);
@@ -617,8 +626,13 @@ std::vector<Bullet*> Person::Fire()
 		else {
 			if (mGuns[mGunIndex]->mClipAmmo != 0)  {
 				Bullet* bullet;
-				float h = 24*sinf(mFacingAngle);
-				float w = 24*cosf(mFacingAngle);
+				int gunId = mGuns[mGunIndex]->mGun->mId;
+				int launchOrigin = gunId >= 0 && gunId < MAX_GUNS ? gProjectileLaunchOrigins[gunId] : -1;
+				bool shoulderWeapon = launchOrigin < 0 ? mGuns[mGunIndex]->mGun->mProjectileType == PROJECTILE_ROCKET : launchOrigin == 1;
+				float muzzleForward = (shoulderWeapon ? 28.0f : 24.0f)+mGuns[mGunIndex]->mGun->mSpriteOffsetX;
+				float muzzleSide = (shoulderWeapon ? 8.0f : 0.0f)+mGuns[mGunIndex]->mGun->mSpriteOffsetY;
+				float h = muzzleForward*sinf(mFacingAngle)+muzzleSide*cosf(mFacingAngle);
+				float w = muzzleForward*cosf(mFacingAngle)-muzzleSide*sinf(mFacingAngle);
 				float theta = mFacingAngle;
 				float speed = 0.3f*mGuns[mGunIndex]->mGun->mBulletSpeed;
 				if (mGuns[mGunIndex]->mGun->mPellets > 1) {
@@ -628,7 +642,12 @@ std::vector<Bullet*> Person::Fire()
 					int randomSteps = pelletCount == 4 ? 10 : 11;
 					for (int i=0; i<pelletCount; i++) {
 						theta += (rand()%randomSteps)/100.0f-0.05f;
-						bullet = new Bullet(mX+w,mY+h,mX+w,mY+h,theta,speed,abs(mGuns[mGunIndex]->mGun->mDamage+rand()%17-8),this);
+						if (mGuns[mGunIndex]->mGun->mProjectileType == PROJECTILE_ROCKET) {
+							bullet = new Rocket(mX+w,mY+h,mX+w,mY+h,theta,speed,this);
+						}
+						else {
+							bullet = new Bullet(mX+w,mY+h,mX+w,mY+h,theta,speed,abs(mGuns[mGunIndex]->mGun->mDamage+rand()%17-8),this);
+						}
 						bullets.push_back(bullet);
 						mBullets->push_back(bullet);
 						theta += step;
@@ -639,7 +658,12 @@ std::vector<Bullet*> Person::Fire()
 						theta += (rand()%(int)ceilf(mRecoilAngle*1000.0f))/1000.0f-(mRecoilAngle*0.5f);
 						//theta = mFacingAngle + (rand()%100)/400.0f-0.125f;
 					}
-					bullet = new Bullet(mX+w,mY+h,mX+w,mY+h,theta,speed,abs(mGuns[mGunIndex]->mGun->mDamage+rand()%17-8),this);
+					if (mGuns[mGunIndex]->mGun->mProjectileType == PROJECTILE_ROCKET) {
+						bullet = new Rocket(mX+w,mY+h,mX+w,mY+h,theta,speed,this);
+					}
+					else {
+						bullet = new Bullet(mX+w,mY+h,mX+w,mY+h,theta,speed,abs(mGuns[mGunIndex]->mGun->mDamage+rand()%17-8),this);
+					}
 					bullets.push_back(bullet);
 					mBullets->push_back(bullet);
 				}
@@ -988,70 +1012,88 @@ void Person::SetState(int state)
 		mStateTime = 0;
 		if (mState == NORMAL || mState == SWITCHING) {
 			if (mGunIndex == PRIMARY) {
-				SetAnimation(ANIM_PRIMARY);
+				SetWeaponAnimation(0,ANIM_PRIMARY);
 			}
 			else if (mGunIndex == SECONDARY) {
-				SetAnimation(ANIM_SECONDARY);
+				SetWeaponAnimation(0,ANIM_SECONDARY);
 			}
 			else if (mGunIndex == KNIFE) {
-				SetAnimation(ANIM_KNIFE);
+				SetWeaponAnimation(0,ANIM_KNIFE);
 			}
 			else if (mGunIndex == GRENADE) {
-				SetAnimation(ANIM_GRENADE);
+				SetWeaponAnimation(0,ANIM_GRENADE);
 			}
 		}
 		else if (mState == ATTACKING) {
 			if (mGunIndex == PRIMARY) {
-				SetAnimation(ANIM_PRIMARY_FIRE);
+				SetWeaponAnimation(1,ANIM_PRIMARY_FIRE);
 				//mCurrentAnimation->Reset();
 				//mCurrentAnimation->Play();
 				mCurrentAnimation->SetSpeed(1000.0f/mGuns[mGunIndex]->mGun->mDelay);
 			}
 			else if (mGunIndex == SECONDARY) {
-				SetAnimation(ANIM_SECONDARY_FIRE);
+				SetWeaponAnimation(1,ANIM_SECONDARY_FIRE);
 				//mCurrentAnimation->Reset();
 				//mCurrentAnimation->Play();
 				mCurrentAnimation->SetSpeed(1000.0f/mGuns[mGunIndex]->mGun->mDelay);
 			}
 			else if (mGunIndex == KNIFE) {
-				SetAnimation(ANIM_KNIFE_SLASH);
+				SetWeaponAnimation(1,ANIM_KNIFE_SLASH);
 				//mCurrentAnimation->Reset();
 				//mCurrentAnimation->Play();
 				mCurrentAnimation->SetSpeed(1000.0f/mGuns[mGunIndex]->mGun->mDelay);
 			}
 			else if (mGunIndex == GRENADE) {
-				SetAnimation(ANIM_GRENADE_PULLBACK);
+				SetWeaponAnimation(1,ANIM_GRENADE_PULLBACK);
 			}
 		}
 		else if (mState == RELOADING) {
 			if (mGunIndex == PRIMARY) {
-				SetAnimation(ANIM_PRIMARY_RELOAD);
+				SetWeaponAnimation(2,ANIM_PRIMARY_RELOAD);
 				mCurrentAnimation->SetSpeed(1000.0f/mGuns[mGunIndex]->mGun->mReloadDelay);
 			}
 			else if (mGunIndex == SECONDARY) {
-				SetAnimation(ANIM_SECONDARY_RELOAD);
+				SetWeaponAnimation(2,ANIM_SECONDARY_RELOAD);
 				mCurrentAnimation->SetSpeed(1000.0f/mGuns[mGunIndex]->mGun->mReloadDelay);
 			}
 		}
 	}
 	if (mState == SWITCHING) {
 		if (mGunIndex == PRIMARY) {
-			SetAnimation(ANIM_PRIMARY);
+			SetWeaponAnimation(0,ANIM_PRIMARY);
 			//mCurrentAnimation->SetSpeed(100.0f/(mGuns[mGunIndex]->mGun->mDelay*0.75f));
 		}
 		else if (mGunIndex == SECONDARY) {
-			SetAnimation(ANIM_SECONDARY);
+			SetWeaponAnimation(0,ANIM_SECONDARY);
 			//mCurrentAnimation->SetSpeed(100.0f/(mGuns[mGunIndex]->mGun->mDelay*0.75f));
 		}
 		else if (mGunIndex == KNIFE) {
-			SetAnimation(ANIM_KNIFE);
+			SetWeaponAnimation(0,ANIM_KNIFE);
 			mCurrentAnimation->SetSpeed(1);
 		}
 		else if (mGunIndex == GRENADE) {
-			SetAnimation(ANIM_GRENADE);
+			SetWeaponAnimation(0,ANIM_GRENADE);
 			mCurrentAnimation->SetSpeed(1);
 		}
 		mKeyFrame.angles[GUN] = mCurrentAnimation->GetKeyFrame(0)->angles[GUN];
+	}
+}
+
+//------------------------------------------------------------------------------------------------
+void Person::SetWeaponAnimation(int action, int fallbackAnimation)
+{
+	Animation* animation = mAnimations[fallbackAnimation];
+	if (mGuns[mGunIndex] != NULL && mGuns[mGunIndex]->mGun != NULL) {
+		int gunId = mGuns[mGunIndex]->mGun->mId;
+		if (gunId >= 0 && gunId < MAX_GUNS && gWeaponAnimationKeyFrames[gunId][action] != NULL) {
+			mWeaponAnimations[action]->SetKeyFrameAnim(gWeaponAnimationKeyFrames[gunId][action]);
+			animation = mWeaponAnimations[action];
+		}
+	}
+	if (mCurrentAnimation != animation) {
+		mCurrentAnimation->Reset();
+		mCurrentAnimation = animation;
+		mCurrentAnimation->Play();
 	}
 }
 
@@ -1067,6 +1109,49 @@ void Person::SetAnimation(int animation)
 		//mCurrentAnimation->Reset();
 		//mCurrentAnimation->Play();
 	}
+}
+
+void Person::GetWeaponAnimationTransform(float pointX, float pointY, float& offsetX, float& offsetY, float& angle)
+{
+	offsetX = pointX*cosf(mFacingAngle)-pointY*sinf(mFacingAngle);
+	offsetY = pointX*sinf(mFacingAngle)+pointY*cosf(mFacingAngle);
+	angle = mFacingAngle;
+	if (mGuns[mGunIndex] == NULL || mGuns[mGunIndex]->mGun == NULL) return;
+
+	int gunId = mGuns[mGunIndex]->mGun->mId;
+	KeyFrameAnim* assignedIdle = gunId >= 0 && gunId < MAX_GUNS ? gWeaponAnimationKeyFrames[gunId][0] : NULL;
+	int idleAnimation = mGunIndex;
+	KeyFrame* idleFrame = assignedIdle == NULL ? mAnimations[idleAnimation]->GetKeyFrame(0) : &assignedIdle->mKeyFrames[0];
+	if (idleFrame == NULL) return;
+
+	float rotation = mRotation+M_PI_2;
+	float scale = mRenderScale;
+	float currentX = -5.0f*scale*cosf(rotation)
+		-10.0f*scale*cosf(mRotation+mKeyFrame.angles[BODY])
+		+8.0f*scale*cosf(rotation+mKeyFrame.angles[RIGHTARM])
+		+10.0f*scale*cosf(rotation+mKeyFrame.angles[RIGHTHAND])
+		+scale*(mGuns[mGunIndex]->mGun->mSpriteOffsetX*cosf(mFacingAngle)-mGuns[mGunIndex]->mGun->mSpriteOffsetY*sinf(mFacingAngle));
+	float currentY = -5.0f*scale*sinf(rotation)
+		-10.0f*scale*sinf(mRotation+mKeyFrame.angles[BODY])
+		+8.0f*scale*sinf(rotation+mKeyFrame.angles[RIGHTARM])
+		+10.0f*scale*sinf(rotation+mKeyFrame.angles[RIGHTHAND])
+		+scale*(mGuns[mGunIndex]->mGun->mSpriteOffsetX*sinf(mFacingAngle)+mGuns[mGunIndex]->mGun->mSpriteOffsetY*cosf(mFacingAngle));
+	float idleX = -5.0f*scale*cosf(rotation)
+		-10.0f*scale*cosf(mRotation+idleFrame->angles[BODY])
+		+8.0f*scale*cosf(rotation+idleFrame->angles[RIGHTARM])
+		+10.0f*scale*cosf(rotation+idleFrame->angles[RIGHTHAND])
+		+scale*(mGuns[mGunIndex]->mGun->mSpriteOffsetX*cosf(mFacingAngle)-mGuns[mGunIndex]->mGun->mSpriteOffsetY*sinf(mFacingAngle));
+	float idleY = -5.0f*scale*sinf(rotation)
+		-10.0f*scale*sinf(mRotation+idleFrame->angles[BODY])
+		+8.0f*scale*sinf(rotation+idleFrame->angles[RIGHTARM])
+		+10.0f*scale*sinf(rotation+idleFrame->angles[RIGHTHAND])
+		+scale*(mGuns[mGunIndex]->mGun->mSpriteOffsetX*sinf(mFacingAngle)+mGuns[mGunIndex]->mGun->mSpriteOffsetY*cosf(mFacingAngle));
+	float angleDelta = mKeyFrame.angles[GUN]-idleFrame->angles[GUN];
+	float pointFromIdleX = offsetX-idleX;
+	float pointFromIdleY = offsetY-idleY;
+	offsetX = currentX+pointFromIdleX*cosf(angleDelta)-pointFromIdleY*sinf(angleDelta);
+	offsetY = currentY+pointFromIdleX*sinf(angleDelta)+pointFromIdleY*cosf(angleDelta);
+	angle += angleDelta;
 }
 
 //------------------------------------------------------------------------------------------------

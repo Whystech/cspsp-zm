@@ -34,11 +34,13 @@ public:
 	void Add(KeyFrame keyframe);
 	void Reset();
 	void SetSpeed(float speed);
+	void SetKeyFrameAnim(KeyFrameAnim* keyFrameAnim);
 	void Play();
 	int GetIndex();
 
 	KeyFrame* GetKeyFrame(int index);
 
+	static bool HasKeyFrames(char* name);
 	static KeyFrameAnim* LoadKeyFrames(char* name);
 };
 

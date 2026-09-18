@@ -25,9 +25,14 @@
 #define BUY_CATEGORY_RIFLES 4
 #define BUY_CATEGORY_MACHINEGUNS 5
 #define BUY_CATEGORY_EQUIPMENT 6
+#define BUY_CATEGORY_SPECIAL 7
 #define BUY_TEAM_T 1
 #define BUY_TEAM_CT 2
 #define MUZZLE_FLASH_FRAMES 3
+#define PROJECTILE_BULLET 0
+#define PROJECTILE_ROCKET 1
+#define MAX_PROJECTILE_STYLES 16
+#define MAX_EXPLOSION_STYLES 16
 
 struct Gun {
 	JQuad* mHandQuad;
@@ -62,6 +67,12 @@ struct Gun {
 	JSample* mDryFireSound;
 
 	int mAmmoBarWidth;
+	int mProjectileType;
+	int mProjectileStyle;
+	int mExplosionStyle;
+	float mExplosionFrameTime;
+	float mSpriteOffsetX;
+	float mSpriteOffsetY;
 };
 
 //------------------------------------------------------------------------------------------------

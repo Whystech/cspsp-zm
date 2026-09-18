@@ -1,3 +1,6 @@
+# WEAPON POSE KEYFRAMES
+# Format: duration_ms body right_arm right_hand left_arm left_hand gun
+# Profile triplets use NAME, NAME_FIRE, and NAME_RELOAD blocks.
 PRIMARY {
 	150 30 15 -60 10 50 0
 }
@@ -52,3 +55,17 @@ GRENADE {
 GRENADE_PULLBACK {
 	200 45 120 -10 0 20 60
 }
+LAUNCHER {
+	150 25 0 0 50 70 0
+}
+LAUNCHER_FIRE {
+	50 55 0 0 85 150 0
+	800 25 0 0 50 70 0
+}
+LAUNCHER_RELOAD {
+	250 15 -10 0 25 70 -15
+	100 5 -20 -15 35 85 -15
+	250 25 -10 -10 60 60 -15
+	100 25 0 0 50 70 0
+}
+

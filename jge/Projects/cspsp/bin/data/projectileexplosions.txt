@@ -1,0 +1,2 @@
+# PROJECTILE SPLASH RADII
+# Format: id radius. Missing IDs use the global HE radius; zero disables splash.

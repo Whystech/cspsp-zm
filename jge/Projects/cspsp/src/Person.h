@@ -51,13 +51,13 @@ enum {
 	ANIM_SECONDARY,
 	ANIM_KNIFE,
 	ANIM_GRENADE,
-	ANIM_BOMB,
 	ANIM_PRIMARY_FIRE,
 	ANIM_SECONDARY_FIRE,
 	ANIM_KNIFE_SLASH,
 	ANIM_GRENADE_PULLBACK,
 	ANIM_PRIMARY_RELOAD,
-	ANIM_SECONDARY_RELOAD
+	ANIM_SECONDARY_RELOAD,
+	ANIM_COUNT
 };
 
 
@@ -81,7 +81,8 @@ protected:
 	int mSoundId;
 	int mNumDryFire;
 	KeyFrame mKeyFrame;
-	Animation* mAnimations[11];
+	Animation* mAnimations[ANIM_COUNT];
+	Animation* mWeaponAnimations[3];
 	Animation* mCurrentAnimation;
 
 	int mMuzzleFlashType;
@@ -196,6 +197,7 @@ public:
 	void RotateFacing(float theta);
 	void SetMoveState(int state);
 	void SetState(int state);
+	void SetWeaponAnimation(int action, int fallbackAnimation);
 	void SetAnimation(int animation);
 	void SetTotalRotation(float theta);
 	void RestoreOriginalTeam();
@@ -209,6 +211,7 @@ public:
 	void LeaveCorpse();
 	void SetKnifeForTeam(int team);
 	GunObject* GetCurrentGun();
+	void GetWeaponAnimationTransform(float pointX, float pointY, float& offsetX, float& offsetY, float& angle);
 	virtual void Teleport(float x, float y);
 };
 

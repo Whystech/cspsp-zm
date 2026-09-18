@@ -32,11 +32,12 @@ BuyMenu::BuyMenu(Person* player, Gun guns[])
 	mCategories[T][MAIN].buttons.push_back(Button(RIFLES,"Rifles"));
 	mCategories[T][MAIN].buttons.push_back(Button(MACHINEGUNS,"Machine Guns"));
 	mCategories[T][MAIN].buttons.push_back(Button(EQUIPMENT,"Equipment"));
+	mCategories[T][MAIN].buttons.push_back(Button(SPECIAL,"Special"));
 	mCategories[CT][MAIN] = mCategories[T][MAIN];
 
 	for (int i=0; i<MAX_GUNS; i++) {
 		if (guns[i].mId != i || guns[i].mName[0] == '\0' ||
-			guns[i].mBuyCategory < PISTOLS || guns[i].mBuyCategory > EQUIPMENT) continue;
+			guns[i].mBuyCategory < PISTOLS || guns[i].mBuyCategory > SPECIAL) continue;
 		if ((guns[i].mBuyTeams & BUY_TEAM_T) != 0) {
 			mCategories[T][guns[i].mBuyCategory].buttons.push_back(Button(i,guns[i].mName));
 		}

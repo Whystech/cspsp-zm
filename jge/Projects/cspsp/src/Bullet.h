@@ -11,6 +11,7 @@
 
 #define TYPE_BULLET 0
 #define TYPE_GRENADE 1
+#define TYPE_ROCKET 2
 #define BULLET_DEAD 5
 
 //------------------------------------------------------------------------------------------------

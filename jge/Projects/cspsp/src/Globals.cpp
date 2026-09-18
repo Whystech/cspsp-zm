@@ -19,6 +19,14 @@ ThemeConfig gThemeConfig;
 BotConfig gBotConfig;
 LimitsConfig gLimitsConfig;
 LaserConfig gLaserConfigs[MAX_GUNS];
+ScreenShakeConfig gScreenShakeConfigs[MAX_GUNS];
+float gProjectileExplosionRadii[MAX_GUNS];
+int gProjectileLaunchOrigins[MAX_GUNS];
+JSample* gWeaponExplosionSounds[MAX_GUNS];
+JSample* gWeaponImpactSounds[MAX_GUNS];
+char gWeaponAnimationProfileNames[MAX_GUNS][64];
+KeyFrameAnim* gWeaponAnimationKeyFrames[MAX_GUNS][3];
+MuzzlePositionConfig gMuzzlePositionConfigs[MAX_GUNS];
 bool gReconnect;
 bool gLogout;
 char gName[32];
@@ -56,6 +64,8 @@ JQuad* gBuyZoneQuad;
 JQuad* gDecalQuads[5];
 std::map<int, std::vector<JQuad*> > gMuzzleFlashQuads;
 JQuad* gBulletImpactQuads[MAX_BULLET_IMPACT_TYPES];
+JQuad* gRocketProjectileQuads[MAX_PROJECTILE_STYLES];
+std::vector<JQuad*> gRocketExplosionQuads[MAX_EXPLOSION_STYLES];
 JQuad* gHealthBorderQuad;
 JQuad* gHealthFillQuad;
 JQuad* gArmorBorderQuad;
@@ -123,7 +133,7 @@ JSample* gSmokeGrenadeSound;
 JSample* gGrenadeBounceSound;
 JSample* gHitIndicatorSound;
 
-KeyFrameAnim* gKeyFrameAnims[11];
+KeyFrameAnim* gKeyFrameAnims[ANIM_COUNT];
 
 ParticleEngine* gParticleEngine;
 hgeParticleSystem* gParticleSystems[3];
@@ -212,6 +222,124 @@ void LoadLaserConfigs(const char* filename)
 		config.endDotScale = std::max(0.1f,std::min(20.0f,endDotScale));
 		config.offsetX = std::max(-100.0f,std::min(100.0f,offsetX));
 		config.offsetY = std::max(-100.0f,std::min(100.0f,offsetY));
+	}
+	fclose(file);
+}
+
+void LoadScreenShakeConfigs(const char* filename)
+{
+	for (int i=0; i<MAX_GUNS; i++) {
+		gScreenShakeConfigs[i].fireMagnitude = 0;
+		gScreenShakeConfigs[i].fireTime = 0.0f;
+		gScreenShakeConfigs[i].explosionMagnitude = 0;
+		gScreenShakeConfigs[i].explosionTime = 0.0f;
+		gScreenShakeConfigs[i].explosionRadius = 0.0f;
+	}
+	FILE* file = fopen(filename,"r");
+	if (file == NULL) return;
+	char line[256];
+	while (fgets(line,sizeof(line),file) != NULL) {
+		if (line[0] == '#') continue;
+		int id, fireMagnitude, explosionMagnitude;
+		float fireTime, explosionTime, explosionRadius;
+		if (sscanf(line,"%d %d %f %d %f %f",&id,&fireMagnitude,&fireTime,&explosionMagnitude,&explosionTime,&explosionRadius) != 6) continue;
+		if (id < 0 || id >= MAX_GUNS) continue;
+		ScreenShakeConfig& config = gScreenShakeConfigs[id];
+		config.fireMagnitude = std::max(0,std::min(100,fireMagnitude));
+		config.fireTime = std::max(0.0f,std::min(5000.0f,fireTime));
+		config.explosionMagnitude = std::max(0,std::min(100,explosionMagnitude));
+		config.explosionTime = std::max(0.0f,std::min(5000.0f,explosionTime));
+		config.explosionRadius = std::max(0.0f,std::min(5000.0f,explosionRadius));
+	}
+	fclose(file);
+}
+
+void LoadProjectileExplosionConfigs(const char* filename)
+{
+	for (int i=0; i<MAX_GUNS; i++) gProjectileExplosionRadii[i] = -1.0f;
+	FILE* file = fopen(filename,"r");
+	if (file == NULL) return;
+	char line[128];
+	while (fgets(line,sizeof(line),file) != NULL) {
+		if (line[0] == '#') continue;
+		int id;
+		float radius;
+		if (sscanf(line,"%d %f",&id,&radius) != 2) continue;
+		if (id < 0 || id >= MAX_GUNS) continue;
+		gProjectileExplosionRadii[id] = std::max(0.0f,std::min(5000.0f,radius));
+	}
+	fclose(file);
+}
+
+void LoadProjectileLaunchOrigins(const char* filename)
+{
+	for (int i=0; i<MAX_GUNS; i++) gProjectileLaunchOrigins[i] = -1;
+	FILE* file = fopen(filename,"r");
+	if (file == NULL) return;
+	char line[128];
+	while (fgets(line,sizeof(line),file) != NULL) {
+		if (line[0] == '#') continue;
+		int id, origin;
+		if (sscanf(line,"%d %d",&id,&origin) != 2) continue;
+		if (id < 0 || id >= MAX_GUNS) continue;
+		gProjectileLaunchOrigins[id] = origin == 1 ? 1 : 0;
+	}
+	fclose(file);
+}
+
+void LoadWeaponAnimationProfiles(const char* filename)
+{
+	for (int i=0; i<MAX_GUNS; i++) {
+		gWeaponAnimationProfileNames[i][0] = '\0';
+		for (int action=0; action<3; action++) gWeaponAnimationKeyFrames[i][action] = NULL;
+	}
+	FILE* file = fopen(filename,"r");
+	if (file == NULL) return;
+	char line[128];
+	while (fgets(line,sizeof(line),file) != NULL) {
+		if (line[0] == '#') continue;
+		int id;
+		char profile[64];
+		if (sscanf(line,"%d %63s",&id,profile) != 2) continue;
+		if (id < 0 || id >= MAX_GUNS) continue;
+		if (strcmp(profile,"0") == 0) continue;
+		if (strcmp(profile,"1") == 0) strcpy(profile,"SPECIAL");
+		for (int index=0; profile[index] != '\0'; index++) profile[index] = toupper(profile[index]);
+		char blockName[80];
+		strcpy(blockName,profile);
+		if (!Animation::HasKeyFrames(blockName)) continue;
+		sprintf(blockName,"%s_FIRE",profile);
+		if (!Animation::HasKeyFrames(blockName)) continue;
+		sprintf(blockName,"%s_RELOAD",profile);
+		if (!Animation::HasKeyFrames(blockName)) continue;
+		strcpy(gWeaponAnimationProfileNames[id],profile);
+		strcpy(blockName,profile);
+		gWeaponAnimationKeyFrames[id][0] = Animation::LoadKeyFrames(blockName);
+		sprintf(blockName,"%s_FIRE",profile);
+		gWeaponAnimationKeyFrames[id][1] = Animation::LoadKeyFrames(blockName);
+		sprintf(blockName,"%s_RELOAD",profile);
+		gWeaponAnimationKeyFrames[id][2] = Animation::LoadKeyFrames(blockName);
+	}
+	fclose(file);
+}
+
+void LoadMuzzlePositionConfigs(const char* filename)
+{
+	for (int i=0; i<MAX_GUNS; i++) {
+		gMuzzlePositionConfigs[i].forward = 0.0f;
+		gMuzzlePositionConfigs[i].sideways = 0.0f;
+	}
+	FILE* file = fopen(filename,"r");
+	if (file == NULL) return;
+	char line[128];
+	while (fgets(line,sizeof(line),file) != NULL) {
+		if (line[0] == '#') continue;
+		int id;
+		float forward, sideways;
+		if (sscanf(line,"%d %f %f",&id,&forward,&sideways) != 3) continue;
+		if (id < 0 || id >= MAX_GUNS) continue;
+		gMuzzlePositionConfigs[id].forward = std::max(-100.0f,std::min(100.0f,forward));
+		gMuzzlePositionConfigs[id].sideways = std::max(-100.0f,std::min(100.0f,sideways));
 	}
 	fclose(file);
 }

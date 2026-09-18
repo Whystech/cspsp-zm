@@ -375,6 +375,9 @@ void GameStateOnline::CheckInput(float dt)
 				mSwitchTimer = 0;
 				
 				if (bullets.size() > 0) {
+					Gun* gun = mPlayer->GetCurrentGun()->mGun;
+					ScreenShakeConfig& shake = gScreenShakeConfigs[gun->mId];
+					if (shake.fireMagnitude > 0 && shake.fireTime > 0.0f) mCamera->Shake(shake.fireMagnitude,shake.fireTime);
 					Packet sendpacket = Packet();
 					if (bullets.size() == 1) {
 						sendpacket.WriteInt8(NEWBULLET);
@@ -621,7 +624,8 @@ void GameStateOnline::CheckCollisions()
 				if (ll < (r * r)) {
 					gParticleEngine->GenerateParticles(BLOOD,mBullets[k]->mX,mBullets[k]->mY,gEffectsConfig.bloodParticleCount);
 					mMap->AddDecal(mBullets[k]->mX,mBullets[k]->mY,DECAL_BLOOD);
-					gSfxManager->PlaySample(gHitSounds[rand()%3],mBullets[k]->mX,mBullets[k]->mY);
+					JSample* impactSound = mBullets[k]->mType == TYPE_BULLET && mBullets[k]->mParentGun != NULL ? gWeaponImpactSounds[mBullets[k]->mParentGun->mId] : NULL;
+					gSfxManager->PlaySample(impactSound == NULL ? gHitSounds[rand()%3] : impactSound,mBullets[k]->mX,mBullets[k]->mY);
 					//mPeople[j]->TakeDamage(mBullets[k]->mDamage);
 					//mPeople[j]->SetMoveState(NOTMOVING);
 					//mPeople[j]->mSpeed *= 0.1f;
@@ -3728,12 +3732,6 @@ void GameStateOnline::Explode(float x, float y, int type) {
 		gParticleSystems[PARTICLE_EXPLOSION]->FireAt(x,y);
 		mMap->AddDecal(x,y,DECAL_EXPLOSION);
 		gSfxManager->PlaySample(gHEGrenadeSounds[rand()%3],x,y);
-		float dx = mCamera->GetX()-x;
-		float dy = mCamera->GetY()-y;
-		float dist = dx*dx+dy*dy;
-		if (dist < 1000.0f) dist = 1000.0f;
-		mCamera->Shake(100*1000.0f/dist,500);
-
 		for (unsigned int i=0; i<mPeople.size(); i++) {
 			if (mPeople[i]->mState == DEAD) continue;
 
