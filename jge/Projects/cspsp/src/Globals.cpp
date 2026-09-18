@@ -16,6 +16,7 @@ HudConfig gHudConfig;
 EffectsConfig gEffectsConfig;
 AudioConfig gAudioConfig;
 ThemeConfig gThemeConfig;
+AimMarkerConfig gAimMarkerConfig;
 BotConfig gBotConfig;
 LimitsConfig gLimitsConfig;
 LaserConfig gLaserConfigs[MAX_GUNS];
@@ -489,6 +490,16 @@ void LoadClientDataConfigs()
 	gThemeConfig.crosshairHitColor = LoadConfigColor(themeFile,"crosshair_hit_color",ARGB(255,255,0,0));
 	gThemeConfig.radarFriendlyColor = LoadConfigColor(themeFile,"radar_friendly_color",ARGB(255,0,255,0));
 	gThemeConfig.radarEnemyColor = LoadConfigColor(themeFile,"radar_enemy_color",ARGB(255,255,0,0));
+
+	const char* aimMarkerFile = "data/aimmarkers.txt";
+	gAimMarkerConfig.guideColor = LoadConfigColor(aimMarkerFile,"guide_color",gThemeConfig.crosshairColor);
+	gAimMarkerConfig.guideInner = LoadConfigFloat(aimMarkerFile,"guide_inner",gHudConfig.crosshairInner,0.0f,500.0f);
+	gAimMarkerConfig.guideLength = LoadConfigFloat(aimMarkerFile,"guide_length",gHudConfig.crosshairOuter-gHudConfig.crosshairInner,0.0f,500.0f);
+	gAimMarkerConfig.guideWidth = LoadConfigFloat(aimMarkerFile,"guide_width",1.0f,0.1f,20.0f);
+	gAimMarkerConfig.hitmarkerColor = LoadConfigColor(aimMarkerFile,"hitmarker_color",gThemeConfig.crosshairHitColor);
+	gAimMarkerConfig.hitmarkerInner = LoadConfigFloat(aimMarkerFile,"hitmarker_inner",gHudConfig.crosshairInner,0.0f,500.0f);
+	gAimMarkerConfig.hitmarkerLength = LoadConfigFloat(aimMarkerFile,"hitmarker_length",gHudConfig.crosshairOuter+5.0f-gHudConfig.crosshairInner,0.0f,500.0f);
+	gAimMarkerConfig.hitmarkerWidth = LoadConfigFloat(aimMarkerFile,"hitmarker_width",1.0f,0.1f,20.0f);
 
 	const char* botFile = "data/bots.txt";
 	gBotConfig.visionRange = LoadConfigFloat(botFile,"vision_range",223.6068f,1.0f,10000.0f);

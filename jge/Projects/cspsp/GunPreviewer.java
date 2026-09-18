@@ -1,6 +1,7 @@
 import java.awt.* ;
 import java.awt.event.* ;
 import java.awt.geom.AffineTransform ;
+import java.awt.geom.Line2D ;
 import java.awt.geom.Point2D ;
 import java.awt.image.BufferedImage ;
 import java.awt.image.RescaleOp ;
@@ -214,6 +215,12 @@ public class GunPreviewer {
 		}
 	}
 
+	private static class AimMarkerConfig {
+		Color guideColor = new Color(0,255,0,200), hitmarkerColor = new Color(255,0,0,255) ;
+		float guideInner = 30.0f, guideLength = 10.0f, guideWidth = 1.0f ;
+		float hitmarkerInner = 30.0f, hitmarkerLength = 15.0f, hitmarkerWidth = 1.0f ;
+	}
+
 	private static class TracerShot {
 		final int weaponId ;
 		final long startedAt ;
@@ -236,12 +243,22 @@ public class GunPreviewer {
 		AnimationFrame copy() {return new AnimationFrame(duration,angles.clone()) ;}
 	}
 
+	private static class PlayerSkinInfo {
+		final int team, atlasCell ;
+		final String name ;
+
+		PlayerSkinInfo(int team, int atlasCell, String name) {
+			this.team=team ; this.atlasCell=atlasCell ; this.name=name ;
+		}
+	}
+
 	static class ResourceModel {
 		static final Preferences PREFERENCES = Preferences.userNodeForPackage(GunPreviewer.class) ;
 		final List<WeaponInfo> weapons = new ArrayList<WeaponInfo>() ;
 		final BufferedImage[] handPages = new BufferedImage[2] ;
 		final BufferedImage[] groundPages = new BufferedImage[2] ;
 		final BufferedImage[] impactPages = new BufferedImage[2] ;
+		final BufferedImage[] playerPages = new BufferedImage[4] ;
 		BufferedImage projectileAtlas ;
 		final BufferedImage[] explosionAtlases = new BufferedImage[MAX_PROJECTILE_STYLES] ;
 		final Map<Integer, BufferedImage> flashes = new HashMap<Integer, BufferedImage>() ;
@@ -253,6 +270,9 @@ public class GunPreviewer {
 		final Map<Integer, Integer> projectileLaunchOrigins = new HashMap<Integer, Integer>() ;
 		final Map<Integer, float[]> muzzlePositions = new HashMap<Integer, float[]>() ;
 		final Map<String, List<AnimationFrame>> animations = new LinkedHashMap<String, List<AnimationFrame>>() ;
+		final List<PlayerSkinInfo> playerSkins = new ArrayList<PlayerSkinInfo>() ;
+		final List<Integer> playerModelCells = new ArrayList<Integer>() ;
+		final AimMarkerConfig aimMarkers = new AimMarkerConfig() ;
 		BufferedImage players ;
 		File directory ;
 		File graphicsDirectory ;
@@ -285,6 +305,7 @@ public class GunPreviewer {
 			projectileLaunchOrigins.clear() ;
 			muzzlePositions.clear() ;
 			animations.clear() ;
+			playerSkins.clear() ;
 			trailingLines.clear() ;
 			tracerLines.clear() ;
 			laserLines.clear() ;
@@ -302,7 +323,12 @@ public class GunPreviewer {
 			projectileAtlas = readRequired("rocketprojectile.png") ;
 			explosionAtlases[0] = readRequired("explosionsprites.png") ;
 			for (int style=1; style<MAX_PROJECTILE_STYLES; style++) explosionAtlases[style] = readOptional("explosionsprites" + style + ".png") ;
-			players = readRequired("players.png") ;
+			players = readConfiguredRequired("players","gfx/players.png") ;
+			playerPages[0] = players ;
+			for (int page=1; page<playerPages.length; page++) {
+				playerPages[page] = readConfiguredOptional("players_page_"+(page+1),"gfx/players"+(page+1)+".png") ;
+			}
+			loadPlayerSkins() ;
 			loadMuzzleFlashes() ;
 			validateAtlas(handPages[0], "guns.png") ;
 			validateAtlas(groundPages[0], "gunsground.png") ;
@@ -323,6 +349,54 @@ public class GunPreviewer {
 			loadProjectileExplosionRadii() ;
 			loadProjectileLaunchOrigins() ;
 			loadMuzzlePositions() ;
+			loadAimMarkers() ;
+		}
+
+		void loadAimMarkers() throws IOException {
+			File file = new File(dataDirectory,"aimmarkers.txt") ;
+			if (!file.isFile()) return ;
+			BufferedReader reader = new BufferedReader(new FileReader(file)) ;
+			try {
+				String line ;
+				while ((line = reader.readLine()) != null) {
+					int comment = line.indexOf('#') ;
+					if (comment >= 0) line = line.substring(0,comment) ;
+					int separator = line.indexOf('=') ;
+					if (separator < 0) continue ;
+					String key = line.substring(0,separator).trim() ;
+					String value = line.substring(separator+1).trim() ;
+					if (key.equals("guide_color")) aimMarkers.guideColor = parseColor(value,aimMarkers.guideColor) ;
+					else if (key.equals("guide_inner")) aimMarkers.guideInner = Float.parseFloat(value) ;
+					else if (key.equals("guide_length")) aimMarkers.guideLength = Float.parseFloat(value) ;
+					else if (key.equals("guide_width")) aimMarkers.guideWidth = Float.parseFloat(value) ;
+					else if (key.equals("hitmarker_color")) aimMarkers.hitmarkerColor = parseColor(value,aimMarkers.hitmarkerColor) ;
+					else if (key.equals("hitmarker_inner")) aimMarkers.hitmarkerInner = Float.parseFloat(value) ;
+					else if (key.equals("hitmarker_length")) aimMarkers.hitmarkerLength = Float.parseFloat(value) ;
+					else if (key.equals("hitmarker_width")) aimMarkers.hitmarkerWidth = Float.parseFloat(value) ;
+				}
+			} catch (NumberFormatException exception) {
+				throw new IOException("Invalid value in aimmarkers.txt",exception) ;
+			} finally {reader.close() ;}
+		}
+
+		Color parseColor(String value, Color fallback) {
+			try {return new Color((int)Long.parseLong(value,16),true) ;}
+			catch (NumberFormatException exception) {return fallback ;}
+		}
+
+		void saveAimMarkers() throws IOException {
+			List<String> lines = new ArrayList<String>() ;
+			lines.add("# AIM GUIDE AND HITMARKER") ;
+			lines.add("# Colors use AARRGGBB hexadecimal format. Distances and widths are pixels.") ;
+			lines.add("guide_color = " + String.format("%08X",aimMarkers.guideColor.getRGB())) ;
+			lines.add("guide_inner = " + Float.toString(aimMarkers.guideInner)) ;
+			lines.add("guide_length = " + Float.toString(aimMarkers.guideLength)) ;
+			lines.add("guide_width = " + Float.toString(aimMarkers.guideWidth)) ;
+			lines.add("hitmarker_color = " + String.format("%08X",aimMarkers.hitmarkerColor.getRGB())) ;
+			lines.add("hitmarker_inner = " + Float.toString(aimMarkers.hitmarkerInner)) ;
+			lines.add("hitmarker_length = " + Float.toString(aimMarkers.hitmarkerLength)) ;
+			lines.add("hitmarker_width = " + Float.toString(aimMarkers.hitmarkerWidth)) ;
+			writeLinesWithBackup(new File(dataDirectory,"aimmarkers.txt"),lines) ;
 		}
 
 		File resolveContentRoot(File root) throws IOException {
@@ -362,6 +436,57 @@ public class GunPreviewer {
 			BufferedImage image = ImageIO.read(file) ;
 			if (image == null) throw new IOException("Unsupported image: " + file.getAbsolutePath()) ;
 			return image ;
+		}
+
+		BufferedImage readConfiguredRequired(String key, String fallback) throws IOException {
+			BufferedImage image=readConfiguredOptional(key,fallback) ;
+			if (image == null) throw new IOException("Missing or invalid resource: " + configuredResourcePath(key,fallback)) ;
+			return image ;
+		}
+
+		BufferedImage readConfiguredOptional(String key, String fallback) throws IOException {
+			File file=new File(directory,configuredResourcePath(key,fallback).replace('/',File.separatorChar)) ;
+			if (!file.isFile()) return null ;
+			BufferedImage image=ImageIO.read(file) ;
+			if (image == null) throw new IOException("Unsupported image: " + file.getAbsolutePath()) ;
+			return image ;
+		}
+
+		String configuredResourcePath(String key, String fallback) throws IOException {
+			File resources=new File(dataDirectory,"resources.txt") ;
+			if (!resources.isFile()) return fallback ;
+			BufferedReader reader=new BufferedReader(new FileReader(resources)) ;
+			try {
+				String line ;
+				while ((line=reader.readLine()) != null) {
+					int comment=line.indexOf('#') ; if (comment >= 0) line=line.substring(0,comment) ;
+					int separator=line.indexOf('=') ; if (separator < 0) continue ;
+					if (line.substring(0,separator).trim().equals(key)) return line.substring(separator+1).trim() ;
+				}
+			} finally {reader.close() ;}
+			return fallback ;
+		}
+
+		void loadPlayerSkins() throws IOException {
+			File file=new File(dataDirectory,"players.txt") ;
+			if (!file.isFile()) return ;
+			BufferedReader reader=new BufferedReader(new FileReader(file)) ;
+			try {
+				String line ;
+				while ((line=reader.readLine()) != null) {
+					String trimmed=line.trim() ;
+					if (!trimmed.startsWith("player ")) continue ;
+					String[] fields=trimmed.split("\\s+",5) ;
+					if (fields.length < 5) continue ;
+					int team=Integer.parseInt(fields[2]) ;
+					int atlasCell=Integer.parseInt(fields[3]) ;
+					int page=atlasCell/8 ;
+					if (team < 0 || team > 1 || atlasCell < 0 || page >= playerPages.length || playerPages[page] == null) continue ;
+					playerSkins.add(new PlayerSkinInfo(team,atlasCell,fields[4])) ;
+				}
+			} catch (NumberFormatException exception) {
+				throw new IOException("Invalid player row in players.txt",exception) ;
+			} finally {reader.close() ;}
 		}
 
 		void loadMuzzleFlashes() throws IOException {
@@ -2145,16 +2270,26 @@ public class GunPreviewer {
 		final JTextField weaponSearch = new JTextField() ;
 		final DefaultListModel<WeaponInfo> weaponListModel = new DefaultListModel<WeaponInfo>() ;
 		final JList<WeaponInfo> weaponList = new JList<WeaponInfo>(weaponListModel) ;
-		final JComboBox<String> teamBox = new JComboBox<String>(new String[] {"Counter-Terrorist", "Terrorist"}) ;
-		final JComboBox<String> modelBox = new JComboBox<String>(new String[] {"Model 1", "Model 2", "Model 3", "Model 4"}) ;
+		final JComboBox<String> teamBox = new JComboBox<String>(new String[] {"UN Forces", "Zombies"}) ;
+		final JComboBox<String> modelBox = new JComboBox<String>() ;
 		final JSlider angleSlider = new JSlider(0, 359, 90) ;
 		final JCheckBox lightPreviewBox = new JCheckBox("Light preview background", false) ;
 		final JComboBox<String> frameBox = new JComboBox<String>(new String[] {"Frame 1", "Frame 2", "Frame 3"}) ;
 		final JCheckBox animateBox = new JCheckBox("Animate muzzle flash", true) ;
+		final JCheckBox hitmarkerPreview = new JCheckBox("Preview hitmarker", false) ;
+		final JButton guideColorButton = new JButton("Guide color") ;
+		final JButton hitmarkerColorButton = new JButton("Hitmarker color") ;
+		final JSpinner guideInner = new JSpinner(new SpinnerNumberModel(30.0,0.0,500.0,1.0)) ;
+		final JSpinner guideLength = new JSpinner(new SpinnerNumberModel(10.0,0.0,500.0,1.0)) ;
+		final JSpinner guideWidth = new JSpinner(new SpinnerNumberModel(1.0,0.1,20.0,0.1)) ;
+		final JSpinner hitmarkerInner = new JSpinner(new SpinnerNumberModel(30.0,0.0,500.0,1.0)) ;
+		final JSpinner hitmarkerLength = new JSpinner(new SpinnerNumberModel(15.0,0.0,500.0,1.0)) ;
+		final JSpinner hitmarkerWidth = new JSpinner(new SpinnerNumberModel(1.0,0.1,20.0,0.1)) ;
 		final JLabel status = new JLabel(" ") ;
 		final JLabel simulationStatus = new JLabel(" ") ;
 		final JProgressBar actionProgress = new JProgressBar(0, 1000) ;
 		final PreviewCanvas canvas = new PreviewCanvas(this) ;
+		final AimMarkerPreviewPanel aimMarkerCanvas = new AimMarkerPreviewPanel(this) ;
 		final Timer timer ;
 		final Timer simulationTimer ;
 		JButton fireButton ;
@@ -2164,6 +2299,8 @@ public class GunPreviewer {
 		int simulatedWeaponId = -1, magazineAmmo, reserveAmmo, shotsFired ;
 		WeaponInfo activeWeapon ;
 		long nextShotAt, reloadStartedAt, reloadUntil ;
+		long shakeStartedAt, shakeUntil ;
+		int shakeMagnitude ;
 		boolean triggerHeld, reloading ;
 		final List<TracerShot> tracerShots = new ArrayList<TracerShot>() ;
 
@@ -2175,8 +2312,13 @@ public class GunPreviewer {
 			setLocationRelativeTo(null) ;
 			getContentPane().setBackground(BACKGROUND) ;
 			getContentPane().setLayout(new BorderLayout()) ;
-			getContentPane().add(buildSidebar(), BorderLayout.WEST) ;
-			getContentPane().add(canvas, BorderLayout.CENTER) ;
+			JPanel previewPage = new JPanel(new BorderLayout()) ;
+			previewPage.add(buildSidebar(),BorderLayout.WEST) ;
+			previewPage.add(canvas,BorderLayout.CENTER) ;
+			JTabbedPane workspaceTabs = new JTabbedPane() ;
+			workspaceTabs.addTab("Weapon Preview",previewPage) ;
+			workspaceTabs.addTab("Aim Markers",buildAimMarkerPage()) ;
+			getContentPane().add(workspaceTabs, BorderLayout.CENTER) ;
 			status.setOpaque(true) ;
 			status.setBackground(new Color(16, 18, 21)) ;
 			status.setForeground(MUTED) ;
@@ -2202,7 +2344,7 @@ public class GunPreviewer {
 			JPanel sidebar = new JPanel() ;
 			sidebar.setBackground(PANEL) ;
 			sidebar.setBorder(new EmptyBorder(24, 22, 24, 22)) ;
-			sidebar.setPreferredSize(new Dimension(340, 1080)) ;
+			sidebar.setPreferredSize(new Dimension(400, 1080)) ;
 			sidebar.setLayout(new BoxLayout(sidebar, BoxLayout.Y_AXIS)) ;
 			JLabel title = new JLabel("Gun Configurator & Previewer") ;
 			title.setForeground(TEXT) ;
@@ -2295,7 +2437,7 @@ public class GunPreviewer {
 			sidebar.add(hint) ;
 			JScrollPane scroll = new JScrollPane(sidebar, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER) ;
 			scroll.setBorder(null) ;
-			scroll.setPreferredSize(new Dimension(330, 700)) ;
+			scroll.setPreferredSize(new Dimension(390, 700)) ;
 			scroll.getViewport().setBackground(PANEL) ;
 			return scroll ;
 		}
@@ -2304,7 +2446,9 @@ public class GunPreviewer {
 			JPanel panel = new JPanel(new BorderLayout(0,6)) ;
 			panel.setOpaque(false) ;
 			panel.setAlignmentX(Component.LEFT_ALIGNMENT) ;
-			panel.setMaximumSize(new Dimension(Integer.MAX_VALUE,180)) ;
+			panel.setMinimumSize(new Dimension(300,210)) ;
+			panel.setPreferredSize(new Dimension(340,210)) ;
+			panel.setMaximumSize(new Dimension(Integer.MAX_VALUE,210)) ;
 			JLabel label = new JLabel("WEAPON SEARCH") ;
 			label.setForeground(MUTED) ;
 			label.setFont(new Font("Dialog",Font.BOLD,10)) ;
@@ -2317,9 +2461,40 @@ public class GunPreviewer {
 			weaponList.setVisibleRowCount(6) ;
 			weaponList.setFixedCellHeight(24) ;
 			JScrollPane listScroll = new JScrollPane(weaponList,JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,JScrollPane.HORIZONTAL_SCROLLBAR_NEVER) ;
+			listScroll.setPreferredSize(new Dimension(320,150)) ;
 			selection.add(listScroll,BorderLayout.CENTER) ;
 			panel.add(selection,BorderLayout.CENTER) ;
 			return panel ;
+		}
+
+		JComponent buildAimMarkerPage() {
+			JPanel page = new JPanel(new BorderLayout()) ;
+			page.setBackground(BACKGROUND) ;
+			JPanel controls = new JPanel() ;
+			controls.setBackground(PANEL) ;
+			controls.setBorder(new EmptyBorder(24,24,24,24)) ;
+			controls.setLayout(new BoxLayout(controls,BoxLayout.Y_AXIS)) ;
+			controls.setPreferredSize(new Dimension(400,760)) ;
+			controls.add(sectionLabel("AIM GUIDE")) ;
+			controls.add(Box.createVerticalStrut(8)) ;
+			addControl(controls,"COLOR",guideColorButton) ;
+			addControl(controls,"INNER RADIUS",guideInner) ;
+			addControl(controls,"LENGTH",guideLength) ;
+			addControl(controls,"WIDTH",guideWidth) ;
+			controls.add(sectionLabel("HITMARKER")) ;
+			controls.add(Box.createVerticalStrut(8)) ;
+			hitmarkerPreview.setOpaque(false) ; hitmarkerPreview.setForeground(TEXT) ; hitmarkerPreview.setSelected(true) ;
+			hitmarkerPreview.setAlignmentX(Component.LEFT_ALIGNMENT) ; controls.add(hitmarkerPreview) ; controls.add(Box.createVerticalStrut(12)) ;
+			addControl(controls,"COLOR",hitmarkerColorButton) ;
+			addControl(controls,"INNER RADIUS",hitmarkerInner) ;
+			addControl(controls,"LENGTH",hitmarkerLength) ;
+			addControl(controls,"WIDTH",hitmarkerWidth) ;
+			JButton save = button("SAVE AIM MARKERS",ACCENT) ; save.addActionListener(event -> saveAimMarkers()) ; controls.add(save) ;
+			JScrollPane controlScroll = new JScrollPane(controls,JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,JScrollPane.HORIZONTAL_SCROLLBAR_NEVER) ;
+			controlScroll.setBorder(null) ;
+			page.add(controlScroll,BorderLayout.WEST) ;
+			page.add(aimMarkerCanvas,BorderLayout.CENTER) ;
+			return page ;
 		}
 
 		JLabel sectionLabel(String text) {
@@ -2382,12 +2557,74 @@ public class GunPreviewer {
 				public void removeUpdate(javax.swing.event.DocumentEvent event) {filterWeapons() ;}
 				public void changedUpdate(javax.swing.event.DocumentEvent event) {filterWeapons() ;}
 			}) ;
-			teamBox.addActionListener(action) ;
+			teamBox.addActionListener(event -> {updatePlayerModels() ; selectionChanged() ;}) ;
 			modelBox.addActionListener(action) ;
 			frameBox.addActionListener(action) ;
 			animateBox.addActionListener(action) ;
 			lightPreviewBox.addActionListener(action) ;
+			hitmarkerPreview.addActionListener(event -> aimMarkerCanvas.repaint()) ;
+			guideColorButton.addActionListener(event -> chooseAimColor(true)) ;
+			hitmarkerColorButton.addActionListener(event -> chooseAimColor(false)) ;
+			javax.swing.event.ChangeListener markerChange = event -> {canvas.repaint() ; aimMarkerCanvas.repaint() ;} ;
+			guideInner.addChangeListener(markerChange) ; guideLength.addChangeListener(markerChange) ; guideWidth.addChangeListener(markerChange) ;
+			hitmarkerInner.addChangeListener(markerChange) ; hitmarkerLength.addChangeListener(markerChange) ; hitmarkerWidth.addChangeListener(markerChange) ;
 			angleSlider.addChangeListener(event -> selectionChanged()) ;
+		}
+
+		void chooseAimColor(boolean guide) {
+			Color current = guide ? guideColorButton.getBackground() : hitmarkerColorButton.getBackground() ;
+			Color selected = JColorChooser.showDialog(this,guide ? "Choose guide color" : "Choose hitmarker color",current) ;
+			if (selected == null) return ;
+			Color color = new Color(selected.getRed(),selected.getGreen(),selected.getBlue(),current.getAlpha()) ;
+			if (guide) guideColorButton.setBackground(color) ; else hitmarkerColorButton.setBackground(color) ;
+			canvas.repaint() ; aimMarkerCanvas.repaint() ;
+		}
+
+		void loadAimMarkerControls() {
+			AimMarkerConfig config = model.aimMarkers ;
+			guideColorButton.setBackground(config.guideColor) ; guideInner.setValue((double)config.guideInner) ;
+			guideLength.setValue((double)config.guideLength) ; guideWidth.setValue((double)config.guideWidth) ;
+			hitmarkerColorButton.setBackground(config.hitmarkerColor) ; hitmarkerInner.setValue((double)config.hitmarkerInner) ;
+			hitmarkerLength.setValue((double)config.hitmarkerLength) ; hitmarkerWidth.setValue((double)config.hitmarkerWidth) ;
+		}
+
+		void saveAimMarkers() {
+			try {
+				AimMarkerConfig config = model.aimMarkers ;
+				config.guideColor=guideColorButton.getBackground() ; config.guideInner=((Number)guideInner.getValue()).floatValue() ;
+				config.guideLength=((Number)guideLength.getValue()).floatValue() ; config.guideWidth=((Number)guideWidth.getValue()).floatValue() ;
+				config.hitmarkerColor=hitmarkerColorButton.getBackground() ; config.hitmarkerInner=((Number)hitmarkerInner.getValue()).floatValue() ;
+				config.hitmarkerLength=((Number)hitmarkerLength.getValue()).floatValue() ; config.hitmarkerWidth=((Number)hitmarkerWidth.getValue()).floatValue() ;
+				model.saveAimMarkers() ; status.setText("Saved data/aimmarkers.txt") ;
+			} catch (IOException exception) {JOptionPane.showMessageDialog(this,exception.getMessage(),"Save failed",JOptionPane.ERROR_MESSAGE) ;}
+		}
+
+		void updatePlayerModels() {
+			int selected = modelBox.getSelectedIndex() ;
+			modelBox.removeAllItems() ;
+			model.playerModelCells.clear() ;
+			int team = teamBox.getSelectedIndex() == 0 ? 1 : 0 ;
+			if (!model.playerSkins.isEmpty()) {
+				for (PlayerSkinInfo skin : model.playerSkins) {
+					if (skin.team != team) continue ;
+					model.playerModelCells.add(Integer.valueOf(skin.atlasCell)) ;
+					modelBox.addItem(skin.name) ;
+				}
+			} else {
+				for (int page=0; page<model.playerPages.length; page++) {
+					if (model.playerPages[page] == null) continue ;
+					for (int modelIndex=0; modelIndex<4; modelIndex++) {
+						model.playerModelCells.add(Integer.valueOf(page*8+(team == 1 ? 4 : 0)+modelIndex)) ;
+						modelBox.addItem("Page " + (page+1) + " - " + (team == 1 ? "CT " : "Zombie ") + (modelIndex+1)) ;
+					}
+				}
+			}
+			if (modelBox.getItemCount() > 0) modelBox.setSelectedIndex(Math.max(0,Math.min(selected,modelBox.getItemCount()-1))) ;
+		}
+
+		int selectedPlayerCell() {
+			int index=modelBox.getSelectedIndex() ;
+			return index >= 0 && index < model.playerModelCells.size() ? model.playerModelCells.get(index).intValue() : 0 ;
 		}
 
 		void reloadResources() {
@@ -2399,6 +2636,8 @@ public class GunPreviewer {
 		void reloadResources(int selectedId) {
 			try {
 				model.load() ;
+				updatePlayerModels() ;
+				loadAimMarkerControls() ;
 				filterWeapons(selectedId) ;
 				resetSimulation() ;
 				selectionChanged() ;
@@ -2559,6 +2798,10 @@ public class GunPreviewer {
 			animatedFrame = (int)(Math.random() * 3) ;
 			flashUntil = now + Math.max(80, Math.min(180, weapon.delay)) ;
 			addTracerShots(weapon, now) ;
+			ScreenShakeConfig shake = model.screenShake(weapon.id) ;
+			if (shake.fireEnabled) {
+				shakeStartedAt=now ; shakeUntil=now+shake.fireTime ; shakeMagnitude=shake.fireMagnitude ;
+			}
 			updateSimulationStatus("FIRING") ;
 			canvas.repaint() ;
 			if (weapon.fireMode == 0) triggerHeld = false ;
@@ -2568,7 +2811,7 @@ public class GunPreviewer {
 			if (weapon.type == 2 || weapon.type == 3 || (weapon.projectileType != 1 && "none".equals(model.tracer(weapon.id).style))) return ;
 			double aim = Math.toRadians(angleSlider.getValue()) ;
 			if (weapon.pellets <= 1) {
-				tracerShots.add(new TracerShot(weapon.id, now, aim)) ;
+				tracerShots.add(new TracerShot(weapon.id, now, aim+(Math.random()-0.5)*weapon.spread)) ;
 				return ;
 			}
 			double angle = aim - weapon.spread * 0.5 ;
@@ -2596,7 +2839,7 @@ public class GunPreviewer {
 			for (int index = tracerShots.size() - 1 ; index >= 0 ; index--) {
 				if (now - tracerShots.get(index).startedAt > 1500) tracerShots.remove(index) ;
 			}
-			if (!tracerShots.isEmpty()) canvas.repaint() ;
+			if (!tracerShots.isEmpty() || now < shakeUntil) canvas.repaint() ;
 			if (reloading) {
 				long duration = Math.max(1, reloadUntil - reloadStartedAt) ;
 				actionProgress.setValue((int)Math.min(1000, (now - reloadStartedAt) * 1000 / duration)) ;
@@ -2613,6 +2856,15 @@ public class GunPreviewer {
 			}
 		}
 
+		double[] previewShake() {
+			long now = System.currentTimeMillis() ;
+			if (now >= shakeUntil || shakeUntil <= shakeStartedAt) return new double[] {0.0,0.0} ;
+			double elapsed = now-shakeStartedAt ;
+			double duration = shakeUntil-shakeStartedAt ;
+			double factor = 1.0-elapsed/duration ;
+			return new double[] {factor*shakeMagnitude*Math.sin(elapsed*0.08),factor*shakeMagnitude*Math.sin(elapsed*0.113)} ;
+		}
+
 		void updateSimulationStatus(String state) {
 			WeaponInfo weapon = selectedWeapon() ;
 			if (weapon == null) return ;
@@ -2623,6 +2875,49 @@ public class GunPreviewer {
 		WeaponInfo selectedWeapon() {return weaponList.getSelectedValue() ;}
 		int flashFrame() {return animateBox.isSelected() ? animatedFrame : frameBox.getSelectedIndex() ;}
 		boolean flashVisible() {return animateBox.isSelected() || System.currentTimeMillis() < flashUntil ;}
+	}
+
+	static class AimMarkerPreviewPanel extends JPanel {
+		final PreviewFrame frame ;
+
+		AimMarkerPreviewPanel(PreviewFrame frame) {
+			this.frame=frame ;
+			setBackground(BACKGROUND) ;
+		}
+
+		protected void paintComponent(Graphics graphics) {
+			super.paintComponent(graphics) ;
+			Graphics2D g=(Graphics2D)graphics.create() ;
+			try {
+				g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_ON) ;
+				g.setColor(new Color(35,39,44)) ;
+				for (int x=0; x<getWidth(); x+=24) g.drawLine(x,0,x,getHeight()) ;
+				for (int y=0; y<getHeight(); y+=24) g.drawLine(0,y,getWidth(),y) ;
+				double centerX=getWidth()*0.5, centerY=getHeight()*0.5 ;
+				WeaponInfo weapon=frame.selectedWeapon() ;
+				double spread=weapon == null ? 0.2 : weapon.spread ;
+				g.setColor(new Color(65,70,76)) ; g.fillOval((int)centerX-12,(int)centerY-12,24,24) ;
+				drawPair(g,centerX,centerY,spread*0.5,frame.guideInner,frame.guideLength,frame.guideWidth,frame.guideColorButton.getBackground()) ;
+				if (frame.hitmarkerPreview.isSelected()) {
+					drawPair(g,centerX,centerY,spread*0.5+0.1,frame.hitmarkerInner,frame.hitmarkerLength,frame.hitmarkerWidth,frame.hitmarkerColorButton.getBackground()) ;
+				}
+				g.setColor(MUTED) ; g.setFont(new Font("Dialog",Font.BOLD,12)) ;
+				g.drawString("LIVE AIM GUIDE + HITMARKER",24,32) ;
+			} finally {g.dispose() ;}
+		}
+
+		void drawPair(Graphics2D g, double centerX, double centerY, double halfAngle, JSpinner innerControl,
+		              JSpinner lengthControl, JSpinner widthControl, Color color) {
+			double inner=((Number)innerControl.getValue()).doubleValue() ;
+			double outer=inner+((Number)lengthControl.getValue()).doubleValue() ;
+			g.setStroke(new BasicStroke(((Number)widthControl.getValue()).floatValue(),BasicStroke.CAP_ROUND,BasicStroke.JOIN_ROUND)) ;
+			g.setColor(color == null ? Color.WHITE : color) ;
+			for (int side=-1; side<=1; side+=2) {
+				double angle=side*halfAngle ;
+				g.draw(new Line2D.Double(centerX+Math.cos(angle)*inner,centerY+Math.sin(angle)*inner,
+				                         centerX+Math.cos(angle)*outer,centerY+Math.sin(angle)*outer)) ;
+			}
+		}
 	}
 
 	static class PreviewCanvas extends JPanel implements MouseWheelListener {
@@ -2692,6 +2987,8 @@ public class GunPreviewer {
 			drawSection(g, gunPanels[3], "MUZZLE FLASH  |  " + gunZoom[3] + "x") ;
 			double centerX = gunPanels[0].getCenterX() ;
 			double centerY = gunPanels[0].getCenterY() + 15 ;
+			double[] shake = frame.previewShake() ;
+			centerX += shake[0] ; centerY += shake[1] ;
 			double aimAngle = Math.toRadians(frame.angleSlider.getValue()) ;
 			double spriteAngle = aimAngle - Math.PI / 2.0 ;
 			double directionX = Math.cos(aimAngle) ;
@@ -2728,7 +3025,7 @@ public class GunPreviewer {
 		}
 
 		double[] drawPosedWeapon(Graphics2D g, WeaponInfo weapon, String poseName, double offsetX, double offsetY, double originX, double originY, double zoom) {
-			if (frame.model.players == null) return new double[] {originX,originY,0.0} ;
+			if (frame.model.playerPages[0] == null) return new double[] {originX,originY,0.0} ;
 			double[] pose = frame.model.animationFrame(poseName,0).angles ;
 			return drawPosedWeapon(g,weapon,pose,offsetX,offsetY,originX,originY,zoom) ;
 		}
@@ -2738,13 +3035,13 @@ public class GunPreviewer {
 		}
 
 		double[] drawPosedWeapon(Graphics2D g, WeaponInfo weapon, double[] pose, double offsetX, double offsetY, double originX, double originY, double zoom, boolean drawLegs) {
-			if (frame.model.players == null) return new double[] {originX,originY,0.0} ;
+			if (frame.model.playerPages[0] == null) return new double[] {originX,originY,0.0} ;
 			double rotation = -Math.PI/2.0, chainRotation = 0.0, body = Math.toRadians(pose[0]) ;
 			double rightArm = Math.toRadians(pose[1]), rightHand = Math.toRadians(pose[2]) ;
 			double leftArm = Math.toRadians(pose[3]), leftHand = Math.toRadians(pose[4]) ;
-			int atlasTeam = frame.teamBox.getSelectedIndex() == 0 ? 1 : 0 ;
-			int playerOffset = (frame.modelBox.getSelectedIndex()+atlasTeam*4)*32 ;
-			BufferedImage players = frame.model.players ;
+			int atlasCell=frame.selectedPlayerCell() ;
+			int playerOffset = (atlasCell%8)*32 ;
+			BufferedImage players = frame.model.playerPages[atlasCell/8] ;
 			if (drawLegs) drawQuad(g,players,playerOffset,32,32,32,originX,originY,16,16,rotation,zoom,false) ;
 			double centerX=originX-5*Math.cos(chainRotation)*zoom, centerY=originY-5*Math.sin(chainRotation)*zoom ;
 			drawQuad(g,players,playerOffset,0,32,16,centerX,centerY,16,8,rotation+body,zoom,false) ;
@@ -2794,7 +3091,7 @@ public class GunPreviewer {
 		}
 
 		void drawPlayerPreview(Graphics2D g) {
-			if (frame.model.players == null) {drawCentered(g, "No player data loaded", getWidth() / 2, getHeight() / 2, MUTED) ; return ;}
+			if (frame.model.playerPages[0] == null) {drawCentered(g, "No player data loaded", getWidth() / 2, getHeight() / 2, MUTED) ; return ;}
 			playerPanel.setBounds(22, 22, getWidth() - 44, getHeight() - 44) ;
 			drawSection(g, playerPanel, "STATIC PLAYER MODEL  |  " + playerZoom + "x") ;
 			drawPlayer(g, playerPanel.getCenterX(), playerPanel.getCenterY() + 16, playerZoom) ;
@@ -2823,9 +3120,9 @@ public class GunPreviewer {
 		void drawPlayer(Graphics2D g, double originX, double originY, double zoom) {
 			double facing = Math.toRadians(frame.angleSlider.getValue()) ;
 			double rotation = facing - Math.PI / 2.0 ;
-			int atlasTeam = frame.teamBox.getSelectedIndex() == 0 ? 1 : 0 ;
-			int playerOffset = (frame.modelBox.getSelectedIndex() + atlasTeam * 4) * 32 ;
-			BufferedImage players = frame.model.players ;
+			int atlasCell=frame.selectedPlayerCell() ;
+			int playerOffset = (atlasCell%8)*32 ;
+			BufferedImage players = frame.model.playerPages[atlasCell/8] ;
 			drawQuad(g, players, playerOffset, 32, 32, 32, originX, originY, 16, 16, rotation, zoom, false) ;
 			double centerX = originX - 5 * Math.cos(facing) * zoom ;
 			double centerY = originY - 5 * Math.sin(facing) * zoom ;

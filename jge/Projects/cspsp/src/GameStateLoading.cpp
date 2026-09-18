@@ -51,6 +51,10 @@ static JSample* LoadConfiguredSampleWithLegacyKey(JSoundSystem* soundSystem, cha
 	char* configured = GetConfig("data/audio.txt",key);
 	if (configured == NULL) configured = GetConfig("data/audio.txt",legacyKey);
 	JSample* sample = soundSystem->LoadSample(configured == NULL ? fallback : configured);
+	if (configured != NULL && (sample == NULL || sample->mSample == NULL)) {
+		delete sample;
+		sample = soundSystem->LoadSample(fallback);
+	}
 	delete[] configured;
 	return sample;
 }
@@ -113,14 +117,21 @@ static void AddLegacyPlayerSkins(int team, JTexture* playersTextures[], JTexture
 {
 	static char* ctNames[] = {"SEAL TEAM 6","GSG-9","SAS","GIGN"};
 	static char* tNames[] = {"PHOENIX CONNEXION","ELITE CREW","ARCTIC AVENGERS","GUERILLA WARFARE"};
-	for (int i=0; i<4; i++) {
-		int id = team == CT ? i : i+4;
-		if (gPlayerSkinLoaded[id]) {
-			for (id=0; id<MAX_PLAYER_SKINS && gPlayerSkinLoaded[id]; id++) {}
-			if (id >= MAX_PLAYER_SKINS) return;
+	for (int page=0; page<MAX_PLAYER_SKINS/8; page++) {
+		if (playersTextures[page] == NULL || playersDeadTextures[page] == NULL) continue;
+		for (int i=0; i<4; i++) {
+			int id = team == CT ? page*8+i : page*8+i+4;
+			if (gPlayerSkinLoaded[id]) {
+				for (id=0; id<MAX_PLAYER_SKINS && gPlayerSkinLoaded[id]; id++) {}
+				if (id >= MAX_PLAYER_SKINS) return;
+			}
+			int atlasId = page*8+(team == CT ? i+4 : i);
+			char generatedName[PLAYER_SKIN_NAME_LENGTH];
+			if (page == 0) strncpy(generatedName,team == CT ? ctNames[i] : tNames[i],PLAYER_SKIN_NAME_LENGTH-1);
+			else snprintf(generatedName,sizeof(generatedName),"%s %d-%d",team == CT ? "CT" : "ZOMBIE",page+1,i+1);
+			generatedName[PLAYER_SKIN_NAME_LENGTH-1] = '\0';
+			AddPlayerSkin(id,team,atlasId,generatedName,playersTextures,playersDeadTextures);
 		}
-		int atlasId = team == CT ? i+4 : i;
-		AddPlayerSkin(id,team,atlasId,team == CT ? ctNames[i] : tNames[i],playersTextures,playersDeadTextures);
 	}
 }
 

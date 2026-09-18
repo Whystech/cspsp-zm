@@ -32,9 +32,9 @@ zombie_claws_hit = sfx/knifehit.wav
 ct_die_1 = sfx/die1.wav
 ct_die_2 = sfx/die2.wav
 ct_die_3 = sfx/die3.wav
-t_die_1 = sfx/die1.wav
-t_die_2 = sfx/die2.wav
-t_die_3 = sfx/die3.wav
+t_die_1 = sfx/zdie1.wav
+t_die_2 = sfx/zdie2.wav
+t_die_3 = sfx/zdie3.wav
 # Legacy death keys remain as fallbacks for older audio.txt files.
 die_1 = sfx/die1.wav
 die_2 = sfx/die2.wav

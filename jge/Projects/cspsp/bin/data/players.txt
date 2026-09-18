@@ -3,7 +3,7 @@
 # Rows may use sparse IDs and any order. Only valid populated rows create slots.
 # Cells 0..7 use page 1, 8..15 page 2, 16..23 page 3, and 24..31 page 4.
 team 0 Zombies
-team 1 UN Forces
+team 1 Fortele Ferentari
 
 player 0 1 4 SEAL TEAM 6
 player 1 1 5 GSG-9
