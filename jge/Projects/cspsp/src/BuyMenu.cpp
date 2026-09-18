@@ -207,7 +207,7 @@ void BuyMenu::Render()
 		if (mIsOldStyle) {
 			if (i < firstVisible || i >= lastVisible) continue;
 			x = 50;
-			y = 25+32*(i-firstVisible);
+			y = 16+27*(i-firstVisible);
 		}
 
 		if (i == mSelectedIndex) {
@@ -273,8 +273,8 @@ void BuyMenu::Render()
 
 	if (mIsOldStyle && mCategoryIndex != MAIN) {
 		gFont->SetScale(0.75f);
-		if (firstVisible > 0) gFont->DrawString("^",255,25);
-		if (lastVisible < size) gFont->DrawString("v",255,217);
+		if (firstVisible > 0) gFont->DrawString("^",255,16);
+		if (lastVisible < size) gFont->DrawString("v",255,194);
 	}
 
 	if (mCategoryIndex == MAIN) {
@@ -282,7 +282,7 @@ void BuyMenu::Render()
 		float y = SCREEN_HEIGHT_2;
 		if (mIsOldStyle) {
 			x = 50;
-			y = 25+32*size;
+			y = 16+27*size;
 		}
 		if (!mIsOldStyle) {
 			if (mSelectedIndex == -1) {

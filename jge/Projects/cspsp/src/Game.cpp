@@ -1870,16 +1870,16 @@ void Game::Render()
 		float y = mPlayer->mY-(dy-SCREEN_HEIGHT_2); //-cosf(mPlayer->mFacingAngle)*1.5f
 
 		float angle = mPlayer->mFacingAngle-mPlayer->mRecoilAngle*0.5f;
-		mRenderer->DrawLine(x+cosf(angle)*gHudConfig.crosshairInner,y+sinf(angle)*gHudConfig.crosshairInner,x+cosf(angle)*gHudConfig.crosshairOuter,y+sinf(angle)*gHudConfig.crosshairOuter,gThemeConfig.crosshairColor);
+		mRenderer->DrawLine(x+cosf(angle)*gAimMarkerConfig.guideInner,y+sinf(angle)*gAimMarkerConfig.guideInner,x+cosf(angle)*(gAimMarkerConfig.guideInner+gAimMarkerConfig.guideLength),y+sinf(angle)*(gAimMarkerConfig.guideInner+gAimMarkerConfig.guideLength),gAimMarkerConfig.guideWidth,gAimMarkerConfig.guideColor);
 		angle = mPlayer->mFacingAngle+mPlayer->mRecoilAngle*0.5f;
-		mRenderer->DrawLine(x+cosf(angle)*gHudConfig.crosshairInner,y+sinf(angle)*gHudConfig.crosshairInner,x+cosf(angle)*gHudConfig.crosshairOuter,y+sinf(angle)*gHudConfig.crosshairOuter,gThemeConfig.crosshairColor);
+		mRenderer->DrawLine(x+cosf(angle)*gAimMarkerConfig.guideInner,y+sinf(angle)*gAimMarkerConfig.guideInner,x+cosf(angle)*(gAimMarkerConfig.guideInner+gAimMarkerConfig.guideLength),y+sinf(angle)*(gAimMarkerConfig.guideInner+gAimMarkerConfig.guideLength),gAimMarkerConfig.guideWidth,gAimMarkerConfig.guideColor);
 
 		int t = (mHitTime-750)/250*255;
 		if (t > 0) {
 			angle = mPlayer->mFacingAngle-mPlayer->mRecoilAngle*0.5f-.1f;
-			mRenderer->DrawLine(x+cosf(angle)*gHudConfig.crosshairInner,y+sinf(angle)*gHudConfig.crosshairInner,x+cosf(angle)*(gHudConfig.crosshairOuter+5),y+sinf(angle)*(gHudConfig.crosshairOuter+5),(gThemeConfig.crosshairHitColor & 0x00ffffff) | ((u32)t << 24));
+			mRenderer->DrawLine(x+cosf(angle)*gAimMarkerConfig.hitmarkerInner,y+sinf(angle)*gAimMarkerConfig.hitmarkerInner,x+cosf(angle)*(gAimMarkerConfig.hitmarkerInner+gAimMarkerConfig.hitmarkerLength),y+sinf(angle)*(gAimMarkerConfig.hitmarkerInner+gAimMarkerConfig.hitmarkerLength),gAimMarkerConfig.hitmarkerWidth,(gAimMarkerConfig.hitmarkerColor & 0x00ffffff) | ((u32)t << 24));
 			angle = mPlayer->mFacingAngle+mPlayer->mRecoilAngle*0.5f+.1f;
-			mRenderer->DrawLine(x+cosf(angle)*gHudConfig.crosshairInner,y+sinf(angle)*gHudConfig.crosshairInner,x+cosf(angle)*(gHudConfig.crosshairOuter+5),y+sinf(angle)*(gHudConfig.crosshairOuter+5),(gThemeConfig.crosshairHitColor & 0x00ffffff) | ((u32)t << 24));
+			mRenderer->DrawLine(x+cosf(angle)*gAimMarkerConfig.hitmarkerInner,y+sinf(angle)*gAimMarkerConfig.hitmarkerInner,x+cosf(angle)*(gAimMarkerConfig.hitmarkerInner+gAimMarkerConfig.hitmarkerLength),y+sinf(angle)*(gAimMarkerConfig.hitmarkerInner+gAimMarkerConfig.hitmarkerLength),gAimMarkerConfig.hitmarkerWidth,(gAimMarkerConfig.hitmarkerColor & 0x00ffffff) | ((u32)t << 24));
 		}
 	}
 	// draw some text

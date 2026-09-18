@@ -128,6 +128,17 @@ struct ThemeConfig {
 	u32 radarEnemyColor;
 };
 
+struct AimMarkerConfig {
+	u32 guideColor;
+	float guideInner;
+	float guideLength;
+	float guideWidth;
+	u32 hitmarkerColor;
+	float hitmarkerInner;
+	float hitmarkerLength;
+	float hitmarkerWidth;
+};
+
 struct BotConfig {
 	float visionRange;
 	float reactionTime;
@@ -184,6 +195,7 @@ extern HudConfig gHudConfig;
 extern EffectsConfig gEffectsConfig;
 extern AudioConfig gAudioConfig;
 extern ThemeConfig gThemeConfig;
+extern AimMarkerConfig gAimMarkerConfig;
 extern BotConfig gBotConfig;
 extern LimitsConfig gLimitsConfig;
 extern LaserConfig gLaserConfigs[MAX_GUNS];
