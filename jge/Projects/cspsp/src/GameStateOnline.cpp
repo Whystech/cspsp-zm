@@ -371,10 +371,11 @@ void GameStateOnline::CheckInput(float dt)
 			}
 
 			if (fire) {
+				bool startingMeleeAttack = IsMeleeSlot(mPlayer->mGunIndex) && mPlayer->mState == NORMAL;
 				std::vector<Bullet*> bullets = mPlayer->Fire();
 				mSwitchTimer = 0;
 				
-				if (bullets.size() > 0) {
+				if (bullets.size() > 0 || startingMeleeAttack) {
 					Gun* gun = mPlayer->GetCurrentGun()->mGun;
 					ScreenShakeConfig& shake = gScreenShakeConfigs[gun->mId];
 					if (shake.fireMagnitude > 0 && shake.fireTime > 0.0f) mCamera->Shake(shake.fireMagnitude,shake.fireTime);
@@ -557,14 +558,14 @@ void GameStateOnline::CheckCollisions()
 				float r = 32;
 				if (dist < 35*35) {
 					if (mGameType == FFA || mFriendlyFire == ON || mPeople[i]->mTeam != mPeople[j]->mTeam) {
-						if (mPeople[i]->mGunIndex == KNIFE && mPeople[i]->mState == ATTACKING) {
+						if (IsMeleeSlot(mPeople[i]->mGunIndex) && mPeople[i]->mState == ATTACKING) {
 							mPeople[i]->mState = DRYFIRING;
 							float angle = atan2f((y2-y),x2-x)+M_PI;
 							float anglediff = fabs(fabs(angle-mPeople[i]->mFacingAngle)-M_PI);
 							if (anglediff <= 0.5f) {
 								gParticleEngine->GenerateParticles(BLOOD,x2,y2,gEffectsConfig.bloodParticleCount);
 								mMap->AddDecal(x2,y2,DECAL_BLOOD);
-								gSfxManager->PlaySample((mPeople[i]->mGuns[KNIFE]->mGun->mId == ZOMBIECLAWS) ? gZombieClawsHitSound : gKnifeHitSound,x,y);
+								gSfxManager->PlaySample((mPeople[i]->mGuns[mPeople[i]->mGunIndex]->mGun->mId == ZOMBIECLAWS) ? gZombieClawsHitSound : gKnifeHitSound,x,y);
 								//mPeopleTemp[j]->TakeDamage(mPeople[i]->mGuns[KNIFE]->mGun->mDamage);
 								if (mPeopleTemp[j]->mState == DEAD) {
 									//UpdateScores(mPeople[i],mPeopleTemp[j],mPeople[i]->mGuns[KNIFE]->mGun);
@@ -572,14 +573,14 @@ void GameStateOnline::CheckCollisions()
 							}
 						}
 						if (mPeopleTemp[j]->mState == DEAD) continue; //just in case the person dies in above if statement
-						if (mPeopleTemp[j]->mGunIndex == KNIFE && mPeopleTemp[j]->mState == ATTACKING) {
+						if (IsMeleeSlot(mPeopleTemp[j]->mGunIndex) && mPeopleTemp[j]->mState == ATTACKING) {
 							mPeopleTemp[j]->mState = DRYFIRING;
 							float angle = atan2f((y-y2),x-x2)+M_PI;
 							float anglediff = fabs(fabs(angle-mPeopleTemp[j]->mFacingAngle)-M_PI);
 							if (anglediff <= 0.5f) {
 								gParticleEngine->GenerateParticles(BLOOD,x,y,gEffectsConfig.bloodParticleCount);
 								mMap->AddDecal(x,y,DECAL_BLOOD);
-								gSfxManager->PlaySample((mPeopleTemp[j]->mGuns[KNIFE]->mGun->mId == ZOMBIECLAWS) ? gZombieClawsHitSound : gKnifeHitSound,x2,y2);
+								gSfxManager->PlaySample((mPeopleTemp[j]->mGuns[mPeopleTemp[j]->mGunIndex]->mGun->mId == ZOMBIECLAWS) ? gZombieClawsHitSound : gKnifeHitSound,x2,y2);
 								//mPeople[i]->TakeDamage(mPeopleTemp[j]->mGuns[KNIFE]->mGun->mDamage);
 								if (mPeople[i]->mState == DEAD) {
 									//UpdateScores(mPeopleTemp[j],mPeople[i],mPeople[i]->mGuns[KNIFE]->mGun);
@@ -3713,6 +3714,9 @@ void GameStateOnline::Buy(Person* player, int index) {
 		}
 		else if (mGuns[index].mType == SECONDARY) {
 			//mPlayer->Drop(SECONDARY);
+			gSfxManager->PlaySample(gPickUpSound, player->mX, player->mY);
+		}
+		else if (mGuns[index].mType == KNIFE) {
 			gSfxManager->PlaySample(gPickUpSound, player->mX, player->mY);
 		}
 		else if (mGuns[index].mType == GRENADE) {

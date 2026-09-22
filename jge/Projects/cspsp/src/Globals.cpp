@@ -405,7 +405,15 @@ static float LoadConfigFloat(const char* file, char* key, float defaultValue, fl
 static u32 LoadConfigColor(const char* file, char* key, u32 defaultValue)
 {
 	char* value = GetConfig(file,key);
-	u32 result = value == NULL ? defaultValue : (u32)strtoul(value,NULL,16);
+	u32 result = defaultValue;
+	if (value != NULL) {
+		u32 color = (u32)strtoul(value,NULL,16);
+		int alpha = (color >> 24) & 0xff;
+		int red = (color >> 16) & 0xff;
+		int green = (color >> 8) & 0xff;
+		int blue = color & 0xff;
+		result = ARGB(alpha,red,green,blue);
+	}
 	delete[] value;
 	return result;
 }

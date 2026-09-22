@@ -362,7 +362,7 @@ void Person::Update(float dt)
 			SetState(NORMAL);
 			mNumDryFire++;
 		}
-		else if (mGunIndex == KNIFE) {
+		else if (IsMeleeSlot(mGunIndex)) {
 			if (mStateTime >= mGuns[mGunIndex]->mGun->mDelay) {
 				SetState(NORMAL);
 			}
@@ -458,13 +458,13 @@ void Person::Render(float x, float y)
 
 		if (mGuns[mGunIndex] != NULL) {
 			//mRenderer->RenderQuad(mGuns[mGunIndex]->mGun->mHandQuad,mX-offsetX,mY-offsetY,mLastFireAngle);
-			if (mGunIndex == KNIFE && (mState == ATTACKING || mState == DRYFIRING)) {
+			if (IsMeleeSlot(mGunIndex) && (mState == ATTACKING || mState == DRYFIRING)) {
 				float angle = 0;
-				if (mStateTime < (mGuns[KNIFE]->mGun->mDelay*0.2f)) {
-					angle = mStateTime/(mGuns[KNIFE]->mGun->mDelay*0.2f);
+				if (mStateTime < (mGuns[mGunIndex]->mGun->mDelay*0.2f)) {
+					angle = mStateTime/(mGuns[mGunIndex]->mGun->mDelay*0.2f);
 				}
-				else if (mStateTime >= (mGuns[KNIFE]->mGun->mDelay*0.2f)) {
-					angle = (mGuns[KNIFE]->mGun->mDelay-mStateTime)/(mGuns[KNIFE]->mGun->mDelay*0.8f);
+				else if (mStateTime >= (mGuns[mGunIndex]->mGun->mDelay*0.2f)) {
+					angle = (mGuns[mGunIndex]->mGun->mDelay-mStateTime)/(mGuns[mGunIndex]->mGun->mDelay*0.8f);
 				}
 
 				//mGuns[mGunIndex]->mGun->mHandQuad->SetColor(ARGB(200,255,255,255));
@@ -534,7 +534,7 @@ void Person::Render(float x, float y)
 		y += scale*(mGuns[mGunIndex]->mGun->mSpriteOffsetX*sinf(mFacingAngle)+mGuns[mGunIndex]->mGun->mSpriteOffsetY*cosf(mFacingAngle));
 		//x2 = x+11*cosf(mRotation+mKeyFrame.angles[GUN]);
 		//y2 = y+11*sinf(mRotation+mKeyFrame.angles[GUN]);
-		if (mTeam != T || mGunIndex != KNIFE || mGuns[mGunIndex]->mGun->mId == ZOMBIECLAWS) {
+		if (mTeam != T || !IsMeleeSlot(mGunIndex) || mGuns[mGunIndex]->mGun->mId == ZOMBIECLAWS || mGunIndex == MELEE) {
 			mRenderer->RenderQuad(mGuns[mGunIndex]->mGun->mHandQuad,x,y,mLastFireAngle+mKeyFrame.angles[GUN],scale,scale);
 		}
 
@@ -612,7 +612,7 @@ std::vector<Bullet*> Person::Fire()
 		mIsFiring = true;
 		mHasFired = true;
 
-		if (mGunIndex == KNIFE) {
+		if (IsMeleeSlot(mGunIndex)) {
 			SetState(ATTACKING);
 			gSfxManager->PlaySample(mGuns[mGunIndex]->mGun->mFireSound,mX,mY);
 			//return true;
@@ -743,7 +743,7 @@ std::vector<Bullet*> Person::StopFire()
 //------------------------------------------------------------------------------------------------
 bool Person::Reload()
 {
-	if (mGunIndex == KNIFE || mGunIndex == GRENADE) return false;
+	if (IsMeleeSlot(mGunIndex) || mGunIndex == GRENADE) return false;
 	if (mState != RELOADING && mGuns[mGunIndex]->mClipAmmo != mGuns[mGunIndex]->mGun->mClip && mGuns[mGunIndex]->mRemainingAmmo != 0) {
 		SetState(RELOADING);
 		mSoundId = gSfxManager->PlaySample(mGuns[mGunIndex]->mGun->mReloadSound,mX,mY);
@@ -904,9 +904,10 @@ bool Person::PickUp(GunObject* gunobject)
 		}
 	}
 	else if (gunobject->mGun->mType == KNIFE) {
-		if (mGuns[KNIFE] == NULL) {
-			mGuns[KNIFE] = gunobject;
+		if (mGuns[MELEE] == NULL) {
+			mGuns[MELEE] = gunobject;
 			gunobject->mOnGround = false;
+			Switch(MELEE);
 			return true;
 		}
 	}
@@ -1017,7 +1018,7 @@ void Person::SetState(int state)
 			else if (mGunIndex == SECONDARY) {
 				SetWeaponAnimation(0,ANIM_SECONDARY);
 			}
-			else if (mGunIndex == KNIFE) {
+			else if (IsMeleeSlot(mGunIndex)) {
 				SetWeaponAnimation(0,ANIM_KNIFE);
 			}
 			else if (mGunIndex == GRENADE) {
@@ -1037,7 +1038,7 @@ void Person::SetState(int state)
 				//mCurrentAnimation->Play();
 				mCurrentAnimation->SetSpeed(1000.0f/mGuns[mGunIndex]->mGun->mDelay);
 			}
-			else if (mGunIndex == KNIFE) {
+			else if (IsMeleeSlot(mGunIndex)) {
 				SetWeaponAnimation(1,ANIM_KNIFE_SLASH);
 				//mCurrentAnimation->Reset();
 				//mCurrentAnimation->Play();
@@ -1067,7 +1068,7 @@ void Person::SetState(int state)
 			SetWeaponAnimation(0,ANIM_SECONDARY);
 			//mCurrentAnimation->SetSpeed(100.0f/(mGuns[mGunIndex]->mGun->mDelay*0.75f));
 		}
-		else if (mGunIndex == KNIFE) {
+		else if (IsMeleeSlot(mGunIndex)) {
 			SetWeaponAnimation(0,ANIM_KNIFE);
 			mCurrentAnimation->SetSpeed(1);
 		}

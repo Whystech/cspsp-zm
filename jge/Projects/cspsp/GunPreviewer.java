@@ -1284,6 +1284,7 @@ public class GunPreviewer {
 		final ProjectilePreviewPanel projectilePreview = new ProjectilePreviewPanel() ;
 		final WeaponPosePreviewPanel weaponPosePreview = new WeaponPosePreviewPanel() ;
 		final AnimationEditorPanel animationEditor ;
+		final JTabbedPane pages = new JTabbedPane(JTabbedPane.LEFT,JTabbedPane.SCROLL_TAB_LAYOUT) ;
 
 		WeaponEditorDialog(PreviewFrame frame, WeaponInfo weapon) {this(frame, weapon, false) ;}
 
@@ -1451,7 +1452,6 @@ public class GunPreviewer {
 			shakePage.setBorder(new EmptyBorder(10,10,10,10)) ;
 			shakePage.add(shakeFields,BorderLayout.NORTH) ;
 
-			JTabbedPane pages = new JTabbedPane(JTabbedPane.LEFT,JTabbedPane.SCROLL_TAB_LAYOUT) ;
 			pages.addTab("Weapon", weaponPage) ;
 			pages.addTab("Pose & Muzzle", posePage) ;
 			pages.addTab("Animations", animationEditor) ;
@@ -1476,7 +1476,7 @@ public class GunPreviewer {
 			installImpactPreviewListeners() ;
 			projectileType.addActionListener(event -> {refreshProjectileControls() ; projectilePreview.repaint() ;}) ;
 			overrideProjectileExplosionRadius.addActionListener(event -> refreshProjectileControls()) ;
-			type.addActionListener(event -> weaponPosePreview.repaint()) ;
+			type.addActionListener(event -> {refreshWeaponTypeControls() ; weaponPosePreview.repaint() ;}) ;
 			animationType.addActionListener(event -> weaponPosePreview.repaint()) ;
 			spriteOffsetX.addChangeListener(event -> weaponPosePreview.repaint()) ;
 			spriteOffsetY.addChangeListener(event -> weaponPosePreview.repaint()) ;
@@ -1808,6 +1808,16 @@ public class GunPreviewer {
 			refreshTracerPreview() ;
 			refreshLaserPreview() ;
 			impactPreview.repaint() ;
+			refreshWeaponTypeControls() ;
+			refreshProjectileControls() ;
+		}
+
+		void refreshWeaponTypeControls() {
+			boolean melee = type.getSelectedIndex() == 2 ;
+			JComponent[] firearmControls = {spread,clip,numClips,reloadDelay,bulletSpeed,fireMode,pellets,
+			                                flashStyle,projectileType,projectileLaunchOrigin,muzzleForward,muzzleSideways} ;
+			for (JComponent control : firearmControls) control.setEnabled(!melee) ;
+			for (int tab = 3 ; tab < 7 ; tab++) pages.setEnabledAt(tab,!melee) ;
 			refreshProjectileControls() ;
 		}
 
@@ -1867,7 +1877,7 @@ public class GunPreviewer {
 		}
 
 		void refreshProjectileControls() {
-			boolean rocket = projectileType.getSelectedIndex() == 1 ;
+			boolean rocket = type.getSelectedIndex() != 2 && projectileType.getSelectedIndex() == 1 ;
 			projectileStyle.setEnabled(rocket) ; explosionStyle.setEnabled(rocket) ; explosionFrameTime.setEnabled(rocket) ;
 			overrideProjectileExplosionRadius.setEnabled(rocket) ;
 			projectileExplosionRadius.setEnabled(rocket && overrideProjectileExplosionRadius.isSelected()) ;
@@ -2572,11 +2582,18 @@ public class GunPreviewer {
 		}
 
 		void chooseAimColor(boolean guide) {
-			Color current = guide ? guideColorButton.getBackground() : hitmarkerColorButton.getBackground() ;
+			Color current = guide ? model.aimMarkers.guideColor : model.aimMarkers.hitmarkerColor ;
 			Color selected = JColorChooser.showDialog(this,guide ? "Choose guide color" : "Choose hitmarker color",current) ;
 			if (selected == null) return ;
 			Color color = new Color(selected.getRed(),selected.getGreen(),selected.getBlue(),current.getAlpha()) ;
-			if (guide) guideColorButton.setBackground(color) ; else hitmarkerColorButton.setBackground(color) ;
+			if (guide) {
+				model.aimMarkers.guideColor = color ;
+				guideColorButton.setBackground(color) ;
+			}
+			else {
+				model.aimMarkers.hitmarkerColor = color ;
+				hitmarkerColorButton.setBackground(color) ;
+			}
 			canvas.repaint() ; aimMarkerCanvas.repaint() ;
 		}
 
@@ -2591,9 +2608,9 @@ public class GunPreviewer {
 		void saveAimMarkers() {
 			try {
 				AimMarkerConfig config = model.aimMarkers ;
-				config.guideColor=guideColorButton.getBackground() ; config.guideInner=((Number)guideInner.getValue()).floatValue() ;
+				config.guideInner=((Number)guideInner.getValue()).floatValue() ;
 				config.guideLength=((Number)guideLength.getValue()).floatValue() ; config.guideWidth=((Number)guideWidth.getValue()).floatValue() ;
-				config.hitmarkerColor=hitmarkerColorButton.getBackground() ; config.hitmarkerInner=((Number)hitmarkerInner.getValue()).floatValue() ;
+				config.hitmarkerInner=((Number)hitmarkerInner.getValue()).floatValue() ;
 				config.hitmarkerLength=((Number)hitmarkerLength.getValue()).floatValue() ; config.hitmarkerWidth=((Number)hitmarkerWidth.getValue()).floatValue() ;
 				model.saveAimMarkers() ; status.setText("Saved data/aimmarkers.txt") ;
 			} catch (IOException exception) {JOptionPane.showMessageDialog(this,exception.getMessage(),"Save failed",JOptionPane.ERROR_MESSAGE) ;}
@@ -2726,12 +2743,13 @@ public class GunPreviewer {
 			if (weapon != null) activeWeapon = weapon ;
 			if (weapon != null && weapon.id != simulatedWeaponId) resetSimulation() ;
 			boolean guns = previewBox.getSelectedIndex() == 0 ;
+			boolean firearm = guns && weapon != null && weapon.type != 2 && weapon.type != 3 ;
 			weaponSearch.setEnabled(guns) ;
 			weaponList.setEnabled(guns) ;
-			frameBox.setEnabled(guns) ;
-			animateBox.setEnabled(guns) ;
+			frameBox.setEnabled(firearm) ;
+			animateBox.setEnabled(firearm) ;
 			if (fireButton != null) fireButton.setEnabled(guns) ;
-			if (reloadButton != null) reloadButton.setEnabled(guns) ;
+			if (reloadButton != null) reloadButton.setEnabled(firearm) ;
 			teamBox.setEnabled(!guns) ;
 			modelBox.setEnabled(!guns) ;
 			angleSlider.setEnabled(true) ;
@@ -2897,9 +2915,9 @@ public class GunPreviewer {
 				WeaponInfo weapon=frame.selectedWeapon() ;
 				double spread=weapon == null ? 0.2 : weapon.spread ;
 				g.setColor(new Color(65,70,76)) ; g.fillOval((int)centerX-12,(int)centerY-12,24,24) ;
-				drawPair(g,centerX,centerY,spread*0.5,frame.guideInner,frame.guideLength,frame.guideWidth,frame.guideColorButton.getBackground()) ;
+				drawPair(g,centerX,centerY,Math.max(spread*0.5,0.1),frame.guideInner,frame.guideLength,frame.guideWidth,frame.model.aimMarkers.guideColor) ;
 				if (frame.hitmarkerPreview.isSelected()) {
-					drawPair(g,centerX,centerY,spread*0.5+0.1,frame.hitmarkerInner,frame.hitmarkerLength,frame.hitmarkerWidth,frame.hitmarkerColorButton.getBackground()) ;
+					drawPair(g,centerX,centerY,Math.max(spread*0.5,0.1)+0.1,frame.hitmarkerInner,frame.hitmarkerLength,frame.hitmarkerWidth,frame.model.aimMarkers.hitmarkerColor) ;
 				}
 				g.setColor(MUTED) ; g.setFont(new Font("Dialog",Font.BOLD,12)) ;
 				g.drawString("LIVE AIM GUIDE + HITMARKER",24,32) ;
@@ -3419,7 +3437,9 @@ public class GunPreviewer {
 			g.fillRect((int)Math.round(x - size * 0.5), (int)Math.round(y - size * 0.5), size, size) ;
 		}
 
-		boolean hasMuzzleFlash(WeaponInfo weapon) {return (weapon.id > 0 && weapon.id < 25) || weapon.id >= 28 ;}
+		boolean hasMuzzleFlash(WeaponInfo weapon) {
+			return weapon.type != 2 && weapon.type != 3 && ((weapon.id > 0 && weapon.id < 25) || weapon.id >= 28) ;
+		}
 
 		void drawFlash(Graphics2D g, WeaponInfo weapon, int x, int y, int zoom) {
 			if (!hasMuzzleFlash(weapon)) {drawCentered(g, "none", x, y, labelColor()) ; return ;}
