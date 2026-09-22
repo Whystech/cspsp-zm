@@ -208,6 +208,8 @@ extern int gProjectileLaunchOrigins[MAX_GUNS];
 void LoadProjectileLaunchOrigins(const char* filename);
 extern JSample* gWeaponExplosionSounds[MAX_GUNS];
 extern JSample* gWeaponImpactSounds[MAX_GUNS];
+extern JSample* gWeaponMeleeHitSounds[MAX_GUNS];
+extern JSample* GetMeleeHitSound(int weaponId);
 extern char gWeaponAnimationProfileNames[MAX_GUNS][64];
 extern KeyFrameAnim* gWeaponAnimationKeyFrames[MAX_GUNS][3];
 void LoadWeaponAnimationProfiles(const char* filename);
