@@ -925,7 +925,7 @@ void Game::CheckCollisions()
 									person1->mState = DRYFIRING;
 									gParticleEngine->GenerateParticles(BLOOD,x2,y2,gEffectsConfig.bloodParticleCount);
 									mMap->AddDecal(x2,y2,DECAL_BLOOD);
-									gSfxManager->PlaySample((person1->mGuns[person1->mGunIndex]->mGun->mId == ZOMBIECLAWS) ? gZombieClawsHitSound : gKnifeHitSound,x,y);
+									gSfxManager->PlaySample(GetMeleeHitSound(person1->mGuns[person1->mGunIndex]->mGun->mId),x,y);
 
 									if (!mIsOnline) {
 										if (person1 == mPlayer) {
@@ -954,7 +954,7 @@ void Game::CheckCollisions()
 									person2->mState = DRYFIRING;
 									gParticleEngine->GenerateParticles(BLOOD,x,y,gEffectsConfig.bloodParticleCount);
 									mMap->AddDecal(x,y,DECAL_BLOOD);
-									gSfxManager->PlaySample((person2->mGuns[person2->mGunIndex]->mGun->mId == ZOMBIECLAWS) ? gZombieClawsHitSound : gKnifeHitSound,x2,y2);
+									gSfxManager->PlaySample(GetMeleeHitSound(person2->mGuns[person2->mGunIndex]->mGun->mId),x2,y2);
 									if (!mIsOnline) {
 										if (person2 == mPlayer) {
 											mHitTime = 1000;

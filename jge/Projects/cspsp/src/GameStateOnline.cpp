@@ -565,7 +565,7 @@ void GameStateOnline::CheckCollisions()
 							if (anglediff <= 0.5f) {
 								gParticleEngine->GenerateParticles(BLOOD,x2,y2,gEffectsConfig.bloodParticleCount);
 								mMap->AddDecal(x2,y2,DECAL_BLOOD);
-								gSfxManager->PlaySample((mPeople[i]->mGuns[mPeople[i]->mGunIndex]->mGun->mId == ZOMBIECLAWS) ? gZombieClawsHitSound : gKnifeHitSound,x,y);
+								gSfxManager->PlaySample(GetMeleeHitSound(mPeople[i]->mGuns[mPeople[i]->mGunIndex]->mGun->mId),x,y);
 								//mPeopleTemp[j]->TakeDamage(mPeople[i]->mGuns[KNIFE]->mGun->mDamage);
 								if (mPeopleTemp[j]->mState == DEAD) {
 									//UpdateScores(mPeople[i],mPeopleTemp[j],mPeople[i]->mGuns[KNIFE]->mGun);
@@ -580,7 +580,7 @@ void GameStateOnline::CheckCollisions()
 							if (anglediff <= 0.5f) {
 								gParticleEngine->GenerateParticles(BLOOD,x,y,gEffectsConfig.bloodParticleCount);
 								mMap->AddDecal(x,y,DECAL_BLOOD);
-								gSfxManager->PlaySample((mPeopleTemp[j]->mGuns[mPeopleTemp[j]->mGunIndex]->mGun->mId == ZOMBIECLAWS) ? gZombieClawsHitSound : gKnifeHitSound,x2,y2);
+								gSfxManager->PlaySample(GetMeleeHitSound(mPeopleTemp[j]->mGuns[mPeopleTemp[j]->mGunIndex]->mGun->mId),x2,y2);
 								//mPeople[i]->TakeDamage(mPeopleTemp[j]->mGuns[KNIFE]->mGun->mDamage);
 								if (mPeople[i]->mState == DEAD) {
 									//UpdateScores(mPeopleTemp[j],mPeople[i],mPeople[i]->mGuns[KNIFE]->mGun);

@@ -475,6 +475,7 @@ int GameStateLoading::Load(int stage) {
 			for (int i=0; i<MAX_GUNS; i++) {
 				gWeaponExplosionSounds[i] = NULL;
 				gWeaponImpactSounds[i] = NULL;
+				gWeaponMeleeHitSounds[i] = NULL;
 			}
 			int mNumGuns = 0;
 			FILE *file;
@@ -624,6 +625,17 @@ int GameStateLoading::Load(int stage) {
 				}
 				else if (gGuns[i].mType == SECONDARY) {
 					gGuns[i].mDryFireSound = gDryFirePistolSound;
+				}
+
+				if (gGuns[i].mType == KNIFE && gGuns[i].mId != 0 && gGuns[i].mId != ZOMBIECLAWS) {
+					sprintf(buffer,"sfx/%shit.wav",gGuns[i].mName);
+					JSample* meleeHitSound = mSoundSystem->LoadSample(buffer);
+					if (meleeHitSound != NULL && meleeHitSound->mSample != NULL) {
+						gWeaponMeleeHitSounds[gGuns[i].mId] = meleeHitSound;
+					}
+					else {
+						delete meleeHitSound;
+					}
 				}
 
 				if (gGuns[i].mProjectileType == PROJECTILE_ROCKET) {

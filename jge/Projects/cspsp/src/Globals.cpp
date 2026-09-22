@@ -25,6 +25,7 @@ float gProjectileExplosionRadii[MAX_GUNS];
 int gProjectileLaunchOrigins[MAX_GUNS];
 JSample* gWeaponExplosionSounds[MAX_GUNS];
 JSample* gWeaponImpactSounds[MAX_GUNS];
+JSample* gWeaponMeleeHitSounds[MAX_GUNS];
 char gWeaponAnimationProfileNames[MAX_GUNS][64];
 KeyFrameAnim* gWeaponAnimationKeyFrames[MAX_GUNS][3];
 MuzzlePositionConfig gMuzzlePositionConfigs[MAX_GUNS];
@@ -142,6 +143,15 @@ SfxManager* gSfxManager;
 Danzeff* gDanzeff;
 Socket* gSocket;
 HttpManager* gHttpManager;
+
+JSample* GetMeleeHitSound(int weaponId)
+{
+	if (weaponId == ZOMBIECLAWS) return gZombieClawsHitSound;
+	if (weaponId >= 0 && weaponId < MAX_GUNS && gWeaponMeleeHitSounds[weaponId] != NULL) {
+		return gWeaponMeleeHitSounds[weaponId];
+	}
+	return gKnifeHitSound;
+}
 
 char* GetConfig(const char *location, char searchstr[]) {
     FILE *file;

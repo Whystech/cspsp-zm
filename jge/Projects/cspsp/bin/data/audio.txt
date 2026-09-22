@@ -26,6 +26,7 @@ hit_1 = sfx/hit1.wav
 hit_2 = sfx/hit2.wav
 hit_3 = sfx/hit3.wav
 # Melee impact sound selected from the equipped melee weapon.
+# Custom melee weapons use sfx/NAMEhit.wav when present, otherwise knife_hit.
 knife_hit = sfx/knifehit.wav
 zombie_claws_hit = sfx/knifehit.wav
 # Team-specific randomized death variants. Change any path independently.
