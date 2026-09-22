@@ -1,0 +1,10 @@
+# AIM GUIDE AND HITMARKER
+# Colors use AARRGGBB hexadecimal format. Distances and widths are pixels.
+guide_color = C800FF00
+guide_inner = 30
+guide_length = 10
+guide_width = 1
+hitmarker_color = FFFF0000
+hitmarker_inner = 30
+hitmarker_length = 15
+hitmarker_width = 1
