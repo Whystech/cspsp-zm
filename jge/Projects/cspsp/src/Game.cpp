@@ -918,14 +918,14 @@ void Game::CheckCollisions()
 					float r = 16*2;
 					if (dist < 40*40) {
 						if (mGameType == FFA || mFriendlyFire == ON || person2->mTeam != person1->mTeam) {
-							if (person1->mGunIndex == KNIFE && person1->mState == ATTACKING) {
+							if (IsMeleeSlot(person1->mGunIndex) && person1->mState == ATTACKING) {
 								float angle = atan2f((y2-y),x2-x);
 								float anglediff = fabs(fabs(angle+M_PI-person1->mFacingAngle)-M_PI);
 								if (anglediff <= 0.6f) {
 									person1->mState = DRYFIRING;
 									gParticleEngine->GenerateParticles(BLOOD,x2,y2,gEffectsConfig.bloodParticleCount);
 									mMap->AddDecal(x2,y2,DECAL_BLOOD);
-									gSfxManager->PlaySample((person1->mGuns[KNIFE]->mGun->mId == ZOMBIECLAWS) ? gZombieClawsHitSound : gKnifeHitSound,x,y);
+									gSfxManager->PlaySample((person1->mGuns[person1->mGunIndex]->mGun->mId == ZOMBIECLAWS) ? gZombieClawsHitSound : gKnifeHitSound,x,y);
 
 									if (!mIsOnline) {
 										if (person1 == mPlayer) {
@@ -935,9 +935,9 @@ void Game::CheckCollisions()
 										if (person2 == mPlayer) {
 											mHud->AddDamageIndicator(angle);
 										}
-										person2->TakeDamage(person1->mGuns[KNIFE]->mGun->mDamage);
+										person2->TakeDamage(person1->mGuns[person1->mGunIndex]->mGun->mDamage);
 										if (person2->mState == DEAD) {
-											UpdateScores(person1,person2,person1->mGuns[KNIFE]->mGun);
+											UpdateScores(person1,person2,person1->mGuns[person1->mGunIndex]->mGun);
 											if (person2->mState != DEAD && person2->mOriginalTeam == CT && person2->mTeam == T) continue;
 										}
 										if (mSpec->mState == DEAD) {
@@ -947,14 +947,14 @@ void Game::CheckCollisions()
 								}
 							}
 							if (person2->mState == DEAD) continue; //just in case the person dies in above if statement
-							if (person2->mGunIndex == KNIFE && person2->mState == ATTACKING) {
+							if (IsMeleeSlot(person2->mGunIndex) && person2->mState == ATTACKING) {
 								float angle = atan2f((y-y2),x-x2);
 								float anglediff = fabs(fabs(angle+M_PI-person2->mFacingAngle)-M_PI);
 								if (anglediff <= 0.6f) {
 									person2->mState = DRYFIRING;
 									gParticleEngine->GenerateParticles(BLOOD,x,y,gEffectsConfig.bloodParticleCount);
 									mMap->AddDecal(x,y,DECAL_BLOOD);
-									gSfxManager->PlaySample((person2->mGuns[KNIFE]->mGun->mId == ZOMBIECLAWS) ? gZombieClawsHitSound : gKnifeHitSound,x2,y2);
+									gSfxManager->PlaySample((person2->mGuns[person2->mGunIndex]->mGun->mId == ZOMBIECLAWS) ? gZombieClawsHitSound : gKnifeHitSound,x2,y2);
 									if (!mIsOnline) {
 										if (person2 == mPlayer) {
 											mHitTime = 1000;
@@ -963,9 +963,9 @@ void Game::CheckCollisions()
 										if (person1 == mPlayer) {
 											mHud->AddDamageIndicator(angle);
 										}
-										person1->TakeDamage(person2->mGuns[KNIFE]->mGun->mDamage);
+										person1->TakeDamage(person2->mGuns[person2->mGunIndex]->mGun->mDamage);
 										if (person1->mState == DEAD) {
-											UpdateScores(person2,person1,person2->mGuns[KNIFE]->mGun);
+											UpdateScores(person2,person1,person2->mGuns[person2->mGunIndex]->mGun);
 											if (person1->mState != DEAD && person1->mOriginalTeam == CT && person1->mTeam == T) continue;
 										}
 										if (mSpec->mState == DEAD) {
@@ -1869,9 +1869,11 @@ void Game::Render()
 		float x = mPlayer->mX-(dx-SCREEN_WIDTH_2); //+sinf(mPlayer->mFacingAngle)*1.5f
 		float y = mPlayer->mY-(dy-SCREEN_HEIGHT_2); //-cosf(mPlayer->mFacingAngle)*1.5f
 
-		float angle = mPlayer->mFacingAngle-mPlayer->mRecoilAngle*0.5f;
+		float guideHalfAngle = mPlayer->mRecoilAngle*0.5f;
+		if (guideHalfAngle < 0.1f) guideHalfAngle = 0.1f;
+		float angle = mPlayer->mFacingAngle-guideHalfAngle;
 		mRenderer->DrawLine(x+cosf(angle)*gAimMarkerConfig.guideInner,y+sinf(angle)*gAimMarkerConfig.guideInner,x+cosf(angle)*(gAimMarkerConfig.guideInner+gAimMarkerConfig.guideLength),y+sinf(angle)*(gAimMarkerConfig.guideInner+gAimMarkerConfig.guideLength),gAimMarkerConfig.guideWidth,gAimMarkerConfig.guideColor);
-		angle = mPlayer->mFacingAngle+mPlayer->mRecoilAngle*0.5f;
+		angle = mPlayer->mFacingAngle+guideHalfAngle;
 		mRenderer->DrawLine(x+cosf(angle)*gAimMarkerConfig.guideInner,y+sinf(angle)*gAimMarkerConfig.guideInner,x+cosf(angle)*(gAimMarkerConfig.guideInner+gAimMarkerConfig.guideLength),y+sinf(angle)*(gAimMarkerConfig.guideInner+gAimMarkerConfig.guideLength),gAimMarkerConfig.guideWidth,gAimMarkerConfig.guideColor);
 
 		int t = (mHitTime-750)/250*255;
@@ -1953,7 +1955,7 @@ void Game::Render()
 
 		/*if (mPlayer->GetCurrentGun() != NULL) {
 			gHudFont->SetColor(ARGB(230,255,200,0));
-			if (mPlayer->mGunIndex == KNIFE) {
+			if (IsMeleeSlot(mPlayer->mGunIndex)) {
 			}
 			else if (mPlayer->mGunIndex == GRENADE) {
 				sprintf(buffer,"%i",mPlayer->GetCurrentGun()->mClipAmmo); 
@@ -2032,7 +2034,7 @@ void Game::Render()
 
 			gFont->SetColor(ARGB(255,255,255,255));
 			gFont->SetScale(0.7f);
-			if (mPlayer->mGunIndex == KNIFE) {
+			if (IsMeleeSlot(mPlayer->mGunIndex)) {
 				//mRenderer->FillRect(SCREEN_WIDTH-10-128+4,SCREEN_HEIGHT-29,120,15,ARGB(255,50,50,50));
 				mRenderer->FillRect(SCREEN_WIDTH-14-120,SCREEN_HEIGHT-29,120,15,ARGB(255,255,255,255));
 				gFont->DrawShadowedString("-", SCREEN_WIDTH-14-50, SCREEN_HEIGHT-45, JGETEXT_RIGHT);
@@ -3309,6 +3311,18 @@ void Game::Buy(int index) {
 					//mPlayer->mGunIndex = SECONDARY;
 					mPlayer->Switch(SECONDARY);
 				}
+				gSfxManager->PlaySample(gPickUpSound, mPlayer->mX, mPlayer->mY);
+			}
+			else {
+				hasMoney = false;
+			}
+		}
+		else if (mGuns[index].mType == KNIFE) {
+			if (mPlayer->mMoney >= mGuns[index].mCost) {
+				mPlayer->mMoney -= mGuns[index].mCost;
+				mPlayer->Drop(MELEE);
+				GunObject *gun = new GunObject(&mGuns[index],0,0);
+				mPlayer->PickUp(gun);
 				gSfxManager->PlaySample(gPickUpSound, mPlayer->mX, mPlayer->mY);
 			}
 			else {

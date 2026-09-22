@@ -239,7 +239,7 @@ std::vector<Bullet*> PersonOnline::Fire()
 	if (mState == NORMAL) {
 		mIsFiring = true;
 		mHasFired = true;
-		if (mGunIndex == KNIFE) {
+		if (IsMeleeSlot(mGunIndex)) {
 			SetState(ATTACKING);
 			gSfxManager->PlaySample(mGuns[mGunIndex]->mGun->mFireSound,mX,mY);
 			//return true;

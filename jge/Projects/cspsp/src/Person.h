@@ -28,6 +28,13 @@
 #define SECONDARY 1
 #define KNIFE 2
 #define GRENADE 3
+#define MELEE 4
+#define WEAPON_SLOT_COUNT 5
+
+inline bool IsMeleeSlot(int slot)
+{
+	return slot == KNIFE || slot == MELEE;
+}
 
 #define BUY_ITEM_ARMOR -2
 #define BUY_ITEM_HEALTH -4
@@ -134,7 +141,7 @@ public:
 	float mRecoilAngle;
 	float mLastFireAngle;
 	bool mIsActive;
-	GunObject* mGuns[5];
+	GunObject* mGuns[WEAPON_SLOT_COUNT];
 	Gun* mKnifeGun;
 	int mGunIndex;
 	//GunObject* mPrimaryGun;
