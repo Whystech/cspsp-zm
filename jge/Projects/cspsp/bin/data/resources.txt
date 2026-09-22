@@ -28,6 +28,7 @@ muzzle_flash_2 = gfx/muzzleflash2.png
 muzzle_flash_3 = gfx/muzzleflash3.png
 muzzle_flash_4 = gfx/muzzleflash4.png
 muzzle_flash_5 = gfx/muzzleflash5.png
+muzzle_flash_6 = gfx/muzzleflash6.png
 # Additional styles need no source edit. Add muzzle_flash_N for IDs 1 through
 # 127 and provide a matching 128x32 image. Missing IDs use style 0.
 bullet_impacts = gfx/bulletimpacts.png
